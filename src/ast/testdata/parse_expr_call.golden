@@ -1,0 +1,32 @@
+{
+  "Call": {
+    "span": {
+      "m": 9,
+      "n": 13
+    },
+    "name": {
+      "span": {
+        "m": 11,
+        "n": 13
+      },
+      "ident": "fn"
+    },
+    "receiver": {
+      "Value": {
+        "span": {
+          "m": 3,
+          "n": 8
+        },
+        "path": [
+          {
+            "span": {
+              "m": 3,
+              "n": 8
+            },
+            "ident": "basic"
+          }
+        ]
+      }
+    }
+  }
+}
