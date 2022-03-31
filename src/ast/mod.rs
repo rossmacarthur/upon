@@ -1,29 +1,28 @@
 //! A simple AST for an expression within a template start and end block.
 
-mod result;
 mod span;
 
 #[cfg(test)]
 use serde::Serialize;
 
-pub use crate::ast::result::{Error, Result};
 pub use crate::ast::span::Span;
+pub use crate::result::{Error, Result};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Expr<'t> {
     Value(Value<'t>),
     Call(Call<'t>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(Serialize))]
 pub struct Value<'t> {
     pub span: Span,
     pub path: Vec<Ident<'t>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(Serialize))]
 pub struct Call<'t> {
     pub span: Span,
@@ -31,7 +30,7 @@ pub struct Call<'t> {
     pub receiver: Box<Expr<'t>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(Serialize))]
 pub struct Ident<'t> {
     pub span: Span,

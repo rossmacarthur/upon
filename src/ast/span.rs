@@ -4,7 +4,7 @@ use std::ops::Index;
 #[cfg(test)]
 use serde::Serialize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(test, derive(Serialize))]
 pub struct Span {
     pub m: usize,

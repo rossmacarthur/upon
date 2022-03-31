@@ -9,15 +9,15 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub struct Error {
-    msg: &'static str,
+    msg: String,
     tmpl: String,
     span: Span,
 }
 
 impl Error {
-    pub fn new(msg: &'static str, tmpl: &str, span: Span) -> Self {
+    pub fn new(msg: impl Into<String>, tmpl: &str, span: Span) -> Self {
         Self {
-            msg,
+            msg: msg.into(),
             tmpl: tmpl.to_string(),
             span,
         }
