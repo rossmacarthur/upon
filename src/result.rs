@@ -7,7 +7,7 @@ use crate::ast::Span;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Error {
     msg: String,
     tmpl: String,
@@ -16,6 +16,7 @@ pub struct Error {
 
 impl Error {
     pub fn new(msg: impl Into<String>, tmpl: &str, span: Span) -> Self {
+        assert!(!tmpl.is_empty(), "tmpl must be populated");
         Self {
             msg: msg.into(),
             tmpl: tmpl.to_string(),
@@ -26,34 +27,16 @@ impl Error {
 
 impl std::error::Error for Error {}
 
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt_pretty(self, f)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            let lines: Vec<_> = self.tmpl.split_terminator('\n').collect();
-            let (line, col) = to_line_col(&lines, self.span.m);
-            let width = max(1, self.tmpl.as_str()[self.span].width());
-            let code = lines.get(line).unwrap_or_else(|| lines.last().unwrap());
-
-            let num = (line + 1).to_string();
-            let pad = num.width();
-            let pipe = "|";
-            let underline = "^".repeat(width);
-
-            write!(
-                f,
-                "\n \
-            {0:pad$} {pipe}\n \
-            {num:>} {pipe} {code}\n \
-            {0:pad$} {pipe} {underline:>width$} {msg}\n",
-                "",
-                pad = pad,
-                pipe = pipe,
-                num = num,
-                code = code,
-                underline = underline,
-                width = col + width,
-                msg = self.msg
-            )
+            fmt_pretty(self, f)
         } else {
             write!(
                 f,
@@ -62,6 +45,34 @@ impl fmt::Display for Error {
             )
         }
     }
+}
+
+fn fmt_pretty(err: &Error, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let lines: Vec<_> = err.tmpl.split_terminator('\n').collect();
+    let (line, col) = to_line_col(&lines, err.span.m);
+    let width = max(1, err.tmpl.as_str()[err.span].width());
+    let code = lines.get(line).unwrap_or_else(|| lines.last().unwrap());
+
+    let num = (line + 1).to_string();
+    let pad = num.width();
+    let pipe = "|";
+    let underline = "^".repeat(width);
+
+    write!(
+        f,
+        "\n \
+        {0:pad$} {pipe}\n \
+        {num:>} {pipe} {code}\n \
+        {0:pad$} {pipe} {underline:>width$} {msg}\n",
+        "",
+        pad = pad,
+        pipe = pipe,
+        num = num,
+        code = code,
+        underline = underline,
+        width = col + width,
+        msg = err.msg
+    )
 }
 
 fn to_line_col(lines: &[&str], offset: usize) -> (usize, usize) {
