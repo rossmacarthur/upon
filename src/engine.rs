@@ -6,19 +6,30 @@ use std::sync::Arc;
 
 use crate::{Result, Template, Value};
 
+/// The compilation and rendering engine.
 #[derive(Clone)]
-pub struct Env<'env> {
-    pub(crate) begin_tag: &'env str,
-    pub(crate) end_tag: &'env str,
-    pub(crate) filters: HashMap<String, Arc<dyn Fn(Value) -> Value + 'env>>,
+pub struct Engine<'e> {
+    pub(crate) begin_tag: &'e str,
+    pub(crate) end_tag: &'e str,
+    pub(crate) filters: HashMap<String, Arc<dyn Fn(Value) -> Value + 'e>>,
 }
 
-impl<'env> Env<'env> {
+impl Default for Engine<'_> {
+    fn default() -> Self {
+        Self {
+            begin_tag: "{{",
+            end_tag: "}}",
+            filters: HashMap::new(),
+        }
+    }
+}
+
+impl<'e> Engine<'e> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_tags(begin_tag: &'env str, end_tag: &'env str) -> Self {
+    pub fn with_tags(begin_tag: &'e str, end_tag: &'e str) -> Self {
         Self {
             begin_tag,
             end_tag,
@@ -28,7 +39,7 @@ impl<'env> Env<'env> {
 
     pub fn add_filter<F>(&mut self, name: impl Into<String>, f: F)
     where
-        F: Fn(Value) -> Value + 'env,
+        F: Fn(Value) -> Value + 'e,
     {
         self.filters.insert(name.into(), Arc::new(f));
     }
@@ -41,12 +52,12 @@ impl<'env> Env<'env> {
         self.filters.remove(name);
     }
 
-    pub fn compile(&'env self, tmpl: &'env str) -> Result<Template<'env>> {
+    pub fn compile(&'e self, tmpl: &'e str) -> Result<Template<'e>> {
         Template::with_env(tmpl, self)
     }
 }
 
-impl fmt::Debug for Env<'_> {
+impl fmt::Debug for Engine<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let filters = f
             .debug_map()
@@ -57,15 +68,5 @@ impl fmt::Debug for Env<'_> {
             .field("end_tag", &self.end_tag)
             .field("filters", &filters)
             .finish()
-    }
-}
-
-impl Default for Env<'_> {
-    fn default() -> Self {
-        Self {
-            begin_tag: "{{",
-            end_tag: "}}",
-            filters: HashMap::new(),
-        }
     }
 }

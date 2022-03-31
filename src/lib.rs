@@ -1,29 +1,30 @@
 mod ast;
 mod data;
-mod env;
+mod engine;
 mod macros;
 mod result;
 
 use crate::ast::{Expr, Span};
 pub use crate::data::{List, Map, Value};
-pub use crate::env::Env;
+pub use crate::engine::Engine;
 pub use crate::result::{Error, Result};
 
+/// A compiled template.
 #[derive(Debug, Clone)]
-pub struct Template<'env> {
-    env: &'env Env<'env>,
-    tmpl: &'env str,
-    subs: Vec<Sub<'env>>,
+pub struct Template<'e> {
+    engine: &'e Engine<'e>,
+    tmpl: &'e str,
+    subs: Vec<Sub<'e>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Sub<'env> {
+struct Sub<'e> {
     span: Span,
-    expr: Expr<'env>,
+    expr: Expr<'e>,
 }
 
-impl<'env> Template<'env> {
-    fn with_env(tmpl: &'env str, env: &'env Env<'env>) -> Result<Self> {
+impl<'e> Template<'e> {
+    fn with_env(tmpl: &'e str, env: &'e Engine<'e>) -> Result<Self> {
         let mut cursor = 0;
         let mut subs = Vec::new();
 
@@ -35,7 +36,11 @@ impl<'env> Template<'env> {
                         let span = Span::new(n, n + env.end_tag.len());
                         return Err(Error::new("unexpected end tag", tmpl, span));
                     }
-                    return Ok(Template { env, tmpl, subs });
+                    return Ok(Template {
+                        engine: env,
+                        tmpl,
+                        subs,
+                    });
                 }
             };
 
@@ -56,13 +61,14 @@ impl<'env> Template<'env> {
         }
     }
 
+    /// Render the template to a string using the provided data.
     pub fn render(&self, data: &Value) -> Result<String> {
         let mut s = String::new();
         let mut i = 0;
         for Sub { span, expr } in &self.subs {
             s.push_str(&self.tmpl[i..span.m]);
             i = span.n;
-            let value = render_expr(self.tmpl, self.env, data, expr)?;
+            let value = render_expr(self.tmpl, self.engine, data, expr)?;
             s.push_str(&value.to_string());
         }
         s.push_str(&self.tmpl[i..]);
@@ -71,7 +77,7 @@ impl<'env> Template<'env> {
     }
 }
 
-fn render_expr(tmpl: &str, env: &Env<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
+fn render_expr(tmpl: &str, env: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
     match expr {
         Expr::Value(ast::Value { path, .. }) => data.lookup(tmpl, path).map(|v| v.clone()),
         Expr::Call(ast::Call { name, receiver, .. }) => match env.filters.get(name.ident) {
@@ -95,7 +101,7 @@ mod tests {
 
     #[test]
     fn env_compile_no_tags() {
-        let env = Env::new();
+        let env = Engine::new();
 
         let t = env.compile("").unwrap();
         assert_eq!(t.subs, Vec::new());
@@ -106,7 +112,7 @@ mod tests {
 
     #[test]
     fn env_compile_default_tags() {
-        let env = Env::new();
+        let env = Engine::new();
         let t = env.compile("test {{ basic }} test").unwrap();
         let subs = vec![Sub {
             span: Span::new(5, 16),
@@ -123,7 +129,7 @@ mod tests {
 
     #[test]
     fn env_compile_custom_tags() {
-        let env = Env::with_tags("<", "/>");
+        let env = Engine::with_tags("<", "/>");
         let t = env.compile("test <basic/> test").unwrap();
         let subs = vec![Sub {
             span: Span::new(5, 13),
@@ -140,7 +146,7 @@ mod tests {
 
     #[test]
     fn env_compile_unclosed_tag() {
-        let env = Env::new();
+        let env = Engine::new();
         let err = env.compile("test {{ test").unwrap_err();
         assert_eq!(
             format!("{:#}", err),
@@ -154,7 +160,7 @@ mod tests {
 
     #[test]
     fn env_compile_unexpected_end_tag() {
-        let env = Env::new();
+        let env = Engine::new();
         let err = env.compile("test }} test").unwrap_err();
         assert_eq!(
             format!("{:#}", err),
@@ -168,7 +174,7 @@ mod tests {
 
     #[test]
     fn template_render_basic() {
-        let env = Env::new();
+        let env = Engine::new();
         let t = env.compile("basic {{ here }}ment").unwrap();
         let s = t.render(&data!({ here: "replace" })).unwrap();
         assert_eq!(s, "basic replacement");
@@ -176,7 +182,7 @@ mod tests {
 
     #[test]
     fn template_render_nested() {
-        let env = Env::new();
+        let env = Engine::new();
         let t = env.compile("basic {{ here.nested }}ment").unwrap();
         let s = t.render(&data!({ here: { nested: "replace" }})).unwrap();
         assert_eq!(s, "basic replacement");
@@ -184,7 +190,7 @@ mod tests {
 
     #[test]
     fn template_render_nested_filter() {
-        let mut env = Env::new();
+        let mut env = Engine::new();
         env.add_filter("lower", |v| match v {
             Value::String(s) => Value::String(s.to_lowercase()),
             v => v,

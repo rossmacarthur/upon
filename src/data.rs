@@ -5,6 +5,7 @@ pub use std::vec::Vec as List;
 use crate::ast::Ident;
 use crate::{Error, Result};
 
+/// Data to be rendered represented as a recursive enum.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {
     None,

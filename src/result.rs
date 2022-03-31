@@ -5,8 +5,10 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::ast::Span;
 
+/// A convenient type alias for results in this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// An error that can occur during template compilation or rendering.
 #[derive(Clone)]
 pub struct Error {
     msg: String,
@@ -15,7 +17,7 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new(msg: impl Into<String>, tmpl: &str, span: Span) -> Self {
+    pub(crate) fn new(msg: impl Into<String>, tmpl: &str, span: Span) -> Self {
         assert!(!tmpl.is_empty(), "tmpl must be populated");
         Self {
             msg: msg.into(),
