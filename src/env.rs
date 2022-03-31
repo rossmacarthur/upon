@@ -42,7 +42,7 @@ impl<'env> Env<'env> {
     }
 
     pub fn compile(&'env self, tmpl: &'env str) -> Result<Template<'env>> {
-        Template::with_env(tmpl, &self)
+        Template::with_env(tmpl, self)
     }
 }
 

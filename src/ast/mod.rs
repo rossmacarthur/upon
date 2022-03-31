@@ -86,7 +86,7 @@ fn parse_value<'t>(tmpl: &'t str, span: Span, token: &'t str) -> Result<Value<'t
     Ok(Value { span, path })
 }
 
-fn split<'t, F>(s: &'t str, span: Span, f: F) -> impl Iterator<Item = (Span, &'t str)> + Clone
+fn split<F>(s: &str, span: Span, f: F) -> impl Iterator<Item = (Span, &str)> + Clone
 where
     F: Fn(char) -> bool + Clone,
 {
