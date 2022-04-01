@@ -1,4 +1,5 @@
 // Heavily based on `serde_json::json!`
+/// Convenient macro for constructing a [`Value`][crate::Value].
 #[macro_export]
 macro_rules! data {
     ($($d:tt)+) => {
@@ -174,12 +175,12 @@ macro_rules! _data {
     };
 
     ({}) => {
-        $crate::Value::Map($crate::Map::new())
+        $crate::Value::Map($crate::value::Map::new())
     };
 
     ({ $($tt:tt)+ }) => {
-        $crate::Value::Map({
-            let mut map = $crate::Map::new();
+        $crate::value::Value::Map({
+            let mut map = $crate::value::Map::new();
             $crate::_data!(@map map () ($($tt)+) ($($tt)+));
             map
         })
@@ -187,7 +188,7 @@ macro_rules! _data {
 
     // Default to `From` implementation.
     ($other:expr) => {
-        $crate::Value::from($other)
+        $crate::value::Value::from($other)
     };
 }
 
@@ -216,7 +217,7 @@ macro_rules! _data_expect_expr_comma {
 
 #[cfg(test)]
 mod tests {
-    use crate::{List, Map, Value};
+    use crate::value::{List, Map, Value};
 
     #[test]
     fn data_none() {
@@ -247,15 +248,15 @@ mod tests {
     #[test]
     fn data_map() {
         let v = data!({ x: "hello" });
-        let exp = Value::from([("x".into(), "hello".into())]);
+        let exp = Value::from([("x", "hello")]);
         assert_eq!(v, exp);
 
         let v = data!({ x: "hello", });
-        let exp = Value::from([("x".into(), "hello".into())]);
+        let exp = Value::from([("x", "hello")]);
         assert_eq!(v, exp);
 
         let v = data!({ x: "hello", y: String::from("world!") });
-        let exp = Value::from([("x".into(), "hello".into()), ("y".into(), "world!".into())]);
+        let exp = Value::from([("x", "hello"), ("y", "world")]);
         assert_eq!(v, exp);
     }
 
@@ -269,11 +270,8 @@ mod tests {
             },
         });
         let exp = Value::from([
-            ("w".into(), "hello".into()),
-            (
-                "x".into(),
-                Value::from([("y".into(), "hello".into()), ("z".into(), "world!".into())]),
-            ),
+            ("w", Value::from("hello")),
+            ("x", Value::from([("y", "hello"), ("z", "world!")])),
         ]);
         assert_eq!(v, exp);
     }

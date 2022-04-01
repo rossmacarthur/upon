@@ -1,13 +1,13 @@
 mod ast;
-mod data;
 mod engine;
 mod macros;
 mod result;
+pub mod value;
 
 use crate::ast::{Expr, Span};
-pub use crate::data::{List, Map, Value};
 pub use crate::engine::Engine;
 pub use crate::result::{Error, Result};
+pub use crate::value::Value;
 
 /// A compiled template.
 #[derive(Debug, Clone)]
@@ -62,13 +62,17 @@ impl<'e> Template<'e> {
     }
 
     /// Render the template to a string using the provided data.
-    pub fn render(&self, data: &Value) -> Result<String> {
+    pub fn render<V>(&self, data: V) -> Result<String>
+    where
+        V: Into<Value>,
+    {
+        let data = data.into();
         let mut s = String::new();
         let mut i = 0;
         for Sub { span, expr } in &self.subs {
             s.push_str(&self.tmpl[i..span.m]);
             i = span.n;
-            let value = render_expr(self.tmpl, self.engine, data, expr)?;
+            let value = render_expr(self.tmpl, self.engine, &data, expr)?;
             s.push_str(&value.to_string());
         }
         s.push_str(&self.tmpl[i..]);
@@ -176,7 +180,7 @@ mod tests {
     fn template_render_basic() {
         let env = Engine::new();
         let t = env.compile("basic {{ here }}ment").unwrap();
-        let s = t.render(&data!({ here: "replace" })).unwrap();
+        let s = t.render(data!({ here: "replace" })).unwrap();
         assert_eq!(s, "basic replacement");
     }
 
@@ -184,7 +188,7 @@ mod tests {
     fn template_render_nested() {
         let env = Engine::new();
         let t = env.compile("basic {{ here.nested }}ment").unwrap();
-        let s = t.render(&data!({ here: { nested: "replace" }})).unwrap();
+        let s = t.render(data!({ here: { nested: "replace" }})).unwrap();
         assert_eq!(s, "basic replacement");
     }
 
@@ -196,7 +200,7 @@ mod tests {
             v => v,
         });
         let t = env.compile("basic {{ here.nested | lower }}ment").unwrap();
-        let s = t.render(&data!({ here: { nested: "RePlAcE" }})).unwrap();
+        let s = t.render(data!({ here: { nested: "RePlAcE" }})).unwrap();
         assert_eq!(s, "basic replacement");
     }
 }
