@@ -7,7 +7,7 @@ pub mod value;
 use crate::ast::{Expr, Span};
 pub use crate::engine::Engine;
 pub use crate::result::{Error, Result};
-pub use crate::value::Value;
+pub use crate::value::{to_value, Value};
 
 /// A compiled template.
 #[derive(Debug, Clone)]
@@ -34,7 +34,7 @@ impl<'e> Template<'e> {
                 None => {
                     if let Some(n) = tmpl[cursor..].find(env.end_tag) {
                         let span = Span::new(n, n + env.end_tag.len());
-                        return Err(Error::new("unexpected end tag", tmpl, span));
+                        return Err(Error::span("unexpected end tag", tmpl, span));
                     }
                     return Ok(Template {
                         engine: env,
@@ -48,7 +48,7 @@ impl<'e> Template<'e> {
                 Some(n) => (m + n + env.end_tag.len(), m + n),
                 None => {
                     let span = Span::new(i, m);
-                    return Err(Error::new("unclosed tag", tmpl, span));
+                    return Err(Error::span("unclosed tag", tmpl, span));
                 }
             };
 
@@ -62,11 +62,15 @@ impl<'e> Template<'e> {
     }
 
     /// Render the template to a string using the provided data.
-    pub fn render<V>(&self, data: V) -> Result<String>
+    pub fn render<S>(&self, data: S) -> Result<String>
     where
-        V: Into<Value>,
+        S: serde::Serialize,
     {
-        let data = data.into();
+        let data = to_value(data).unwrap();
+        self._render(data)
+    }
+
+    fn _render(&self, data: Value) -> Result<String> {
         let mut s = String::new();
         let mut i = 0;
         for Sub { span, expr } in &self.subs {
@@ -87,7 +91,7 @@ fn render_expr(tmpl: &str, env: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> R
         Expr::Call(ast::Call { name, receiver, .. }) => match env.filters.get(name.ident) {
             Some(f) => render_expr(tmpl, env, data, receiver).map(&**f),
             None => {
-                return Err(Error::new(
+                return Err(Error::span(
                     format!("function not found `{}`", name.ident),
                     tmpl,
                     name.span,

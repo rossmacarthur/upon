@@ -1,4 +1,5 @@
 mod from;
+mod ser;
 
 pub use std::collections::HashMap as Map;
 use std::fmt;
@@ -6,6 +7,7 @@ pub use std::vec::Vec as List;
 
 use crate::ast::Ident;
 use crate::result::{Error, Result};
+pub use crate::value::ser::to_value;
 
 /// Data to be rendered represented as a recursive enum.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,16 +56,16 @@ impl Value {
         for Ident { span, ident: p } in path {
             data = match data {
                 Value::None => {
-                    return Err(Error::new(
-                        format!("cannot index None with `{}`", p),
+                    return Err(Error::span(
+                        format!("cannot index none with `{}`", p),
                         tmpl,
                         *span,
                     ))
                 }
 
                 Value::String(_) => {
-                    return Err(Error::new(
-                        format!("cannot index String with `{}`", p),
+                    return Err(Error::span(
+                        format!("cannot index string with `{}`", p),
                         tmpl,
                         *span,
                     ))
@@ -72,8 +74,8 @@ impl Value {
                 Value::List(list) => match p.parse::<usize>() {
                     Ok(i) => &list[i],
                     Err(_) => {
-                        return Err(Error::new(
-                            format!("cannot index List with `{}`", p),
+                        return Err(Error::span(
+                            format!("cannot index list with `{}`", p),
                             tmpl,
                             *span,
                         ))
@@ -83,8 +85,8 @@ impl Value {
                 Value::Map(map) => match map.get(*p) {
                     Some(value) => value,
                     None => {
-                        return Err(Error::new(
-                            format!("key `{}` not found in Map", p),
+                        return Err(Error::span(
+                            format!("key `{}` not found in map", p),
                             tmpl,
                             *span,
                         ))
@@ -149,7 +151,7 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ cannot index None with `hello`
+   |    ^^^^^ cannot index none with `hello`
 "
         );
     }
@@ -171,7 +173,7 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ cannot index String with `hello`
+   |    ^^^^^ cannot index string with `hello`
 "
         );
     }
@@ -193,7 +195,7 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ cannot index List with `hello`
+   |    ^^^^^ cannot index list with `hello`
 "
         );
     }
@@ -215,7 +217,7 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ key `hello` not found in Map
+   |    ^^^^^ key `hello` not found in map
 "
         );
     }

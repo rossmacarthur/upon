@@ -256,7 +256,7 @@ mod tests {
         assert_eq!(v, exp);
 
         let v = data!({ x: "hello", y: String::from("world!") });
-        let exp = Value::from([("x", "hello"), ("y", "world")]);
+        let exp = Value::from([("x", "hello"), ("y", "world!")]);
         assert_eq!(v, exp);
     }
 

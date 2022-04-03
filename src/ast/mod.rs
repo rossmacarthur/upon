@@ -45,7 +45,7 @@ pub fn parse_expr(tmpl: &str, span: Span) -> Result<Expr<'_>> {
     let mut it = split(s, span, char::is_whitespace).filter(|(_, s)| !s.is_empty());
 
     let mut expr = match it.next() {
-        None => return Err(Error::new("expected value", tmpl, span)),
+        None => return Err(Error::span("expected value", tmpl, span)),
         Some((span, token)) => Expr::Value(parse_value(tmpl, span, token)?),
     };
 
@@ -60,9 +60,9 @@ pub fn parse_expr(tmpl: &str, span: Span) -> Result<Expr<'_>> {
                         receiver: Box::new(expr),
                     })
                 }
-                None => return Err(Error::new("expected expression after pipe", tmpl, pspan)),
+                None => return Err(Error::span("expected expression after pipe", tmpl, pspan)),
             },
-            Some((span, _)) => return Err(Error::new("unexpected token", tmpl, span)),
+            Some((span, _)) => return Err(Error::span("unexpected token", tmpl, span)),
             None => break Ok(expr),
         }
     }
@@ -77,7 +77,7 @@ fn parse_value<'t>(tmpl: &'t str, span: Span, token: &'t str) -> Result<Value<'t
     let path: Vec<_> = split(token, span, |c| c == '.')
         .map(|(span, ident)| {
             if ident.is_empty() {
-                return Err(Error::new("invalid identifier", tmpl, span));
+                return Err(Error::span("invalid identifier", tmpl, span));
             }
             Ok(Ident { span, ident })
         })

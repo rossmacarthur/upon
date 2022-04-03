@@ -10,6 +10,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 unicode-width = "0.1.9"
+serde = "1.0.136"
 
 [dev-dependencies]
 goldie = "0.2.0"
