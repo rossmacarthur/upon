@@ -2,8 +2,12 @@
 /// Convenient macro for constructing a [`Value`][crate::Value].
 #[macro_export]
 macro_rules! data {
-    ($($d:tt)+) => {
-        $crate::_data!($($d)+)
+    ( $($tt:tt)+ ) => {
+        $crate::value::Value::Map({
+            let mut map = $crate::value::Map::new();
+            $crate::_data!(@map map () ($($tt)+) ($($tt)+));
+            map
+        })
     };
 }
 
@@ -188,7 +192,7 @@ macro_rules! _data {
 
     // Default to `From` implementation.
     ($other:expr) => {
-        $crate::value::Value::from($other)
+        $crate::value::to_value($other).unwrap()
     };
 }
 
@@ -221,58 +225,51 @@ mod tests {
 
     #[test]
     fn data_none() {
-        let v = data!(None);
-        assert_eq!(v, Value::None);
+        let v = data! { field: None };
+        assert_eq!(v, Value::from([(String::from("field"), Value::None)]));
     }
 
     #[test]
     fn data_string() {
-        let v = data!("testing...");
-        assert_eq!(v, Value::from("testing..."));
+        let v = data! { field: "testing..." };
+        assert_eq!(
+            v,
+            Value::from([(String::from("field"), Value::from("testing..."))])
+        );
     }
 
     #[test]
     fn data_list() {
-        let v = data!(["testing...", None, {}, []]);
+        let v = data! { field: ["testing...", None, {}, []] };
         assert_eq!(
             v,
-            Value::from([
-                Value::from("testing..."),
-                Value::None,
-                Value::Map(Map::new()),
-                Value::List(List::new()),
-            ])
+            Value::from([(
+                String::from("field"),
+                Value::from([
+                    Value::from("testing..."),
+                    Value::None,
+                    Value::Map(Map::new()),
+                    Value::List(List::new()),
+                ])
+            )])
         )
     }
 
     #[test]
     fn data_map() {
-        let v = data!({ x: "hello" });
-        let exp = Value::from([("x", "hello")]);
+        let v = data! { field: { x: "hello" } };
+        let exp = Value::from([(String::from("field"), Value::from([("x", "hello")]))]);
         assert_eq!(v, exp);
 
-        let v = data!({ x: "hello", });
-        let exp = Value::from([("x", "hello")]);
+        let v = data! { field: { x: "hello", }};
+        let exp = Value::from([(String::from("field"), Value::from([("x", "hello")]))]);
         assert_eq!(v, exp);
 
-        let v = data!({ x: "hello", y: String::from("world!") });
-        let exp = Value::from([("x", "hello"), ("y", "world!")]);
-        assert_eq!(v, exp);
-    }
-
-    #[test]
-    fn data_map_nested() {
-        let v = data!({
-            w: "hello",
-            x: {
-                y: "hello",
-                z: "world!",
-            },
-        });
-        let exp = Value::from([
-            ("w", Value::from("hello")),
-            ("x", Value::from([("y", "hello"), ("z", "world!")])),
-        ]);
+        let v = data! { field: { x: "hello", y: String::from("world!") }};
+        let exp = Value::from([(
+            String::from("field"),
+            Value::from([("x", "hello"), ("y", "world!")]),
+        )]);
         assert_eq!(v, exp);
     }
 }

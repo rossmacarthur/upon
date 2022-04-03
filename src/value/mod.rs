@@ -115,28 +115,28 @@ mod tests {
 
     #[test]
     fn lookup_single() {
-        let data = data!({ hello: "world" });
+        let data = data! { hello: "world" };
         let exp = data.lookup("", &[id("hello")]).unwrap();
         assert_eq!(&Value::from("world"), exp);
     }
 
     #[test]
     fn lookup_nested() {
-        let data = data!({ hello: { world: "testing..." } });
+        let data = data! { hello: { world: "testing..." } };
         let exp = data.lookup("", &[id("hello"), id("world")]).unwrap();
         assert_eq!(&Value::from("testing..."), exp);
     }
 
     #[test]
     fn lookup_list_index() {
-        let data = data!({ hello: ["world"] });
+        let data = data! { hello: ["world"] };
         let exp = data.lookup("", &[id("hello"), id("0")]).unwrap();
         assert_eq!(&Value::from("world"), exp);
     }
 
     #[test]
     fn lookup_cannot_index_none() {
-        let data = data!(None);
+        let data = Value::None;
         let err = data
             .lookup(
                 "{{ hello }}",
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn lookup_cannot_index_string() {
-        let data = data!("testing...");
+        let data = Value::from("testing...");
         let err = data
             .lookup(
                 "{{ hello }}",
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn lookup_cannot_index_list() {
-        let data = data!(["te", "ting..."]);
+        let data = Value::from(["te", "ting..."]);
         let err = data
             .lookup(
                 "{{ hello }}",
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn lookup_key_not_found() {
-        let data = data!({ te: "ting..." });
+        let data = data! { te: "ting..." };
         let err = data
             .lookup(
                 "{{ hello }}",

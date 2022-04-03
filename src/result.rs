@@ -42,7 +42,7 @@ impl std::error::Error for Error {}
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.span {
-            Some((tmpl, span)) => fmt_pretty(&self.msg, &tmpl, *span, f),
+            Some((tmpl, span)) => fmt_pretty(&self.msg, tmpl, *span, f),
             None => write!(f, "{}", self.msg),
         }
     }
@@ -53,7 +53,7 @@ impl fmt::Display for Error {
         match &self.span {
             Some((tmpl, span)) => {
                 if f.alternate() {
-                    fmt_pretty(&self.msg, &tmpl, *span, f)
+                    fmt_pretty(&self.msg, tmpl, *span, f)
                 } else {
                     write!(f, "{} between bytes {} and {}", self.msg, span.m, span.n)
                 }

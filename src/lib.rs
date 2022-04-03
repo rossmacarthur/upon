@@ -184,7 +184,7 @@ mod tests {
     fn template_render_basic() {
         let env = Engine::new();
         let t = env.compile("basic {{ here }}ment").unwrap();
-        let s = t.render(data!({ here: "replace" })).unwrap();
+        let s = t.render(data! { here: "replace" }).unwrap();
         assert_eq!(s, "basic replacement");
     }
 
@@ -192,7 +192,7 @@ mod tests {
     fn template_render_nested() {
         let env = Engine::new();
         let t = env.compile("basic {{ here.nested }}ment").unwrap();
-        let s = t.render(data!({ here: { nested: "replace" }})).unwrap();
+        let s = t.render(data! { here: { nested: "replace" }}).unwrap();
         assert_eq!(s, "basic replacement");
     }
 
@@ -204,7 +204,7 @@ mod tests {
             v => v,
         });
         let t = env.compile("basic {{ here.nested | lower }}ment").unwrap();
-        let s = t.render(data!({ here: { nested: "RePlAcE" }})).unwrap();
+        let s = t.render(data! { here: { nested: "RePlAcE" }}).unwrap();
         assert_eq!(s, "basic replacement");
     }
 }
