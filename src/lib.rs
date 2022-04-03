@@ -1,3 +1,66 @@
+//! A tiny, configurable find-and-replace template engine.
+//!
+//! # Features
+//!
+//! - Rendering values, e.g. `{{ path.to.value }}`
+//! - Configurable template tags, e.g. `<? value ?>`
+//! - Arbitrary filter functions, e.g. `{{ value | filter }}`
+//!
+//! # Examples
+//!
+//! Render data constructed using the macro.
+//!
+//! ```
+//! use upon::data;
+//!
+//! let result = upon::render("Hello {{ value }}", data! { value: "World!" })?;
+//! assert_eq!(result, "Hello World!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! Render using structured data.
+//!
+//! ```
+//! #[derive(serde::Serialize)]
+//! struct Data {
+//!     value: String
+//! }
+//!
+//! let result = upon::render("Hello {{ value }}", Data { value: "World!".into() })?;
+//! assert_eq!(result, "Hello World!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! Render a template using custom tags.
+//!
+//! ```
+//! use upon::{data, Engine};
+//!
+//! let engine = Engine::with_tags("<?", "?>");
+//! let result = engine.render("Hello <? value ?>", data! { value: "World!" })?;
+//! assert_eq!(result, "Hello World!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! Transform data using filters.
+//!
+//! ```
+//! use upon::{data, Engine, Value};
+//!
+//! let mut engine = Engine::new();
+//! engine.add_filter("lower", |mut v| {
+//!     if let Value::String(s) = &mut v {
+//!         *s = s.to_lowercase();
+//!     }
+//!     v
+//! });
+//!
+//! let result = engine.render("Hello {{ value | lower }}", data! { value: "WORLD!" })?;
+//! assert_eq!(result, "Hello world!");
+//!
+//! # Ok::<(), upon::Error>(())
+//! ```
+
 mod ast;
 mod engine;
 mod macros;
@@ -8,6 +71,14 @@ use crate::ast::{Expr, Span};
 pub use crate::engine::Engine;
 pub use crate::result::{Error, Result};
 pub use crate::value::{to_value, Value};
+
+/// Render the template to a string using the provided data.
+pub fn render<S>(tmpl: &str, data: S) -> Result<String>
+where
+    S: serde::Serialize,
+{
+    Engine::new().compile(tmpl)?.render(data)
+}
 
 /// A compiled template.
 #[derive(Debug, Clone)]
