@@ -11,7 +11,7 @@ use crate::{Result, Template, Value};
 pub struct Engine<'e> {
     pub(crate) begin_tag: &'e str,
     pub(crate) end_tag: &'e str,
-    pub(crate) filters: HashMap<String, Arc<dyn Fn(Value) -> Value + 'e>>,
+    pub(crate) filters: HashMap<String, Arc<dyn Fn(Value) -> Value + Send + Sync + 'e>>,
 }
 
 impl Default for Engine<'_> {
@@ -39,7 +39,7 @@ impl<'e> Engine<'e> {
 
     pub fn add_filter<F>(&mut self, name: impl Into<String>, f: F)
     where
-        F: Fn(Value) -> Value + 'e,
+        F: Fn(Value) -> Value + Send + Sync + 'e,
     {
         self.filters.insert(name.into(), Arc::new(f));
     }
@@ -53,7 +53,7 @@ impl<'e> Engine<'e> {
     }
 
     pub fn compile(&'e self, source: &'e str) -> Result<Template<'e>> {
-        Template::with_env(source, self)
+        Template::with_engine(source, self)
     }
 
     /// Render the template to a string using the provided data.
@@ -71,7 +71,7 @@ impl fmt::Debug for Engine<'_> {
             .debug_map()
             .entries(self.filters.keys().map(|k| (k, "<filter>")))
             .finish();
-        f.debug_struct("Env")
+        f.debug_struct("Engine")
             .field("begin_tag", &self.begin_tag)
             .field("end_tag", &self.end_tag)
             .field("filters", &filters)

@@ -99,7 +99,7 @@ impl<'e> Template<'e> {
         self.source
     }
 
-    fn with_env(source: &'e str, engine: &'e Engine<'e>) -> Result<Self> {
+    fn with_engine(source: &'e str, engine: &'e Engine<'e>) -> Result<Self> {
         let mut cursor = 0;
         let mut subs = Vec::new();
 
@@ -160,11 +160,11 @@ impl<'e> Template<'e> {
     }
 }
 
-fn render_expr(source: &str, env: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
+fn render_expr(source: &str, engine: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
     match expr {
         Expr::Value(ast::Value { path, .. }) => data.lookup(source, path).map(|v| v.clone()),
-        Expr::Call(ast::Call { name, receiver, .. }) => match env.filters.get(name.ident) {
-            Some(f) => render_expr(source, env, data, receiver).map(&**f),
+        Expr::Call(ast::Call { name, receiver, .. }) => match engine.filters.get(name.ident) {
+            Some(f) => render_expr(source, engine, data, receiver).map(&**f),
             None => {
                 return Err(Error::span(
                     format!("function not found `{}`", name.ident),
@@ -183,20 +183,20 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn env_compile_no_tags() {
-        let env = Engine::new();
+    fn engine_compile_no_tags() {
+        let eng = Engine::new();
 
-        let t = env.compile("").unwrap();
+        let t = eng.compile("").unwrap();
         assert_eq!(t.subs, Vec::new());
 
-        let t = env.compile("just testing").unwrap();
+        let t = eng.compile("just testing").unwrap();
         assert_eq!(t.subs, Vec::new());
     }
 
     #[test]
-    fn env_compile_default_tags() {
-        let env = Engine::new();
-        let t = env.compile("test {{ basic }} test").unwrap();
+    fn engine_compile_default_tags() {
+        let eng = Engine::new();
+        let t = eng.compile("test {{ basic }} test").unwrap();
         let subs = vec![Sub {
             span: Span::new(5, 16),
             expr: Expr::Value(ast::Value {
@@ -211,9 +211,9 @@ mod tests {
     }
 
     #[test]
-    fn env_compile_custom_tags() {
-        let env = Engine::with_tags("<", "/>");
-        let t = env.compile("test <basic/> test").unwrap();
+    fn engine_compile_custom_tags() {
+        let eng = Engine::with_tags("<", "/>");
+        let t = eng.compile("test <basic/> test").unwrap();
         let subs = vec![Sub {
             span: Span::new(5, 13),
             expr: Expr::Value(ast::Value {
@@ -228,9 +228,9 @@ mod tests {
     }
 
     #[test]
-    fn env_compile_unclosed_tag() {
-        let env = Engine::new();
-        let err = env.compile("test {{ test").unwrap_err();
+    fn engine_compile_unclosed_tag() {
+        let eng = Engine::new();
+        let err = eng.compile("test {{ test").unwrap_err();
         assert_eq!(
             format!("{:#}", err),
             "
@@ -242,9 +242,9 @@ mod tests {
     }
 
     #[test]
-    fn env_compile_unexpected_end_tag() {
-        let env = Engine::new();
-        let err = env.compile("test }} test").unwrap_err();
+    fn engine_compile_unexpected_end_tag() {
+        let eng = Engine::new();
+        let err = eng.compile("test }} test").unwrap_err();
         assert_eq!(
             format!("{:#}", err),
             "
@@ -257,28 +257,28 @@ mod tests {
 
     #[test]
     fn template_render_basic() {
-        let env = Engine::new();
-        let t = env.compile("basic {{ here }}ment").unwrap();
+        let eng = Engine::new();
+        let t = eng.compile("basic {{ here }}ment").unwrap();
         let s = t.render(data! { here: "replace" }).unwrap();
         assert_eq!(s, "basic replacement");
     }
 
     #[test]
     fn template_render_nested() {
-        let env = Engine::new();
-        let t = env.compile("basic {{ here.nested }}ment").unwrap();
+        let eng = Engine::new();
+        let t = eng.compile("basic {{ here.nested }}ment").unwrap();
         let s = t.render(data! { here: { nested: "replace" }}).unwrap();
         assert_eq!(s, "basic replacement");
     }
 
     #[test]
     fn template_render_nested_filter() {
-        let mut env = Engine::new();
-        env.add_filter("lower", |v| match v {
+        let mut eng = Engine::new();
+        eng.add_filter("lower", |v| match v {
             Value::String(s) => Value::String(s.to_lowercase()),
             v => v,
         });
-        let t = env.compile("basic {{ here.nested | lower }}ment").unwrap();
+        let t = eng.compile("basic {{ here.nested | lower }}ment").unwrap();
         let s = t.render(data! { here: { nested: "RePlAcE" }}).unwrap();
         assert_eq!(s, "basic replacement");
     }
