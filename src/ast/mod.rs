@@ -38,15 +38,15 @@ pub struct Ident<'t> {
 }
 
 /// Parses an expression from a location in a template.
-pub fn parse_expr(tmpl: &str, span: Span) -> Result<Expr<'_>> {
-    let s = &tmpl[span];
+pub fn parse_expr(source: &str, span: Span) -> Result<Expr<'_>> {
+    let s = &source[span];
 
     // Tokenizes the input into words.
     let mut it = split(s, span, char::is_whitespace).filter(|(_, s)| !s.is_empty());
 
     let mut expr = match it.next() {
-        None => return Err(Error::span("expected value", tmpl, span)),
-        Some((span, token)) => Expr::Value(parse_value(tmpl, span, token)?),
+        None => return Err(Error::span("expected value", source, span)),
+        Some((span, token)) => Expr::Value(parse_value(source, span, token)?),
     };
 
     loop {
@@ -60,9 +60,9 @@ pub fn parse_expr(tmpl: &str, span: Span) -> Result<Expr<'_>> {
                         receiver: Box::new(expr),
                     })
                 }
-                None => return Err(Error::span("expected expression after pipe", tmpl, pspan)),
+                None => return Err(Error::span("expected expression after pipe", source, pspan)),
             },
-            Some((span, _)) => return Err(Error::span("unexpected token", tmpl, span)),
+            Some((span, _)) => return Err(Error::span("unexpected token", source, span)),
             None => break Ok(expr),
         }
     }
@@ -70,14 +70,14 @@ pub fn parse_expr(tmpl: &str, span: Span) -> Result<Expr<'_>> {
 
 /// Parses a value from a token in a template.
 ///
-/// - `tmpl` is the entire template
+/// - `source` is the entire template
 /// - `span` is the span of the given token.
-/// - `s` the token to parse
-fn parse_value<'t>(tmpl: &'t str, span: Span, token: &'t str) -> Result<Value<'t>> {
+/// - `token` the token to parse
+fn parse_value<'t>(source: &'t str, span: Span, token: &'t str) -> Result<Value<'t>> {
     let path: Vec<_> = split(token, span, |c| c == '.')
         .map(|(span, ident)| {
             if ident.is_empty() {
-                return Err(Error::span("invalid identifier", tmpl, span));
+                return Err(Error::span("invalid identifier", source, span));
             }
             Ok(Ident { span, ident })
         })
@@ -105,10 +105,10 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[track_caller]
-    fn parse_template(tmpl: &str) -> Result<Expr<'_>> {
-        let m = tmpl.find("{{").unwrap() + 2;
-        let n = tmpl.find("}}").unwrap();
-        parse_expr(tmpl, Span::new(m, n))
+    fn parse_template(source: &str) -> Result<Expr<'_>> {
+        let m = source.find("{{").unwrap() + 2;
+        let n = source.find("}}").unwrap();
+        parse_expr(source, Span::new(m, n))
     }
 
     #[test]

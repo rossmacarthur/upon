@@ -50,7 +50,7 @@ impl fmt::Display for Value {
 }
 
 impl Value {
-    pub(crate) fn lookup<'a>(&'a self, tmpl: &str, path: &[Ident]) -> Result<&'a Value> {
+    pub(crate) fn lookup<'a>(&'a self, source: &str, path: &[Ident]) -> Result<&'a Value> {
         let mut data = self;
 
         for Ident { span, ident: p } in path {
@@ -58,7 +58,7 @@ impl Value {
                 Value::None => {
                     return Err(Error::span(
                         format!("cannot index none with `{}`", p),
-                        tmpl,
+                        source,
                         *span,
                     ))
                 }
@@ -66,7 +66,7 @@ impl Value {
                 Value::String(_) => {
                     return Err(Error::span(
                         format!("cannot index string with `{}`", p),
-                        tmpl,
+                        source,
                         *span,
                     ))
                 }
@@ -76,7 +76,7 @@ impl Value {
                     Err(_) => {
                         return Err(Error::span(
                             format!("cannot index list with `{}`", p),
-                            tmpl,
+                            source,
                             *span,
                         ))
                     }
@@ -87,7 +87,7 @@ impl Value {
                     None => {
                         return Err(Error::span(
                             format!("key `{}` not found in map", p),
-                            tmpl,
+                            source,
                             *span,
                         ))
                     }

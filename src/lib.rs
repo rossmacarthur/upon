@@ -73,18 +73,18 @@ pub use crate::result::{Error, Result};
 pub use crate::value::{to_value, Value};
 
 /// Render the template to a string using the provided data.
-pub fn render<S>(tmpl: &str, data: S) -> Result<String>
+pub fn render<S>(source: &str, data: S) -> Result<String>
 where
     S: serde::Serialize,
 {
-    Engine::new().compile(tmpl)?.render(data)
+    Engine::new().compile(source)?.render(data)
 }
 
 /// A compiled template.
 #[derive(Debug, Clone)]
 pub struct Template<'e> {
     engine: &'e Engine<'e>,
-    tmpl: &'e str,
+    source: &'e str,
     subs: Vec<Sub<'e>>,
 }
 
@@ -95,37 +95,41 @@ struct Sub<'e> {
 }
 
 impl<'e> Template<'e> {
-    fn with_env(tmpl: &'e str, env: &'e Engine<'e>) -> Result<Self> {
+    pub fn source(&self) -> &'e str {
+        self.source
+    }
+
+    fn with_env(source: &'e str, engine: &'e Engine<'e>) -> Result<Self> {
         let mut cursor = 0;
         let mut subs = Vec::new();
 
         loop {
-            let (i, m) = match tmpl[cursor..].find(env.begin_tag) {
-                Some(m) => (m, m + env.begin_tag.len()),
+            let (i, m) = match source[cursor..].find(engine.begin_tag) {
+                Some(m) => (m, m + engine.begin_tag.len()),
                 None => {
-                    if let Some(n) = tmpl[cursor..].find(env.end_tag) {
-                        let span = Span::new(n, n + env.end_tag.len());
-                        return Err(Error::span("unexpected end tag", tmpl, span));
+                    if let Some(n) = source[cursor..].find(engine.end_tag) {
+                        let span = Span::new(n, n + engine.end_tag.len());
+                        return Err(Error::span("unexpected end tag", source, span));
                     }
                     return Ok(Template {
-                        engine: env,
-                        tmpl,
+                        engine,
+                        source,
                         subs,
                     });
                 }
             };
 
-            let (j, n) = match tmpl[m..].find(env.end_tag) {
-                Some(n) => (m + n + env.end_tag.len(), m + n),
+            let (j, n) = match source[m..].find(engine.end_tag) {
+                Some(n) => (m + n + engine.end_tag.len(), m + n),
                 None => {
                     let span = Span::new(i, m);
-                    return Err(Error::span("unclosed tag", tmpl, span));
+                    return Err(Error::span("unclosed tag", source, span));
                 }
             };
 
             let outer = Span::new(i, j);
             let inner = Span::new(m, n);
-            let expr = ast::parse_expr(tmpl, inner)?;
+            let expr = ast::parse_expr(source, inner)?;
             subs.push(Sub { span: outer, expr });
 
             cursor = j;
@@ -145,26 +149,26 @@ impl<'e> Template<'e> {
         let mut s = String::new();
         let mut i = 0;
         for Sub { span, expr } in &self.subs {
-            s.push_str(&self.tmpl[i..span.m]);
+            s.push_str(&self.source[i..span.m]);
             i = span.n;
-            let value = render_expr(self.tmpl, self.engine, &data, expr)?;
+            let value = render_expr(self.source, self.engine, &data, expr)?;
             s.push_str(&value.to_string());
         }
-        s.push_str(&self.tmpl[i..]);
+        s.push_str(&self.source[i..]);
 
         Ok(s)
     }
 }
 
-fn render_expr(tmpl: &str, env: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
+fn render_expr(source: &str, env: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
     match expr {
-        Expr::Value(ast::Value { path, .. }) => data.lookup(tmpl, path).map(|v| v.clone()),
+        Expr::Value(ast::Value { path, .. }) => data.lookup(source, path).map(|v| v.clone()),
         Expr::Call(ast::Call { name, receiver, .. }) => match env.filters.get(name.ident) {
-            Some(f) => render_expr(tmpl, env, data, receiver).map(&**f),
+            Some(f) => render_expr(source, env, data, receiver).map(&**f),
             None => {
                 return Err(Error::span(
                     format!("function not found `{}`", name.ident),
-                    tmpl,
+                    source,
                     name.span,
                 ))
             }

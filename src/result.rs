@@ -16,11 +16,11 @@ pub struct Error {
 }
 
 impl Error {
-    pub(crate) fn span(msg: impl Into<String>, tmpl: &str, span: Span) -> Self {
-        assert!(!tmpl.is_empty(), "tmpl must be populated");
+    pub(crate) fn span(msg: impl Into<String>, source: &str, span: Span) -> Self {
+        assert!(!source.is_empty(), "source must be populated");
         Self {
             msg: msg.into(),
-            span: Some((tmpl.to_string(), span)),
+            span: Some((source.to_string(), span)),
         }
     }
 }
@@ -42,7 +42,7 @@ impl std::error::Error for Error {}
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.span {
-            Some((tmpl, span)) => fmt_pretty(&self.msg, tmpl, *span, f),
+            Some((source, span)) => fmt_pretty(&self.msg, source, *span, f),
             None => write!(f, "{}", self.msg),
         }
     }
@@ -51,9 +51,9 @@ impl fmt::Debug for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.span {
-            Some((tmpl, span)) => {
+            Some((source, span)) => {
                 if f.alternate() {
-                    fmt_pretty(&self.msg, tmpl, *span, f)
+                    fmt_pretty(&self.msg, source, *span, f)
                 } else {
                     write!(f, "{} between bytes {} and {}", self.msg, span.m, span.n)
                 }
@@ -63,10 +63,10 @@ impl fmt::Display for Error {
     }
 }
 
-fn fmt_pretty(msg: &str, tmpl: &str, span: Span, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let lines: Vec<_> = tmpl.split_terminator('\n').collect();
+fn fmt_pretty(msg: &str, source: &str, span: Span, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let lines: Vec<_> = source.split_terminator('\n').collect();
     let (line, col) = to_line_col(&lines, span.m);
-    let width = max(1, tmpl[span].width());
+    let width = max(1, source[span].width());
     let code = lines.get(line).unwrap_or_else(|| lines.last().unwrap());
 
     let num = (line + 1).to_string();

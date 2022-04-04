@@ -52,16 +52,16 @@ impl<'e> Engine<'e> {
         self.filters.remove(name);
     }
 
-    pub fn compile(&'e self, tmpl: &'e str) -> Result<Template<'e>> {
-        Template::with_env(tmpl, self)
+    pub fn compile(&'e self, source: &'e str) -> Result<Template<'e>> {
+        Template::with_env(source, self)
     }
 
     /// Render the template to a string using the provided data.
-    pub fn render<S>(&'e self, tmpl: &str, data: S) -> Result<String>
+    pub fn render<S>(&'e self, source: &str, data: S) -> Result<String>
     where
         S: serde::Serialize,
     {
-        self.compile(tmpl)?.render(data)
+        self.compile(source)?.render(data)
     }
 }
 
