@@ -104,10 +104,10 @@ impl<'e> Template<'e> {
         let mut subs = Vec::new();
 
         loop {
-            let (i, m) = match source[cursor..].find(engine.begin_tag) {
+            let (i, m) = match source[cursor..].find(engine.begin_tag).map(|x| cursor + x) {
                 Some(m) => (m, m + engine.begin_tag.len()),
                 None => {
-                    if let Some(n) = source[cursor..].find(engine.end_tag) {
+                    if let Some(n) = source[cursor..].find(engine.end_tag).map(|x| cursor + x) {
                         let span = Span::new(n, n + engine.end_tag.len());
                         return Err(Error::span("unexpected end tag", source, span));
                     }
@@ -261,6 +261,14 @@ mod tests {
         let t = eng.compile("basic {{ here }}ment").unwrap();
         let s = t.render(data! { here: "replace" }).unwrap();
         assert_eq!(s, "basic replacement");
+    }
+
+    #[test]
+    fn template_render_multiple() {
+        let eng = Engine::new();
+        let t = eng.compile("basic {{ here }}ment and {{ p }}ain").unwrap();
+        let s = t.render(data! { here: "replace", p: "ag" }).unwrap();
+        assert_eq!(s, "basic replacement and again");
     }
 
     #[test]
