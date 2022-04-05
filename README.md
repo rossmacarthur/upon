@@ -4,57 +4,77 @@ A tiny, configurable find-and-replace template engine.
 
 ## Features
 
-- Rendering values, e.g. `{{ path.to.value }}`
+- Rendering values, e.g. `{{ user.name }}`
 - Configurable template tags, e.g. `<? value ?>`
-- Arbitrary filter functions, e.g. `{{ value | filter }}`
+- Arbitrary filter functions to transform data, e.g. `{{ value | my_filter }}`
 
-## Examples
+ ## Examples
 
-Render data constructed using the macro.
+ #### Render data constructed using the macro
 
 ```rust
-use upon::data;
+use upon::{Engine, data};
 
-let result = upon::render("Hello {{ value }}", data! { value: "World!" })?;
+let result = Engine::new()
+   .compile("Hello {{ value }}")?
+   .render(data! { value: "World!" })?;
+
 assert_eq!(result, "Hello World!");
 ```
 
-Render using structured data.
-
-```rust
-#[derive(serde::Serialize)]
-struct Data {
-    value: String
-}
-
-let result = upon::render("Hello {{ value }}", Data { value: "World!".into() })?;
-assert_eq!(result, "Hello World!");
-```
-
-Render a template using custom tags.
+### Render a template using custom tags
 
 ```rust
 use upon::{data, Engine};
 
-let engine = Engine::with_tags("<?", "?>");
-let result = engine.render("Hello <? value ?>", data! { value: "World!" })?;
+let result = Engine::with_tags("<?", "?>")
+   .compile("Hello <? value ?>")?
+   .render(data! { value: "World!" })?;
+
 assert_eq!(result, "Hello World!");
 ```
 
-Transform data using filters.
+### Render using structured data
+
+```rust
+use upon::Engine;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct Data {
+   user: User,
+}
+#[derive(Serialize)]
+struct User {
+   name: String,
+}
+
+let data = Data { user: User { name: "John Smith".into() } };
+
+let result = Engine::new().compile("Hello {{ user.name }}")?.render(data)?;
+
+assert_eq!(result, "Hello John Smith");
+```
+
+### Transform data using filters
 
 ```rust
 use upon::{data, Engine, Value};
 
-let mut engine = Engine::new();
-engine.add_filter("lower", |mut v| {
-    if let Value::String(s) = &mut v {
+fn lower(mut v: Value) -> Value {
+   if let Value::String(s) = &mut v {
        *s = s.to_lowercase();
-    }
-    v
-});
+   }
+   v
+}
 
-let result = engine.render("Hello {{ value | lower }}", data! { value: "WORLD!" })?;
+let mut engine = Engine::new();
+engine.add_filter("lower", lower);
+
+let result = engine
+   .compile("Hello {{ value | lower }}")?
+   .render(data! { value: "WORLD!" })?;
+
 assert_eq!(result, "Hello world!");
 ```
 

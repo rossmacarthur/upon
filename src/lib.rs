@@ -2,62 +2,95 @@
 //!
 //! # Features
 //!
-//! - Rendering values, e.g. `{{ path.to.value }}`
+//! - Rendering values, e.g. `{{ user.name }}`
 //! - Configurable template tags, e.g. `<? value ?>`
-//! - Arbitrary filter functions, e.g. `{{ value | filter }}`
+//! - Arbitrary filter functions to transform data, e.g. `{{ value | my_filter }}`
 //!
 //! # Examples
 //!
-//! Render data constructed using the macro.
+//! ### Render data constructed using the macro
 //!
 //! ```
-//! use upon::data;
+//! use upon::{Engine, data};
 //!
-//! let result = upon::render("Hello {{ value }}", data! { value: "World!" })?;
+//! let result = Engine::new()
+//!     .compile("Hello {{ value }}")?
+//!     .render(data! { value: "World!" })?;
+//!
 //! assert_eq!(result, "Hello World!");
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! Render using structured data.
-//!
-//! ```
-//! #[derive(serde::Serialize)]
-//! struct Data {
-//!     value: String
-//! }
-//!
-//! let result = upon::render("Hello {{ value }}", Data { value: "World!".into() })?;
-//! assert_eq!(result, "Hello World!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! Render a template using custom tags.
+//! ### Render a template using custom tags
 //!
 //! ```
 //! use upon::{data, Engine};
 //!
-//! let engine = Engine::with_tags("<?", "?>");
-//! let result = engine.render("Hello <? value ?>", data! { value: "World!" })?;
+//! let result = Engine::with_tags("<?", "?>")
+//!     .compile("Hello <? value ?>")?
+//!     .render(data! { value: "World!" })?;
+//!
 //! assert_eq!(result, "Hello World!");
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! Transform data using filters.
+//! ### Render using structured data
+//!
+//! ```
+//! use upon::Engine;
+//! use serde::Serialize;
+//!
+//! #[derive(Serialize)]
+//! struct Data {
+//!     user: User,
+//! }
+//! #[derive(Serialize)]
+//! struct User {
+//!     name: String,
+//! }
+//!
+//! let data = Data { user: User { name: "John Smith".into() } };
+//!
+//! let result = Engine::new().compile("Hello {{ user.name }}")?.render(data)?;
+//!
+//! assert_eq!(result, "Hello John Smith");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! ### Named templates
+//!
+//! ```
+//! use upon::{data, Engine};
+//!
+//! let mut engine = Engine::new();
+//! engine.add_template("hello", "Hello {{ value }}")?;
+//!
+//! let result = engine.render("hello", data! { value: "World!" })?;
+//!
+//! assert_eq!(result, "Hello World!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! ### Transform data using filters
 //!
 //! ```
 //! use upon::{data, Engine, Value};
 //!
-//! let mut engine = Engine::new();
-//! engine.add_filter("lower", |mut v| {
+//! fn lower(mut v: Value) -> Value {
 //!     if let Value::String(s) = &mut v {
 //!         *s = s.to_lowercase();
 //!     }
 //!     v
-//! });
+//! }
 //!
-//! let result = engine.render("Hello {{ value | lower }}", data! { value: "WORLD!" })?;
+//! let mut engine = Engine::new();
+//! engine.add_filter("lower", lower);
+//!
+//! let result = engine
+//!     .compile("Hello {{ value | lower }}")?
+//!     .render(data! { value: "WORLD!" })?;
+//!
 //! assert_eq!(result, "Hello world!");
-//!
 //! # Ok::<(), upon::Error>(())
 //! ```
 
@@ -72,18 +105,15 @@ pub use crate::engine::Engine;
 pub use crate::result::{Error, Result};
 pub use crate::value::{to_value, Value};
 
-/// Render the template to a string using the provided data.
-pub fn render<S>(source: &str, data: S) -> Result<String>
-where
-    S: serde::Serialize,
-{
-    Engine::new().compile(source)?.render(data)
-}
-
 /// A compiled template.
 #[derive(Debug, Clone)]
 pub struct Template<'e> {
     engine: &'e Engine<'e>,
+    template: RawTemplate<'e>,
+}
+
+#[derive(Debug, Clone)]
+struct RawTemplate<'e> {
     source: &'e str,
     subs: Vec<Sub<'e>>,
 }
@@ -95,11 +125,28 @@ struct Sub<'e> {
 }
 
 impl<'e> Template<'e> {
-    pub fn source(&self) -> &'e str {
-        self.source
+    fn compile(engine: &'e Engine<'e>, source: &'e str) -> Result<Self> {
+        let template = RawTemplate::compile(engine, source)?;
+        Ok(Self { engine, template })
     }
 
-    fn with_engine(source: &'e str, engine: &'e Engine<'e>) -> Result<Self> {
+    #[inline]
+    pub fn source(&self) -> &'e str {
+        self.template.source
+    }
+
+    /// Render the template to a string using the provided data.
+    #[inline]
+    pub fn render<S>(&self, data: S) -> Result<String>
+    where
+        S: serde::Serialize,
+    {
+        self.template.render(self.engine, data)
+    }
+}
+
+impl<'e> RawTemplate<'e> {
+    fn compile(engine: &Engine<'_>, source: &'e str) -> Result<Self> {
         let mut cursor = 0;
         let mut subs = Vec::new();
 
@@ -111,11 +158,7 @@ impl<'e> Template<'e> {
                         let span = Span::new(n, n + engine.end_tag.len());
                         return Err(Error::span("unexpected end tag", source, span));
                     }
-                    return Ok(Template {
-                        engine,
-                        source,
-                        subs,
-                    });
+                    return Ok(Self { source, subs });
                 }
             };
 
@@ -136,22 +179,22 @@ impl<'e> Template<'e> {
         }
     }
 
-    /// Render the template to a string using the provided data.
-    pub fn render<S>(&self, data: S) -> Result<String>
+    #[inline]
+    fn render<S>(&self, engine: &Engine<'_>, data: S) -> Result<String>
     where
         S: serde::Serialize,
     {
         let data = to_value(data).unwrap();
-        self._render(data)
+        self._render(engine, data)
     }
 
-    fn _render(&self, data: Value) -> Result<String> {
+    fn _render(&self, engine: &Engine<'_>, data: Value) -> Result<String> {
         let mut s = String::new();
         let mut i = 0;
         for Sub { span, expr } in &self.subs {
             s.push_str(&self.source[i..span.m]);
             i = span.n;
-            let value = render_expr(self.source, self.engine, &data, expr)?;
+            let value = render_expr(engine, self.source, &data, expr)?;
             s.push_str(&value.to_string());
         }
         s.push_str(&self.source[i..]);
@@ -160,11 +203,11 @@ impl<'e> Template<'e> {
     }
 }
 
-fn render_expr(source: &str, engine: &Engine<'_>, data: &Value, expr: &Expr<'_>) -> Result<Value> {
+fn render_expr(engine: &Engine<'_>, source: &str, data: &Value, expr: &Expr<'_>) -> Result<Value> {
     match expr {
         Expr::Value(ast::Value { path, .. }) => data.lookup(source, path).map(|v| v.clone()),
         Expr::Call(ast::Call { name, receiver, .. }) => match engine.filters.get(name.ident) {
-            Some(f) => render_expr(source, engine, data, receiver).map(&**f),
+            Some(f) => render_expr(engine, source, data, receiver).map(&**f),
             None => {
                 return Err(Error::span(
                     format!("function not found `{}`", name.ident),
@@ -187,10 +230,10 @@ mod tests {
         let eng = Engine::new();
 
         let t = eng.compile("").unwrap();
-        assert_eq!(t.subs, Vec::new());
+        assert_eq!(t.template.subs, Vec::new());
 
         let t = eng.compile("just testing").unwrap();
-        assert_eq!(t.subs, Vec::new());
+        assert_eq!(t.template.subs, Vec::new());
     }
 
     #[test]
@@ -207,7 +250,7 @@ mod tests {
                 }],
             }),
         }];
-        assert_eq!(t.subs, subs);
+        assert_eq!(t.template.subs, subs);
     }
 
     #[test]
@@ -224,7 +267,7 @@ mod tests {
                 }],
             }),
         }];
-        assert_eq!(t.subs, subs);
+        assert_eq!(t.template.subs, subs);
     }
 
     #[test]
@@ -244,13 +287,13 @@ mod tests {
     #[test]
     fn engine_compile_unexpected_end_tag() {
         let eng = Engine::new();
-        let err = eng.compile("test }} test").unwrap_err();
+        let err = eng.compile("{{ test }} test }} test").unwrap_err();
         assert_eq!(
             format!("{:#}", err),
             "
    |
- 1 | test }} test
-   |      ^^ unexpected end tag
+ 1 | {{ test }} test }} test
+   |                 ^^ unexpected end tag
 "
         )
     }
