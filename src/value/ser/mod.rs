@@ -25,6 +25,9 @@ impl Serialize for Value {
     {
         match self {
             Value::None => serializer.serialize_unit(),
+            Value::Bool(b) => serializer.serialize_bool(*b),
+            Value::Integer(i) => serializer.serialize_i64(*i),
+            Value::Float(f) => serializer.serialize_f64(*f),
             Value::String(string) => serializer.serialize_str(string),
             Value::List(list) => list.serialize(serializer),
             Value::Map(map) => {
@@ -58,48 +61,50 @@ impl serde::Serializer for Serializer {
     type SerializeTupleVariant = SerializeTupleVariant;
     type SerializeStructVariant = SerializeStructVariant;
 
-    fn serialize_bool(self, _v: bool) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_bool(self, v: bool) -> Result<Self::Ok> {
+        Ok(Value::Bool(v))
     }
 
-    fn serialize_i8(self, _v: i8) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_i8(self, v: i8) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::from(v)))
     }
 
-    fn serialize_i16(self, _v: i16) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_i16(self, v: i16) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::from(v)))
     }
 
-    fn serialize_i32(self, _v: i32) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_i32(self, v: i32) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::from(v)))
     }
 
-    fn serialize_i64(self, _v: i64) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_i64(self, v: i64) -> Result<Self::Ok> {
+        Ok(Value::Integer(v))
     }
 
-    fn serialize_u8(self, _v: u8) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_u8(self, v: u8) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::from(v)))
     }
 
-    fn serialize_u16(self, _v: u16) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_u16(self, v: u16) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::from(v)))
     }
 
-    fn serialize_u32(self, _v: u32) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_u32(self, v: u32) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::from(v)))
     }
 
-    fn serialize_u64(self, _v: u64) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
+        Ok(Value::Integer(i64::try_from(v).map_err(|_| {
+            Error::custom("out of range integral type conversion attempted")
+        })?))
     }
 
-    fn serialize_f32(self, _v: f32) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_f32(self, v: f32) -> Result<Self::Ok> {
+        Ok(Value::Float(f64::from(v)))
     }
 
-    fn serialize_f64(self, _v: f64) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_f64(self, v: f64) -> Result<Self::Ok> {
+        Ok(Value::Float(v))
     }
 
     fn serialize_char(self, v: char) -> Result<Self::Ok> {
@@ -110,8 +115,14 @@ impl serde::Serializer for Serializer {
         Ok(Value::String(String::from(v)))
     }
 
-    fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok> {
-        Err(err_unsupported_type())
+    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok> {
+        Ok(Value::List(
+            v.iter()
+                .copied()
+                .map(i64::from)
+                .map(Value::Integer)
+                .collect(),
+        ))
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
@@ -213,8 +224,4 @@ impl serde::Serializer for Serializer {
             map: Map::with_capacity(len),
         })
     }
-}
-
-fn err_unsupported_type() -> Error {
-    Error::custom("unsupported type")
 }

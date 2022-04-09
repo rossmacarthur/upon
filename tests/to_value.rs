@@ -5,9 +5,30 @@ use serde::Serialize;
 use upon::value::{to_value, List, Map, Value};
 
 #[test]
-fn to_value_unsupported_err() {
-    let err = to_value(true).unwrap_err().to_string();
-    assert_eq!(err.to_string(), "unsupported type");
+fn to_value_bool() {
+    assert_eq!(to_value(true).unwrap(), Value::Bool(true));
+    assert_eq!(to_value(false).unwrap(), Value::Bool(false));
+}
+
+#[test]
+fn to_value_integer() {
+    assert_eq!(to_value(123_i8).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_i16).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_i32).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_i64).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_u8).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_u16).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_u32).unwrap(), Value::Integer(123));
+    assert_eq!(to_value(123_u64).unwrap(), Value::Integer(123));
+}
+
+#[test]
+fn to_value_out_of_range_integral() {
+    let err = to_value(u64::MAX).unwrap_err().to_string();
+    assert_eq!(
+        err.to_string(),
+        "out of range integral type conversion attempted"
+    );
 }
 
 #[test]
@@ -21,6 +42,19 @@ fn to_value_str() {
         to_value("testing...").unwrap(),
         Value::String(String::from("testing..."))
     );
+}
+
+#[test]
+fn to_value_bytes() {
+    assert_eq!(
+        to_value(&[1u8, 2, 3, 4]).unwrap(),
+        Value::List(vec![
+            Value::Integer(1),
+            Value::Integer(2),
+            Value::Integer(3),
+            Value::Integer(4)
+        ]),
+    )
 }
 
 #[test]

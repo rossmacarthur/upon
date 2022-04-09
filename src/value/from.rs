@@ -8,6 +8,38 @@ impl From<()> for Value {
     }
 }
 
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Self::Bool(b)
+    }
+}
+
+macro_rules! impl_from_int {
+    ($($ty:ty)+) => {
+        $(
+            impl From<$ty> for Value {
+                fn from(i: $ty) -> Self {
+                    Self::Integer(i64::from(i))
+                }
+            }
+        )+
+    };
+}
+
+impl_from_int! { u8 u16 u32 i8 i16 i32 i64 }
+
+impl From<f32> for Value {
+    fn from(f: f32) -> Self {
+        Self::Float(f64::from(f))
+    }
+}
+
+impl From<f64> for Value {
+    fn from(f: f64) -> Self {
+        Self::Float(f64::from(f))
+    }
+}
+
 impl From<String> for Value {
     fn from(s: String) -> Self {
         Self::String(s)

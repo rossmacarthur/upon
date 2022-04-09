@@ -170,6 +170,14 @@ macro_rules! _data {
         $crate::Value::None
     };
 
+    (false) => {
+        $crate::Value::Bool(false)
+    };
+
+    (true) => {
+        $crate::Value::Bool(false)
+    };
+
     ([]) => {
         $crate::Value::List($crate::_data_list![])
     };
