@@ -55,7 +55,7 @@ pub fn parse_expr(source: &str, span: Span) -> Result<Expr<'_>> {
                 Some((span, ident)) => {
                     let name = Ident { span, ident };
                     expr = Expr::Call(Call {
-                        span: pspan.union(span),
+                        span: pspan.combine(span),
                         name,
                         receiver: Box::new(expr),
                     })
@@ -82,7 +82,7 @@ fn parse_value<'t>(source: &'t str, span: Span, token: &'t str) -> Result<Value<
             Ok(Ident { span, ident })
         })
         .collect::<Result<_>>()?;
-    let span = path[0].span.union(path[path.len() - 1].span);
+    let span = path[0].span.combine(path[path.len() - 1].span);
     Ok(Value { span, path })
 }
 
