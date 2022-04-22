@@ -1,5 +1,5 @@
 use std::cmp::{max, min};
-use std::ops::Index;
+use std::ops::{Index, Range};
 
 #[cfg(test)]
 use serde::Serialize;
@@ -29,5 +29,14 @@ impl Index<Span> for str {
     fn index(&self, span: Span) -> &Self::Output {
         let Span { m, n } = span;
         &self[m..n]
+    }
+}
+
+impl From<Range<usize>> for Span {
+    fn from(r: Range<usize>) -> Self {
+        Self {
+            m: r.start,
+            n: r.end,
+        }
     }
 }

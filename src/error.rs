@@ -16,11 +16,11 @@ pub struct Error {
 }
 
 impl Error {
-    pub(crate) fn span(msg: impl Into<String>, source: &str, span: Span) -> Self {
+    pub(crate) fn span(msg: impl Into<String>, source: &str, span: impl Into<Span>) -> Self {
         assert!(!source.is_empty(), "source must be populated");
         Self {
             msg: msg.into(),
-            span: Some((source.to_string(), span)),
+            span: Some((source.to_string(), span.into())),
         }
     }
 }
