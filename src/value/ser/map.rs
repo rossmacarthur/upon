@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::ser::{Error as _, Impossible};
 
-use crate::result::{Error, Result};
+use crate::error::{Error, Result};
 use crate::value::ser::to_value;
 use crate::value::{Map, Value};
 

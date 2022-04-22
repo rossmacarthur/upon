@@ -96,13 +96,13 @@
 
 mod ast;
 mod engine;
+mod error;
 mod macros;
-mod result;
 pub mod value;
 
 use crate::ast::{Expr, Span};
 pub use crate::engine::Engine;
-pub use crate::result::{Error, Result};
+pub use crate::error::{Error, Result};
 pub use crate::value::{to_value, Value};
 
 /// A compiled template.

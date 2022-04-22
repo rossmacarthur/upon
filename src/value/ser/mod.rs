@@ -4,7 +4,7 @@ mod variants;
 
 use serde::ser::{Error as _, Serialize};
 
-use crate::result::{Error, Result};
+use crate::error::{Error, Result};
 use crate::value::ser::list::SerializeList;
 use crate::value::ser::map::SerializeMap;
 use crate::value::ser::variants::{SerializeStructVariant, SerializeTupleVariant};

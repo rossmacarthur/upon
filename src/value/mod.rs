@@ -7,7 +7,7 @@ use std::mem;
 pub use std::vec::Vec as List;
 
 use crate::ast::Ident;
-use crate::result::{Error, Result};
+use crate::error::{Error, Result};
 pub use crate::value::ser::to_value;
 
 /// Data to be rendered represented as a recursive enum.

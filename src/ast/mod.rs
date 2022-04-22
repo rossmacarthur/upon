@@ -6,7 +6,7 @@ mod span;
 use serde::Serialize;
 
 pub use crate::ast::span::Span;
-pub use crate::result::{Error, Result};
+pub use crate::error::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(Serialize))]
