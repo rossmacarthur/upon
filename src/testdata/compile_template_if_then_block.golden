@@ -1,0 +1,36 @@
+Template {
+    source: "lorem {% if another %} ipsum {% endif %} dolor",
+    scope: Scope {
+        stmts: [
+            Raw(
+                "lorem ",
+            ),
+            IfElse(
+                IfElse {
+                    cond: Var(
+                        Var {
+                            path: [
+                                Ident {
+                                    ident: "another",
+                                    span: (12, 19),
+                                },
+                            ],
+                            span: (12, 19),
+                        },
+                    ),
+                    then_branch: Scope {
+                        stmts: [
+                            Raw(
+                                " ipsum ",
+                            ),
+                        ],
+                    },
+                    else_branch: None,
+                },
+            ),
+            Raw(
+                " dolor",
+            ),
+        ],
+    },
+}

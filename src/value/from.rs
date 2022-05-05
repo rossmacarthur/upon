@@ -36,7 +36,7 @@ impl From<f32> for Value {
 
 impl From<f64> for Value {
     fn from(f: f64) -> Self {
-        Self::Float(f64::from(f))
+        Self::Float(f)
     }
 }
 

@@ -1,14 +1,17 @@
 use std::cmp::{max, min};
+use std::fmt;
 use std::ops::{Index, Range};
 
-#[cfg(test)]
-use serde::Serialize;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(test, derive(Serialize))]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub m: usize,
     pub n: usize,
+}
+
+impl fmt::Debug for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.m, self.n)
+    }
 }
 
 impl Span {

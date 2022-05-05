@@ -1,10 +1,11 @@
-//! A tiny, configurable find-and-replace template engine.
+//! A tiny template engine.
 //!
 //! # Features
 //!
-//! - Rendering values, e.g. `{{ user.name }}`
-//! - Configurable template tags, e.g. `<? value ?>`
-//! - Arbitrary filter functions to transform data, e.g. `{{ value | my_filter }}`
+//! - Configurable template delimiters: `<? value ?>`
+//! - Rendering values: `{{ user.name }}`
+//! - Conditionals: `{% if user.enabled %} User is enabled {% endif %}`
+//! - Customizable filter functions: `{{ value | my_filter }}`
 //!
 //! # Examples
 //!
@@ -24,9 +25,9 @@
 //! ### Render a template using custom tags
 //!
 //! ```
-//! use upon::{data, Engine};
+//! use upon::{data, Engine, Delimiters};
 //!
-//! let result = Engine::with_tags("<?", "?>")
+//! let result = Engine::with_delims(Delimiters::new("<?", "?>", "<%", "%>"))
 //!     .compile("Hello <? value ?>")?
 //!     .render(data! { value: "World!" })?;
 //!
@@ -95,38 +96,215 @@
 //! ```
 
 mod ast;
-mod engine;
+mod compile;
 mod error;
+mod lex;
 mod macros;
+mod span;
 pub mod value;
 
-use crate::ast::{Expr, Span};
-pub use crate::engine::Engine;
+use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::fmt;
+use std::hash::Hash;
+use std::sync::Arc;
+
 pub use crate::error::{Error, Result};
+use crate::span::Span;
 pub use crate::value::{to_value, Value};
+
+/// The compilation and rendering engine.
+#[derive(Clone)]
+pub struct Engine<'e> {
+    delims: Delimiters<'e>,
+    templates: HashMap<String, ast::Template<'e>>,
+    filters: HashMap<String, Arc<dyn Fn(Value) -> Value + Send + Sync + 'e>>,
+}
+
+/// Delimiter configuration.
+#[derive(Debug, Clone)]
+pub struct Delimiters<'e> {
+    begin_expr: &'e str,
+    end_expr: &'e str,
+    begin_block: &'e str,
+    end_block: &'e str,
+}
 
 /// A compiled template.
 #[derive(Debug, Clone)]
 pub struct Template<'e> {
     engine: &'e Engine<'e>,
-    template: RawTemplate<'e>,
+    template: ast::Template<'e>,
 }
 
-#[derive(Debug, Clone)]
-struct RawTemplate<'e> {
-    source: &'e str,
-    subs: Vec<Sub<'e>>,
+impl<'e> Default for Engine<'e> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Sub<'e> {
-    span: Span,
-    expr: Expr<'e>,
+impl<'e> Engine<'e> {
+    pub fn new() -> Self {
+        Self {
+            delims: Delimiters::default(),
+            templates: HashMap::new(),
+            filters: HashMap::new(),
+        }
+    }
+
+    pub fn with_delims(delims: Delimiters<'e>) -> Self {
+        Self {
+            delims,
+            templates: HashMap::new(),
+            filters: HashMap::new(),
+        }
+    }
+
+    pub fn add_filter<F>(&mut self, name: impl Into<String>, f: F)
+    where
+        F: Fn(Value) -> Value + Send + Sync + 'e,
+    {
+        self.filters.insert(name.into(), Arc::new(f));
+    }
+
+    pub fn remove_filter<Q: ?Sized>(&mut self, name: &Q)
+    where
+        String: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.filters.remove(name);
+    }
+
+    /// Add a new named template to the engine.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use upon::{data, Engine};
+    ///
+    /// let mut engine = Engine::new();
+    /// engine.add_template("hello", "Hello {{ test }}!")?;
+    /// # Ok::<(), upon::Error>(())
+    /// ```
+    pub fn add_template(&mut self, name: impl Into<String>, source: &'e str) -> Result<()> {
+        let t = compile::template(source, &self.delims)?;
+        self.templates.insert(name.into(), t);
+        Ok(())
+    }
+
+    /// Remove a named template from the engine.
+    ///
+    /// # Panics
+    ///
+    /// If the template does not exist.
+    #[track_caller]
+    pub fn remove_template(&mut self, name: &'e str) {
+        self.templates.remove(name).unwrap();
+    }
+
+    /// Compile an unamed template and return it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use upon::{data, Engine};
+    ///
+    /// let engine = Engine::new();
+    ///
+    ///  let result = engine
+    ///     .compile("Hello {{ test }}!")?
+    ///     .render(data! { test: "World" })?;
+    ///
+    /// assert_eq!(result, "Hello World!");
+    /// # Ok::<(), upon::Error>(())
+    /// ```
+    pub fn compile(&'e self, source: &'e str) -> Result<Template<'e>> {
+        Template::compile(self, source)
+    }
+
+    /// Render a named template to a string using the provided data.
+    ///
+    /// # Panics
+    ///
+    /// If the template does not exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use upon::{data, Engine};
+    ///
+    /// let mut engine = Engine::new();
+    /// engine.add_template("hello", "Hello {{ test }}!")?;
+    ///
+    /// let result = engine.render("hello", data! { test: "World" })?;
+    ///
+    /// assert_eq!(result, "Hello World!");
+    /// # Ok::<(), upon::Error>(())
+    /// ```
+    pub fn render<S>(&'e self, _name: &str, _data: S) -> Result<String>
+    where
+        S: serde::Serialize,
+    {
+        todo!()
+    }
+}
+
+impl fmt::Debug for Engine<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let filters = f
+            .debug_map()
+            .entries(self.filters.keys().map(|k| (k, "<filter>")))
+            .finish();
+        f.debug_struct("Engine")
+            .field("delims", &self.delims)
+            .field("templates", &self.templates)
+            .field("filters", &filters)
+            .finish()
+    }
+}
+
+impl Default for Delimiters<'_> {
+    fn default() -> Self {
+        Self::new("{{", "}}", "{%", "%}")
+    }
+}
+
+impl<'e> Delimiters<'e> {
+    /// Returns a new tag configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use upon::Delimiters;
+    ///
+    /// // Like Liquid / Jinja, this is the same as `Delimiters::default()`
+    /// let delims = Delimiters::new("{{", "}}", "{%", "%}");
+    ///
+    /// // Use single braces for expressions and double braces for blocks
+    /// let delims = Delimiters::new("{", "}", "{{", "}}");
+    ///
+    /// // Completely custom!
+    /// let delims = Delimiters::new("<?", "?>", "<%", "%>");
+    /// ```
+    pub const fn new(
+        begin_expr: &'e str,
+        end_expr: &'e str,
+        begin_block: &'e str,
+        end_block: &'e str,
+    ) -> Self {
+        Self {
+            begin_expr,
+            end_expr,
+            begin_block,
+            end_block,
+        }
+    }
 }
 
 impl<'e> Template<'e> {
+    #[inline]
     fn compile(engine: &'e Engine<'e>, source: &'e str) -> Result<Self> {
-        let template = RawTemplate::compile(engine, source)?;
+        let template = compile::template(source, &engine.delims)?;
         Ok(Self { engine, template })
     }
 
@@ -137,200 +315,10 @@ impl<'e> Template<'e> {
 
     /// Render the template to a string using the provided data.
     #[inline]
-    pub fn render<S>(&self, data: S) -> Result<String>
+    pub fn render<S>(&self, _data: S) -> Result<String>
     where
         S: serde::Serialize,
     {
-        self.template.render(self.engine, data)
-    }
-}
-
-impl<'e> RawTemplate<'e> {
-    fn compile(engine: &Engine<'_>, source: &'e str) -> Result<Self> {
-        let mut cursor = 0;
-        let mut subs = Vec::new();
-
-        loop {
-            let (i, m) = match source[cursor..].find(engine.begin_tag).map(|x| cursor + x) {
-                Some(m) => (m, m + engine.begin_tag.len()),
-                None => {
-                    if let Some(n) = source[cursor..].find(engine.end_tag).map(|x| cursor + x) {
-                        let span = Span::new(n, n + engine.end_tag.len());
-                        return Err(Error::span("unexpected end tag", source, span));
-                    }
-                    return Ok(Self { source, subs });
-                }
-            };
-
-            let (j, n) = match source[m..].find(engine.end_tag) {
-                Some(n) => (m + n + engine.end_tag.len(), m + n),
-                None => {
-                    let span = Span::new(i, m);
-                    return Err(Error::span("unclosed tag", source, span));
-                }
-            };
-
-            let outer = Span::new(i, j);
-            let inner = Span::new(m, n);
-            let expr = ast::parse_expr(source, inner)?;
-            subs.push(Sub { span: outer, expr });
-
-            cursor = j;
-        }
-    }
-
-    #[inline]
-    fn render<S>(&self, engine: &Engine<'_>, data: S) -> Result<String>
-    where
-        S: serde::Serialize,
-    {
-        let data = to_value(data).unwrap();
-        self._render(engine, data)
-    }
-
-    fn _render(&self, engine: &Engine<'_>, data: Value) -> Result<String> {
-        let mut s = String::new();
-        let mut i = 0;
-        for Sub { span, expr } in &self.subs {
-            s.push_str(&self.source[i..span.m]);
-            i = span.n;
-            let value = render_expr(engine, self.source, &data, expr)?;
-            s.push_str(&value.to_string());
-        }
-        s.push_str(&self.source[i..]);
-
-        Ok(s)
-    }
-}
-
-fn render_expr(engine: &Engine<'_>, source: &str, data: &Value, expr: &Expr<'_>) -> Result<Value> {
-    match expr {
-        Expr::Value(ast::Value { path, .. }) => data.lookup(source, path).map(|v| v.clone()),
-        Expr::Call(ast::Call { name, receiver, .. }) => match engine.filters.get(name.ident) {
-            Some(f) => render_expr(engine, source, data, receiver).map(&**f),
-            None => {
-                return Err(Error::span(
-                    format!("function not found `{}`", name.ident),
-                    source,
-                    name.span,
-                ))
-            }
-        },
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn engine_compile_no_tags() {
-        let eng = Engine::new();
-
-        let t = eng.compile("").unwrap();
-        assert_eq!(t.template.subs, Vec::new());
-
-        let t = eng.compile("just testing").unwrap();
-        assert_eq!(t.template.subs, Vec::new());
-    }
-
-    #[test]
-    fn engine_compile_default_tags() {
-        let eng = Engine::new();
-        let t = eng.compile("test {{ basic }} test").unwrap();
-        let subs = vec![Sub {
-            span: Span::new(5, 16),
-            expr: Expr::Value(ast::Value {
-                span: Span::new(8, 13),
-                path: vec![ast::Ident {
-                    span: Span::new(8, 13),
-                    ident: "basic",
-                }],
-            }),
-        }];
-        assert_eq!(t.template.subs, subs);
-    }
-
-    #[test]
-    fn engine_compile_custom_tags() {
-        let eng = Engine::with_tags("<", "/>");
-        let t = eng.compile("test <basic/> test").unwrap();
-        let subs = vec![Sub {
-            span: Span::new(5, 13),
-            expr: Expr::Value(ast::Value {
-                span: Span::new(6, 11),
-                path: vec![ast::Ident {
-                    span: Span::new(6, 11),
-                    ident: "basic",
-                }],
-            }),
-        }];
-        assert_eq!(t.template.subs, subs);
-    }
-
-    #[test]
-    fn engine_compile_unclosed_tag() {
-        let eng = Engine::new();
-        let err = eng.compile("test {{ test").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | test {{ test
-   |      ^^ unclosed tag
-"
-        )
-    }
-
-    #[test]
-    fn engine_compile_unexpected_end_tag() {
-        let eng = Engine::new();
-        let err = eng.compile("{{ test }} test }} test").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | {{ test }} test }} test
-   |                 ^^ unexpected end tag
-"
-        )
-    }
-
-    #[test]
-    fn template_render_basic() {
-        let eng = Engine::new();
-        let t = eng.compile("basic {{ here }}ment").unwrap();
-        let s = t.render(data! { here: "replace" }).unwrap();
-        assert_eq!(s, "basic replacement");
-    }
-
-    #[test]
-    fn template_render_multiple() {
-        let eng = Engine::new();
-        let t = eng.compile("basic {{ here }}ment and {{ p }}ain").unwrap();
-        let s = t.render(data! { here: "replace", p: "ag" }).unwrap();
-        assert_eq!(s, "basic replacement and again");
-    }
-
-    #[test]
-    fn template_render_nested() {
-        let eng = Engine::new();
-        let t = eng.compile("basic {{ here.nested }}ment").unwrap();
-        let s = t.render(data! { here: { nested: "replace" }}).unwrap();
-        assert_eq!(s, "basic replacement");
-    }
-
-    #[test]
-    fn template_render_nested_filter() {
-        let mut eng = Engine::new();
-        eng.add_filter("lower", |v| match v {
-            Value::String(s) => Value::String(s.to_lowercase()),
-            v => v,
-        });
-        let t = eng.compile("basic {{ here.nested | lower }}ment").unwrap();
-        let s = t.render(data! { here: { nested: "RePlAcE" }}).unwrap();
-        assert_eq!(s, "basic replacement");
+        todo!()
     }
 }

@@ -1,0 +1,10 @@
+Template {
+    source: "lorem ipsum dolor sit amet",
+    scope: Scope {
+        stmts: [
+            Raw(
+                "lorem ipsum dolor sit amet",
+            ),
+        ],
+    },
+}

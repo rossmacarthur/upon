@@ -3,7 +3,7 @@ name = "upon"
 version = "0.0.0"
 authors = ["Ross MacArthur <ross@macarthur.io>"]
 edition = "2021"
-description = "A tiny, configurable find-and-replace template engine"
+description = "A tiny template engine"
 readme = "README.md"
 repository = "https://github.com/rossmacarthur/upon"
 license = "MIT OR Apache-2.0"
@@ -11,8 +11,8 @@ keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
 
 [dependencies]
-unicode-width = "0.1.9"
 serde = "1.0.136"
+unicode-width = "0.1.9"
 
 [dev-dependencies]
 goldie = "0.2.0"

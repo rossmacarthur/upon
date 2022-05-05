@@ -1,0 +1,51 @@
+Template {
+    source: "lorem {{ ipsum.dolor | fn | another }} sit amet",
+    scope: Scope {
+        stmts: [
+            Raw(
+                "lorem ",
+            ),
+            InlineExpr(
+                InlineExpr {
+                    expr: Call(
+                        Call {
+                            name: Ident {
+                                ident: "another",
+                                span: (28, 35),
+                            },
+                            receiver: Call(
+                                Call {
+                                    name: Ident {
+                                        ident: "fn",
+                                        span: (23, 25),
+                                    },
+                                    receiver: Var(
+                                        Var {
+                                            path: [
+                                                Ident {
+                                                    ident: "ipsum",
+                                                    span: (9, 14),
+                                                },
+                                                Ident {
+                                                    ident: "dolor",
+                                                    span: (15, 20),
+                                                },
+                                            ],
+                                            span: (9, 20),
+                                        },
+                                    ),
+                                    span: (21, 22),
+                                },
+                            ),
+                            span: (26, 27),
+                        },
+                    ),
+                    span: (6, 38),
+                },
+            ),
+            Raw(
+                " sit amet",
+            ),
+        ],
+    },
+}

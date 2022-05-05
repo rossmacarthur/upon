@@ -3,7 +3,7 @@ use std::fmt;
 
 use unicode_width::UnicodeWidthStr;
 
-use crate::ast::Span;
+use crate::span::Span;
 
 /// A convenient type alias for results in this crate.
 pub type Result<T> = std::result::Result<T, Error>;
