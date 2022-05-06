@@ -6,19 +6,16 @@ pub fn template<'t>(source: &'t str, delims: &Delimiters<'_>) -> Result<ast::Tem
     Parser::new(source, delims).expect_template()
 }
 
-#[derive(Debug, Clone)]
 pub struct Parser<'e, 't> {
     tokens: Lexer<'e, 't>,
     peeked: Option<Option<(Token, Span)>>,
 }
 
-#[derive(Debug, Clone)]
 enum State<'t> {
     If(ast::Expr<'t>, Span),
     Else(Span),
 }
 
-#[derive(Debug, Clone)]
 enum Block<'t> {
     If(ast::Expr<'t>),
     Else,

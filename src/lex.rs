@@ -1,6 +1,5 @@
 use crate::{Delimiters, Error, Result, Span};
 
-#[derive(Debug, Clone)]
 pub struct Lexer<'e, 't> {
     delims: &'e Delimiters<'e>,
     pub source: &'t str,
@@ -9,7 +8,6 @@ pub struct Lexer<'e, 't> {
     next: Option<(Token, Span)>,
 }
 
-#[derive(Debug, Clone)]
 enum State {
     Template,
     InBlock { begin: Span, end: Token },
