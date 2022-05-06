@@ -22,7 +22,7 @@ enum State<'t> {
 enum Block<'t> {
     If(ast::Expr<'t>),
     Else,
-    End,
+    EndIf,
 }
 
 impl<'e, 't> Parser<'e, 't> {
@@ -63,8 +63,8 @@ impl<'e, 't> Parser<'e, 't> {
                             scopes.push(ast::Scope::new());
                             continue;
                         }
-                        Block::End => {
-                            let err = || Error::span("unexpected end block", self.source(), span);
+                        Block::EndIf => {
+                            let err = || Error::span("unexpected `endif`", self.source(), span);
 
                             let mut last = blocks.pop().ok_or_else(err)?;
                             let mut else_branch = None;
@@ -82,8 +82,12 @@ impl<'e, 't> Parser<'e, 't> {
                                         else_branch,
                                     }
                                 }
-                                State::Else(_) => {
-                                    todo!()
+                                State::Else(span) => {
+                                    return Err(Error::span(
+                                        "expected `if`, found `else`",
+                                        self.source(),
+                                        span,
+                                    ));
                                 }
                             };
 
@@ -98,12 +102,12 @@ impl<'e, 't> Parser<'e, 't> {
             scopes.last_mut().unwrap().stmts.push(stmt);
         }
 
-        if let Some(block) = blocks.pop() {
-            let span = match block {
-                State::If(_, sp) => sp,
-                State::Else(sp) => sp,
+        if let Some(block) = blocks.first() {
+            let (msg, span) = match block {
+                State::If(_, sp) => ("unclosed `if`", sp),
+                State::Else(sp) => ("unexpected `else`", sp),
             };
-            return Err(Error::span("unclosed if statement", self.source(), span));
+            return Err(Error::span(msg, self.source(), *span));
         }
 
         assert!(blocks.is_empty());
@@ -123,7 +127,7 @@ impl<'e, 't> Parser<'e, 't> {
                 Ok(Block::If(expr))
             }
             "else" => Ok(Block::Else),
-            "endif" => Ok(Block::End),
+            "endif" => Ok(Block::EndIf),
             _ => Err(Error::span(
                 "expected keyword `if`, `else`, or `endif`, found identifier",
                 self.source(),
@@ -135,9 +139,11 @@ impl<'e, 't> Parser<'e, 't> {
     fn expect_expr(&mut self) -> Result<ast::Expr<'t>> {
         let mut expr = ast::Expr::Var(self.expect_var(Some("an expression"))?);
         while self.is_next(Token::Pipe)? {
-            let span = self.expect(Token::Pipe, None)?;
+            self.expect(Token::Pipe, None)?;
+            let name = self.expect_ident(Some("a function"))?;
+            let span = name.span.combine(expr.span());
             expr = ast::Expr::Call(ast::Call {
-                name: self.expect_ident(Some("a function"))?,
+                name,
                 receiver: Box::new(expr),
                 span,
             });
@@ -239,6 +245,19 @@ mod tests {
     }
 
     #[test]
+    fn compile_template_inline_expr_eof() {
+        let err = parse("lorem {{ ipsum.dolor |").unwrap_err();
+        assert_eq!(
+            format!("{:#}", err),
+            "
+   |
+ 1 | lorem {{ ipsum.dolor |
+   |                       ^ expected a function, found EOF
+"
+        );
+    }
+
+    #[test]
     fn compile_template_inline_expr_empty() {
         let err = parse("lorem {{ }} ipsum dolor").unwrap_err();
         assert_eq!(
@@ -317,6 +336,19 @@ mod tests {
     }
 
     #[test]
+    fn compile_template_expected_keyword() {
+        let err = parse("lorem {% fi another %} ipsum {% endif %} dolor").unwrap_err();
+        assert_eq!(
+            format!("{:#}", err),
+            "
+   |
+ 1 | lorem {% fi another %} ipsum {% endif %} dolor
+   |          ^^ expected keyword `if`, `else`, or `endif`, found identifier
+"
+        );
+    }
+
+    #[test]
     fn compile_template_unexpected_end_block() {
         let err = parse("lorem {% endif %} ipsum").unwrap_err();
         assert_eq!(
@@ -324,7 +356,33 @@ mod tests {
             "
    |
  1 | lorem {% endif %} ipsum
-   |       ^^^^^^^^^^^ unexpected end block
+   |       ^^^^^^^^^^^ unexpected `endif`
+"
+        );
+    }
+
+    #[test]
+    fn compile_template_expected_if_block() {
+        let err = parse("lorem {% else %} {% else %} {% endif %} ipsum").unwrap_err();
+        assert_eq!(
+            format!("{:#}", err),
+            "
+   |
+ 1 | lorem {% else %} {% else %} {% endif %} ipsum
+   |       ^^^^^^^^^^ expected `if`, found `else`
+"
+        );
+    }
+
+    #[test]
+    fn compile_template_unexpected_else_block() {
+        let err = parse("lorem {% else %} {% else %} ipsum").unwrap_err();
+        assert_eq!(
+            format!("{:#}", err),
+            "
+   |
+ 1 | lorem {% else %} {% else %} ipsum
+   |       ^^^^^^^^^^ unexpected `else`
 "
         );
     }
@@ -337,7 +395,7 @@ mod tests {
             "
    |
  1 | lorem {% if cond %} ipsum
-   |       ^^^^^^^^^^^^^ unclosed if statement
+   |       ^^^^^^^^^^^^^ unclosed `if`
 "
         );
     }

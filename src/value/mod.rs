@@ -73,72 +73,42 @@ impl fmt::Display for Value {
 }
 
 impl Value {
+    pub(crate) fn human(&self) -> &'static str {
+        match self {
+            Value::None => "none",
+            Value::Bool(_) => "bool",
+            Value::Integer(_) => "integer",
+            Value::Float(_) => "float",
+            Value::String(_) => "string",
+            Value::List(_) => "list",
+            Value::Map(_) => "map",
+        }
+    }
+
     pub(crate) fn lookup<'a>(&'a self, source: &str, path: &[Ident]) -> Result<&'a Value> {
         let mut data = self;
 
         for Ident { span, ident: p } in path {
             data = match data {
-                Value::None => {
-                    return Err(Error::span(
-                        format!("cannot index none with `{}`", p),
-                        source,
-                        *span,
-                    ))
-                }
-
-                Value::Bool(_) => {
-                    return Err(Error::span(
-                        format!("cannot index bool with `{}`", p),
-                        source,
-                        *span,
-                    ))
-                }
-
-                Value::Integer(_) => {
-                    return Err(Error::span(
-                        format!("cannot index integer with `{}`", p),
-                        source,
-                        *span,
-                    ))
-                }
-
-                Value::Float(_) => {
-                    return Err(Error::span(
-                        format!("cannot index float with `{}`", p),
-                        source,
-                        *span,
-                    ))
-                }
-
-                Value::String(_) => {
-                    return Err(Error::span(
-                        format!("cannot index string with `{}`", p),
-                        source,
-                        *span,
-                    ))
-                }
-
                 Value::List(list) => match p.parse::<usize>() {
                     Ok(i) => &list[i],
                     Err(_) => {
-                        return Err(Error::span(
-                            format!("cannot index list with `{}`", p),
-                            source,
-                            *span,
-                        ))
+                        return Err(Error::span("cannot index list with string", source, *span))
                     }
                 },
 
                 Value::Map(map) => match map.get(*p) {
                     Some(value) => value,
-                    None => {
-                        return Err(Error::span(
-                            format!("key `{}` not found in map", p),
-                            source,
-                            *span,
-                        ))
-                    }
+                    None => return Err(Error::span("not found in map", source, *span)),
                 },
+
+                val => {
+                    return Err(Error::span(
+                        format!("cannot index into {}", val.human()),
+                        source,
+                        *span,
+                    ))
+                }
             }
         }
         Ok(data)
@@ -198,7 +168,7 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ cannot index none with `hello`
+   |    ^^^^^ cannot index into none
 "
         );
     }
@@ -220,14 +190,14 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ cannot index string with `hello`
+   |    ^^^^^ cannot index into string
 "
         );
     }
 
     #[test]
     fn lookup_cannot_index_list() {
-        let data = Value::from(["te", "ting..."]);
+        let data = Value::from(["tes", "ting..."]);
         let err = data
             .lookup(
                 "{{ hello }}",
@@ -242,14 +212,14 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ cannot index list with `hello`
+   |    ^^^^^ cannot index list with string
 "
         );
     }
 
     #[test]
     fn lookup_key_not_found() {
-        let data = data! { te: "ting..." };
+        let data = data! { tes: "ting..." };
         let err = data
             .lookup(
                 "{{ hello }}",
@@ -264,7 +234,7 @@ mod tests {
             "
    |
  1 | {{ hello }}
-   |    ^^^^^ key `hello` not found in map
+   |    ^^^^^ not found in map
 "
         );
     }

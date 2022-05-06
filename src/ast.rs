@@ -63,3 +63,12 @@ impl Scope<'_> {
         Self { stmts: Vec::new() }
     }
 }
+
+impl Expr<'_> {
+    pub const fn span(&self) -> Span {
+        match self {
+            Expr::Var(var) => var.span,
+            Expr::Call(call) => call.span,
+        }
+    }
+}

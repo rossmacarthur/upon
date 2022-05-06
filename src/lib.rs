@@ -100,6 +100,7 @@ mod compile;
 mod error;
 mod lex;
 mod macros;
+mod render;
 mod span;
 pub mod value;
 
@@ -241,11 +242,12 @@ impl<'e> Engine<'e> {
     /// assert_eq!(result, "Hello World!");
     /// # Ok::<(), upon::Error>(())
     /// ```
-    pub fn render<S>(&'e self, _name: &str, _data: S) -> Result<String>
+    pub fn render<S>(&'e self, name: &str, data: S) -> Result<String>
     where
         S: serde::Serialize,
     {
-        todo!()
+        let t = self.templates.get(name).unwrap();
+        render::template(self, t, to_value(data)?)
     }
 }
 
@@ -315,10 +317,10 @@ impl<'e> Template<'e> {
 
     /// Render the template to a string using the provided data.
     #[inline]
-    pub fn render<S>(&self, _data: S) -> Result<String>
+    pub fn render<S>(&self, data: S) -> Result<String>
     where
         S: serde::Serialize,
     {
-        todo!()
+        render::template(self.engine, &self.template, to_value(data)?)
     }
 }
