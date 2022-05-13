@@ -10,24 +10,24 @@ Template {
                     expr: Call(
                         Call {
                             name: Ident {
-                                ident: "another",
+                                value: "another",
                                 span: (28, 35),
                             },
                             receiver: Call(
                                 Call {
                                     name: Ident {
-                                        ident: "fn",
+                                        value: "fn",
                                         span: (23, 25),
                                     },
                                     receiver: Var(
                                         Var {
                                             path: [
                                                 Ident {
-                                                    ident: "ipsum",
+                                                    value: "ipsum",
                                                     span: (9, 14),
                                                 },
                                                 Ident {
-                                                    ident: "dolor",
+                                                    value: "dolor",
                                                     span: (15, 20),
                                                 },
                                             ],

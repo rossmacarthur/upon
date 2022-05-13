@@ -18,6 +18,7 @@ pub enum Stmt<'t> {
     Raw(&'t str),
     InlineExpr(InlineExpr<'t>),
     IfElse(IfElse<'t>),
+    ForLoop(ForLoop<'t>),
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +32,26 @@ pub struct IfElse<'t> {
     pub cond: Expr<'t>,
     pub then_branch: Scope<'t>,
     pub else_branch: Option<Scope<'t>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ForLoop<'t> {
+    pub vars: LoopVars<'t>,
+    pub iterable: Expr<'t>,
+    pub body: Scope<'t>,
+}
+
+#[derive(Debug, Clone)]
+pub enum LoopVars<'t> {
+    Item(Ident<'t>),
+    KeyValue(KeyValue<'t>),
+}
+
+#[derive(Debug, Clone)]
+pub struct KeyValue<'t> {
+    pub key: Ident<'t>,
+    pub value: Ident<'t>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -54,7 +75,7 @@ pub struct Call<'t> {
 
 #[derive(Debug, Clone)]
 pub struct Ident<'t> {
-    pub ident: &'t str,
+    pub value: &'t str,
     pub span: Span,
 }
 
@@ -67,8 +88,17 @@ impl Scope<'_> {
 impl Expr<'_> {
     pub const fn span(&self) -> Span {
         match self {
-            Expr::Var(var) => var.span,
-            Expr::Call(call) => call.span,
+            Self::Var(var) => var.span,
+            Self::Call(call) => call.span,
+        }
+    }
+}
+
+impl LoopVars<'_> {
+    pub const fn span(&self) -> Span {
+        match self {
+            LoopVars::Item(item) => item.span,
+            LoopVars::KeyValue(kv) => kv.span,
         }
     }
 }

@@ -1,3 +1,4 @@
+use crate::compile::Keyword;
 use crate::{Delimiters, Error, Result, Span};
 
 pub struct Lexer<'e, 't> {
@@ -30,10 +31,14 @@ pub enum Token {
     Period,
     /// `|`
     Pipe,
+    /// `,`
+    Comma,
     /// A sequence of tab (0x09) and/or spaces (0x20)
     Whitespace,
     /// An attribute, variable, or possible literal
     Ident,
+    /// A keyword.
+    Keyword,
 }
 
 impl Token {
@@ -44,10 +49,12 @@ impl Token {
             Self::EndExpr => "end tag",
             Self::BeginBlock => "begin tag",
             Self::EndBlock => "end tag",
-            Self::Period => "a period",
-            Self::Pipe => "a pipe",
+            Self::Period => "period",
+            Self::Pipe => "pipe",
+            Self::Comma => "comma",
             Self::Whitespace => "whitespace",
-            Self::Ident => "an identifier",
+            Self::Ident => "identifier",
+            Self::Keyword => "keyword",
         }
     }
 
@@ -168,10 +175,20 @@ impl<'e, 't> Lexer<'e, 't> {
                     // Single character to token mappings
                     '.' => (Token::Period, i + 1),
                     '|' => (Token::Pipe, i + 1),
+                    ',' => (Token::Comma, i + 1),
 
                     // Multi character tokens with a distinct starting character
-                    c if is_whitespace(c) => self.lex_while(iter, Token::Whitespace, is_whitespace),
-                    c if is_ident(c) => self.lex_while(iter, Token::Ident, is_ident),
+                    c if is_whitespace(c) => {
+                        (Token::Whitespace, self.lex_while(iter, is_whitespace))
+                    }
+                    c if is_ident(c) => {
+                        let j = self.lex_while(iter, is_ident);
+                        let tk = match Keyword::all().contains(&&self.source[i..j]) {
+                            true => Token::Keyword,
+                            false => Token::Ident,
+                        };
+                        (tk, j)
+                    }
 
                     // Any other character
                     c => {
@@ -211,7 +228,7 @@ impl<'e, 't> Lexer<'e, 't> {
         }
     }
 
-    fn lex_while<I, P>(&mut self, mut iter: I, tk: Token, pred: P) -> (Token, usize)
+    fn lex_while<I, P>(&mut self, mut iter: I, pred: P) -> usize
     where
         I: Iterator<Item = (usize, char)> + Clone,
         P: Fn(char) -> bool,
@@ -221,8 +238,8 @@ impl<'e, 't> Lexer<'e, 't> {
                 Some((_, c)) if pred(c) => {
                     iter.next().unwrap();
                 }
-                Some((j, _)) => return (tk, j),
-                None => return (tk, self.source.len()),
+                Some((j, _)) => return j,
+                None => return self.source.len(),
             }
         }
     }
@@ -327,7 +344,7 @@ mod tests {
             [
                 (Token::BeginBlock, "{%"),
                 (Token::Whitespace, " "),
-                (Token::Ident, "if"),
+                (Token::Keyword, "if"),
                 (Token::Whitespace, " "),
                 (Token::Ident, "cond"),
                 (Token::Whitespace, " "),

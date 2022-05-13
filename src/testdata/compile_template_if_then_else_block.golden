@@ -11,7 +11,7 @@ Template {
                         Var {
                             path: [
                                 Ident {
-                                    ident: "another",
+                                    value: "another",
                                     span: (12, 19),
                                 },
                             ],

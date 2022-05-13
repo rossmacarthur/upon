@@ -1,0 +1,67 @@
+Template {
+    source: "lorem {% for k, v in iter %} ipsum {{ k }} dolor {% endfor %} sit",
+    scope: Scope {
+        stmts: [
+            Raw(
+                "lorem ",
+            ),
+            ForLoop(
+                ForLoop {
+                    vars: KeyValue(
+                        KeyValue {
+                            key: Ident {
+                                value: "k",
+                                span: (13, 14),
+                            },
+                            value: Ident {
+                                value: "v",
+                                span: (16, 17),
+                            },
+                            span: (13, 17),
+                        },
+                    ),
+                    iterable: Var(
+                        Var {
+                            path: [
+                                Ident {
+                                    value: "iter",
+                                    span: (21, 25),
+                                },
+                            ],
+                            span: (21, 25),
+                        },
+                    ),
+                    body: Scope {
+                        stmts: [
+                            Raw(
+                                " ipsum ",
+                            ),
+                            InlineExpr(
+                                InlineExpr {
+                                    expr: Var(
+                                        Var {
+                                            path: [
+                                                Ident {
+                                                    value: "k",
+                                                    span: (38, 39),
+                                                },
+                                            ],
+                                            span: (38, 39),
+                                        },
+                                    ),
+                                    span: (35, 42),
+                                },
+                            ),
+                            Raw(
+                                " dolor ",
+                            ),
+                        ],
+                    },
+                },
+            ),
+            Raw(
+                " sit",
+            ),
+        ],
+    },
+}
