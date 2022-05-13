@@ -78,7 +78,7 @@ impl Token {
 }
 
 impl<'e, 't> Lexer<'e, 't> {
-    pub fn new(source: &'t str, delims: &'e Delimiters<'e>) -> Self {
+    pub(crate) fn new(source: &'t str, delims: &'e Delimiters<'e>) -> Self {
         Self {
             delims,
             source,

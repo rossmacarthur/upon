@@ -2,7 +2,7 @@ use crate::ast;
 use crate::lex::{Lexer, Token};
 use crate::{Delimiters, Error, Result, Span};
 
-pub fn template<'t>(source: &'t str, delims: &Delimiters<'_>) -> Result<ast::Template<'t>> {
+pub(crate) fn template<'t>(source: &'t str, delims: &Delimiters<'_>) -> Result<ast::Template<'t>> {
     Parser::new(source, delims).expect_template()
 }
 

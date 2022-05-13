@@ -2,38 +2,54 @@
 //!
 //! # Features
 //!
-//! - Configurable template delimiters: `<? value ?>`
 //! - Rendering values: `{{ user.name }}`
-//! - Conditionals: `{% if user.enabled %} User is enabled {% endif %}`
+//! - Conditionals: `{% if user.enabled %} ... {% endif %}`
+//! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Customizable filter functions: `{{ value | my_filter }}`
+//! - Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
+//! - Render any [`serde`][serde] serializable values.
+//! - Macro for quick rendering: `data!{ name: "John", age: 42 }`
+//!
+//! # Introduction
+//!
+//! Your entry point is the compilation and rendering [`Engine`], this stores
+//! the delimiter settings, registered templates, and filter functions.
+//! Generally, you only need to construct one engine.
+//!
+//! ```
+//! let mut engine = upon::Engine::new();
+//! ```
+//!
+//! Add templates to the engine using `.add_template()` either using a string
+//! literal or using [`include_str!`].
+//!
+//! ```
+//! # let mut engine = upon::Engine::new();
+//! engine.add_template("hello", "Hello {{ user.name }}!")?;
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! Now render the template using its name.
+//!
+//! ```
+//! # let mut engine = upon::Engine::new();
+//! # engine.add_template("hello", "Hello {{ user.name }}!")?;
+//! let result = engine.render("hello", upon::data!{ user: { name: "John" } })?;
+//! assert_eq!(result, "Hello John!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! For convenience you can also compile and render templates without storing
+//! the template in the engine.
+//!
+//! ```
+//! # let mut engine = upon::Engine::new();
+//! let template = engine.compile("Hello {{ user.name }}!")?;
+//! template.render(upon::data!{ user: { name: "John" } })?;
+//! # Ok::<(), upon::Error>(())
+//! ```
 //!
 //! # Examples
-//!
-//! ### Render data constructed using the macro
-//!
-//! ```
-//! use upon::{Engine, data};
-//!
-//! let result = Engine::new()
-//!     .compile("Hello {{ value }}")?
-//!     .render(data! { value: "World!" })?;
-//!
-//! assert_eq!(result, "Hello World!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! ### Render a template using custom tags
-//!
-//! ```
-//! use upon::{data, Engine, Delimiters};
-//!
-//! let result = Engine::with_delims(Delimiters::new("<?", "?>", "<%", "%>"))
-//!     .compile("Hello <? value ?>")?
-//!     .render(data! { value: "World!" })?;
-//!
-//! assert_eq!(result, "Hello World!");
-//! # Ok::<(), upon::Error>(())
-//! ```
 //!
 //! ### Render using structured data
 //!
@@ -58,20 +74,6 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! ### Named templates
-//!
-//! ```
-//! use upon::{data, Engine};
-//!
-//! let mut engine = Engine::new();
-//! engine.add_template("hello", "Hello {{ value }}")?;
-//!
-//! let result = engine.render("hello", data! { value: "World!" })?;
-//!
-//! assert_eq!(result, "Hello World!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
 //! ### Transform data using filters
 //!
 //! ```
@@ -92,6 +94,17 @@
 //!     .render(data! { value: "WORLD!" })?;
 //!
 //! assert_eq!(result, "Hello world!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! ### Render a template using custom tags
+//!
+//! ```
+//! let result = upon::Engine::with_delims("<?", "?>", "<%", "%>")
+//!     .compile("Hello <? value ?>")?
+//!     .render(upon::data! { value: "World!" })?;
+//!
+//! assert_eq!(result, "Hello World!");
 //! # Ok::<(), upon::Error>(())
 //! ```
 
@@ -124,7 +137,7 @@ pub struct Engine<'e> {
 
 /// Delimiter configuration.
 #[derive(Debug, Clone)]
-pub struct Delimiters<'e> {
+struct Delimiters<'e> {
     begin_expr: &'e str,
     end_expr: &'e str,
     begin_block: &'e str,
@@ -153,9 +166,14 @@ impl<'e> Engine<'e> {
         }
     }
 
-    pub fn with_delims(delims: Delimiters<'e>) -> Self {
+    pub fn with_delims(
+        begin_expr: &'e str,
+        end_expr: &'e str,
+        begin_block: &'e str,
+        end_block: &'e str,
+    ) -> Self {
         Self {
-            delims,
+            delims: Delimiters::new(begin_expr, end_expr, begin_block, end_block),
             templates: HashMap::new(),
             filters: HashMap::new(),
         }
@@ -177,16 +195,6 @@ impl<'e> Engine<'e> {
     }
 
     /// Add a new named template to the engine.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use upon::{data, Engine};
-    ///
-    /// let mut engine = Engine::new();
-    /// engine.add_template("hello", "Hello {{ test }}!")?;
-    /// # Ok::<(), upon::Error>(())
-    /// ```
     pub fn add_template(&mut self, name: impl Into<String>, source: &'e str) -> Result<()> {
         let t = compile::template(source, &self.delims)?;
         self.templates.insert(name.into(), t);
@@ -204,21 +212,6 @@ impl<'e> Engine<'e> {
     }
 
     /// Compile an unamed template and return it.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use upon::{data, Engine};
-    ///
-    /// let engine = Engine::new();
-    ///
-    ///  let result = engine
-    ///     .compile("Hello {{ test }}!")?
-    ///     .render(data! { test: "World" })?;
-    ///
-    /// assert_eq!(result, "Hello World!");
-    /// # Ok::<(), upon::Error>(())
-    /// ```
     pub fn compile(&'e self, source: &'e str) -> Result<Template<'e>> {
         Template::compile(self, source)
     }
@@ -228,20 +221,6 @@ impl<'e> Engine<'e> {
     /// # Panics
     ///
     /// If the template does not exist.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use upon::{data, Engine};
-    ///
-    /// let mut engine = Engine::new();
-    /// engine.add_template("hello", "Hello {{ test }}!")?;
-    ///
-    /// let result = engine.render("hello", data! { test: "World" })?;
-    ///
-    /// assert_eq!(result, "Hello World!");
-    /// # Ok::<(), upon::Error>(())
-    /// ```
     pub fn render<S>(&'e self, name: &str, data: S) -> Result<String>
     where
         S: serde::Serialize,
@@ -273,22 +252,7 @@ impl Default for Delimiters<'_> {
 
 impl<'e> Delimiters<'e> {
     /// Returns a new tag configuration.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use upon::Delimiters;
-    ///
-    /// // Like Liquid / Jinja, this is the same as `Delimiters::default()`
-    /// let delims = Delimiters::new("{{", "}}", "{%", "%}");
-    ///
-    /// // Use single braces for expressions and double braces for blocks
-    /// let delims = Delimiters::new("{", "}", "{{", "}}");
-    ///
-    /// // Completely custom!
-    /// let delims = Delimiters::new("<?", "?>", "<%", "%>");
-    /// ```
-    pub const fn new(
+    const fn new(
         begin_expr: &'e str,
         end_expr: &'e str,
         begin_block: &'e str,
