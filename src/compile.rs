@@ -76,7 +76,8 @@ impl<'e, 't> Parser<'e, 't> {
                         }
 
                         Block::EndIf => {
-                            let err = || Error::span("unexpected `endif`", self.source(), span);
+                            let err =
+                                || Error::span("unexpected `endif` block", self.source(), span);
 
                             let mut last = blocks.pop().ok_or_else(err)?;
                             let mut else_branch = None;
@@ -94,18 +95,11 @@ impl<'e, 't> Parser<'e, 't> {
                                         else_branch,
                                     }
                                 }
-                                State::Else(span) => {
+                                state => {
                                     return Err(Error::span(
-                                        "expected `if`, found `else`",
+                                        format!("unexpected `{}` block", state.human()),
                                         self.source(),
-                                        span,
-                                    ));
-                                }
-                                State::For(_, _, span) => {
-                                    return Err(Error::span(
-                                        "expected `if`, found `for`",
-                                        self.source(),
-                                        span,
+                                        state.span(),
                                     ));
                                 }
                             };
@@ -121,7 +115,7 @@ impl<'e, 't> Parser<'e, 't> {
 
                         Block::EndFor => {
                             let last = blocks.pop().ok_or_else(|| {
-                                Error::span("unexpected `endfor`", self.source(), span)
+                                Error::span("unexpected `endfor` block", self.source(), span)
                             })?;
                             let for_loop = match last {
                                 State::For(vars, iterable, _) => {
@@ -132,18 +126,11 @@ impl<'e, 't> Parser<'e, 't> {
                                         body,
                                     }
                                 }
-                                State::If(_, span) => {
+                                state => {
                                     return Err(Error::span(
-                                        "expected `for`, found `if`",
+                                        format!("unexpected `{}` block", state.human()),
                                         self.source(),
-                                        span,
-                                    ));
-                                }
-                                State::Else(span) => {
-                                    return Err(Error::span(
-                                        "expected `for`, found `else`",
-                                        self.source(),
-                                        span,
+                                        state.span(),
                                     ));
                                 }
                             };
@@ -161,9 +148,9 @@ impl<'e, 't> Parser<'e, 't> {
 
         if let Some(block) = blocks.first() {
             let (msg, span) = match block {
-                State::If(_, sp) => ("unclosed `if`", sp),
-                State::Else(sp) => ("unexpected `else`", sp),
-                State::For(_, _, sp) => ("unclosed `for`", sp),
+                State::If(_, sp) => ("unclosed `if` block", sp),
+                State::Else(sp) => ("unexpected `else` block", sp),
+                State::For(_, _, sp) => ("unclosed `for` block", sp),
             };
             return Err(Error::span(msg, self.source(), *span));
         }
@@ -320,7 +307,7 @@ impl Keyword {
     }
 
     fn human(&self) -> &'static str {
-        match *self {
+        match self {
             Self::If => "if",
             Self::Else => "else",
             Self::EndIf => "endif",
@@ -344,285 +331,20 @@ impl Keyword {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn compile_template_empty() {
-        let ast = parse("").unwrap();
-        goldie::assert!(format!("{:#?}", ast));
+impl State<'_> {
+    fn human(&self) -> &'static str {
+        match self {
+            State::If(_, _) => "if",
+            State::Else(_) => "else",
+            State::For(_, _, _) => "for",
+        }
     }
 
-    #[test]
-    fn compile_template_raw() {
-        let ast = parse("lorem ipsum dolor sit amet").unwrap();
-        goldie::assert!(format!("{:#?}", ast));
-    }
-
-    #[test]
-    fn compile_template_inline_expr() {
-        let tokens = parse("lorem {{ ipsum.dolor | fn | another }} sit amet").unwrap();
-        goldie::assert!(format!("{:#?}", tokens));
-    }
-
-    #[test]
-    fn compile_template_inline_expr_eof() {
-        let err = parse("lorem {{ ipsum.dolor |").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {{ ipsum.dolor |
-   |                       ^ expected identifier, found EOF
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_inline_expr_empty() {
-        let err = parse("lorem {{ }} ipsum dolor").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {{ }} ipsum dolor
-   |          ^^ expected identifier, found end tag
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_inline_expr_unexpected_pipe_token() {
-        let err = parse("lorem {{ | }} ipsum dolor").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {{ | }} ipsum dolor
-   |          ^ expected identifier, found pipe
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_inline_expr_unexpected_period_token() {
-        let err = parse("lorem {{ var | . }} ipsum dolor").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {{ var | . }} ipsum dolor
-   |                ^ expected identifier, found period
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_inline_expr_expected_a_function() {
-        let err = parse("lorem {{ ipsum.dolor | }} sit").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {{ ipsum.dolor | }} sit
-   |                        ^^ expected identifier, found end tag
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_inline_expr_expected_end_tag() {
-        let err = parse("lorem {{ var another }} ipsum dolor").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {{ var another }} ipsum dolor
-   |              ^^^^^^^ expected end tag, found identifier
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_if_then_block() {
-        let tokens = parse("lorem {% if another %} ipsum {% endif %} dolor").unwrap();
-        goldie::assert!(format!("{:#?}", tokens));
-    }
-
-    #[test]
-    fn compile_template_if_then_else_block() {
-        let tokens =
-            parse("lorem {% if another %} ipsum {% else %} dolor {% endif %} sit").unwrap();
-        goldie::assert!(format!("{:#?}", tokens));
-    }
-
-    #[test]
-    fn compile_template_expected_keyword() {
-        let err = parse("lorem {% fi another %} ipsum {% endif %} dolor").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% fi another %} ipsum {% endif %} dolor
-   |          ^^ expected keyword, found identifier
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_unexpected_keyword() {
-        let err = parse("lorem {% in another %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% in another %} ipsum
-   |          ^^ unexpected keyword `in`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_unexpected_endif_block() {
-        let err = parse("lorem {% endif %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% endif %} ipsum
-   |       ^^^^^^^^^^^ unexpected `endif`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_expected_if_block() {
-        let err = parse("lorem {% else %} {% else %} {% endif %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% else %} {% else %} {% endif %} ipsum
-   |       ^^^^^^^^^^ expected `if`, found `else`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_unexpected_else_block() {
-        let err = parse("lorem {% else %} {% else %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% else %} {% else %} ipsum
-   |       ^^^^^^^^^^ unexpected `else`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_unclosed_if_statement() {
-        let err = parse("lorem {% if cond %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% if cond %} ipsum
-   |       ^^^^^^^^^^^^^ unclosed `if`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_for_loop() {
-        let tokens =
-            parse("lorem {% for k, v in iter %} ipsum {{ k }} dolor {% endfor %} sit").unwrap();
-        goldie::assert!(format!("{:#?}", tokens));
-    }
-
-    #[test]
-    fn compile_template_for_loop_trailing_comma() {
-        let err = parse("lorem {% for k, in iter %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% for k, in iter %} ipsum
-   |                 ^^ expected identifier, found keyword
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_for_loop_missing_iterable() {
-        let err = parse("lorem {% for kv in %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% for kv in %} ipsum
-   |                    ^^ expected identifier, found end tag
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_unexpected_endfor_block() {
-        let err = parse("lorem {% endfor %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% endfor %} ipsum
-   |       ^^^^^^^^^^^^ unexpected `endfor`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_endfor_expected_for_block() {
-        let err = parse("lorem {% else %} {% endfor %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% else %} {% endfor %} ipsum
-   |       ^^^^^^^^^^ expected `for`, found `else`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_for_loop_unexpected_else_block() {
-        let err = parse("lorem {% if cond %} {% endfor %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% if cond %} {% endfor %} ipsum
-   |       ^^^^^^^^^^^^^ expected `for`, found `if`
-"
-        );
-    }
-
-    #[test]
-    fn compile_template_for_loop_unclosed() {
-        let err = parse("lorem {% for k, v in iter %} ipsum").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem {% for k, v in iter %} ipsum
-   |       ^^^^^^^^^^^^^^^^^^^^^^ unclosed `for`
-"
-        );
-    }
-
-    fn parse(source: &str) -> Result<ast::Template<'_>> {
-        template(source, &Delimiters::default())
+    fn span(&self) -> Span {
+        match self {
+            State::If(_, span) => *span,
+            State::Else(span) => *span,
+            State::For(_, _, span) => *span,
+        }
     }
 }

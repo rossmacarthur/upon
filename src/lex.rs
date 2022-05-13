@@ -257,8 +257,6 @@ fn is_ident(c: char) -> bool {
 mod tests {
     use super::*;
 
-    use pretty_assertions::assert_eq;
-
     #[test]
     fn lex_empty() {
         let tokens = lex("").unwrap();
@@ -364,84 +362,6 @@ mod tests {
                 (Token::Whitespace, " "),
                 (Token::EndBlock, "%}"),
             ]
-        );
-    }
-
-    #[test]
-    fn lex_unexpected_end_expr() {
-        let err = lex("lorem ipsum }} dolor sit amet").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem ipsum }} dolor sit amet
-   |             ^^ unexpected end tag
-"
-        );
-    }
-
-    #[test]
-    fn lex_unexpected_end_block() {
-        let err = lex("lorem ipsum %} dolor sit amet").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem ipsum %} dolor sit amet
-   |             ^^ unexpected end tag
-"
-        );
-    }
-
-    #[test]
-    fn lex_unclosed_begin_expr() {
-        let err = lex("lorem ipsum {{ {{ dolor sit amet").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem ipsum {{ {{ dolor sit amet
-   |             ^^ unclosed begin tag
-"
-        );
-    }
-
-    #[test]
-    fn lex_unclosed_begin_block() {
-        let err = lex("lorem ipsum {% {{ dolor sit amet").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem ipsum {% {{ dolor sit amet
-   |             ^^ unclosed begin tag
-"
-        );
-    }
-
-    #[test]
-    fn lex_unexpected_end_tag() {
-        let err = lex("lorem ipsum {{ %} dolor sit amet").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem ipsum {{ %} dolor sit amet
-   |                ^^ unexpected end tag
-"
-        );
-    }
-
-    #[test]
-    fn lex_unexpected_character() {
-        let err = lex("lorem ipsum {{ ✨ }} dolor sit amet").unwrap_err();
-        assert_eq!(
-            format!("{:#}", err),
-            "
-   |
- 1 | lorem ipsum {{ ✨ }} dolor sit amet
-   |                ^^ unexpected character
-"
         );
     }
 

@@ -93,12 +93,3 @@ impl Expr<'_> {
         }
     }
 }
-
-impl LoopVars<'_> {
-    pub const fn span(&self) -> Span {
-        match self {
-            LoopVars::Item(item) => item.span,
-            LoopVars::KeyValue(kv) => kv.span,
-        }
-    }
-}

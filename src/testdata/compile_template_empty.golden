@@ -1,6 +1,0 @@
-Template {
-    source: "",
-    scope: Scope {
-        stmts: [],
-    },
-}
