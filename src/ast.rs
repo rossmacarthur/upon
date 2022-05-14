@@ -3,79 +3,79 @@
 use crate::span::Span;
 
 #[derive(Debug, Clone)]
-pub struct Template<'t> {
-    pub source: &'t str,
-    pub scope: Scope<'t>,
+pub struct Template<'source> {
+    pub source: &'source str,
+    pub scope: Scope<'source>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Scope<'t> {
-    pub stmts: Vec<Stmt<'t>>,
+pub struct Scope<'source> {
+    pub stmts: Vec<Stmt<'source>>,
 }
 
 #[derive(Debug, Clone)]
-pub enum Stmt<'t> {
-    Raw(&'t str),
-    InlineExpr(InlineExpr<'t>),
-    IfElse(IfElse<'t>),
-    ForLoop(ForLoop<'t>),
+pub enum Stmt<'source> {
+    Raw(&'source str),
+    InlineExpr(InlineExpr<'source>),
+    IfElse(IfElse<'source>),
+    ForLoop(ForLoop<'source>),
 }
 
 #[derive(Debug, Clone)]
-pub struct InlineExpr<'t> {
-    pub expr: Expr<'t>,
+pub struct InlineExpr<'source> {
+    pub expr: Expr<'source>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub struct IfElse<'t> {
-    pub cond: Expr<'t>,
-    pub then_branch: Scope<'t>,
-    pub else_branch: Option<Scope<'t>>,
+pub struct IfElse<'source> {
+    pub cond: Expr<'source>,
+    pub then_branch: Scope<'source>,
+    pub else_branch: Option<Scope<'source>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct ForLoop<'t> {
-    pub vars: LoopVars<'t>,
-    pub iterable: Expr<'t>,
-    pub body: Scope<'t>,
+pub struct ForLoop<'source> {
+    pub vars: LoopVars<'source>,
+    pub iterable: Expr<'source>,
+    pub body: Scope<'source>,
 }
 
 #[derive(Debug, Clone)]
-pub enum LoopVars<'t> {
-    Item(Ident<'t>),
-    KeyValue(KeyValue<'t>),
+pub enum LoopVars<'source> {
+    Item(Ident<'source>),
+    KeyValue(KeyValue<'source>),
 }
 
 #[derive(Debug, Clone)]
-pub struct KeyValue<'t> {
-    pub key: Ident<'t>,
-    pub value: Ident<'t>,
+pub struct KeyValue<'source> {
+    pub key: Ident<'source>,
+    pub value: Ident<'source>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub enum Expr<'t> {
-    Var(Var<'t>),
-    Call(Call<'t>),
+pub enum Expr<'source> {
+    Var(Var<'source>),
+    Call(Call<'source>),
 }
 
 #[derive(Debug, Clone)]
-pub struct Var<'t> {
-    pub path: Vec<Ident<'t>>,
+pub struct Var<'source> {
+    pub path: Vec<Ident<'source>>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub struct Call<'t> {
-    pub name: Ident<'t>,
-    pub receiver: Box<Expr<'t>>,
+pub struct Call<'source> {
+    pub name: Ident<'source>,
+    pub receiver: Box<Expr<'source>>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub struct Ident<'t> {
-    pub raw: &'t str,
+pub struct Ident<'source> {
+    pub raw: &'source str,
     pub span: Span,
 }
 
