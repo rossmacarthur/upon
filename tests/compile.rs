@@ -68,7 +68,7 @@ fn compile_inline_expr_err_empty() {
         "
    |
  1 | lorem {{ }} ipsum dolor
-   |          ^^ expected identifier, found end tag
+   |          ^^ expected identifier, found end expression
 "
     );
 }
@@ -113,13 +113,13 @@ fn compile_inline_expr_err_expected_function() {
         "
    |
  1 | lorem {{ ipsum.dolor | }} sit
-   |                        ^^ expected identifier, found end tag
+   |                        ^^ expected identifier, found end expression
 "
     );
 }
 
 #[test]
-fn compile_inline_expr_err_expected_end_tag() {
+fn compile_inline_expr_err_expected_end_expression() {
     let err = Engine::new()
         .compile("lorem {{ ipsum dolor }} sit")
         .unwrap_err();
@@ -128,7 +128,7 @@ fn compile_inline_expr_err_expected_end_tag() {
         "
    |
  1 | lorem {{ ipsum dolor }} sit
-   |                ^^^^^ expected end tag, found identifier
+   |                ^^^^^ expected end expression, found identifier
 "
     );
 }
@@ -233,7 +233,7 @@ fn compile_for_statement_err_missing_iterable() {
         "
    |
  1 | lorem {% for ipsum in %} dolor
-   |                       ^^ expected identifier, found end tag
+   |                       ^^ expected identifier, found end block
 "
     );
 }

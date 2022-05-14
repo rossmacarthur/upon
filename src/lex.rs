@@ -1,9 +1,12 @@
-use crate::compile::Keyword;
-use crate::{Delimiters, Error, Result, Span};
+//! A lexer that tokenizes the template source into distinct chunks to make
+//! parsing easier.
 
-pub struct Lexer<'e, 't> {
-    delims: &'e Delimiters<'e>,
-    pub source: &'t str,
+use crate::compile::Keyword;
+use crate::{Engine, Error, Result, Span};
+
+pub struct Lexer<'engine, 'source> {
+    engine: &'engine Engine<'engine>,
+    pub source: &'source str,
     state: State,
     cursor: usize,
     next: Option<(Token, Span)>,
@@ -14,18 +17,18 @@ enum State {
     InBlock { begin: Span, end: Token },
 }
 
-/// The type of token yielded by the lexer.
+/// The unit yielded by the lexer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Token {
     /// Raw template
     Raw,
-    /// A begin expression tag, e.g. `{{`
+    /// Begin expression delimiter, e.g. `{{`
     BeginExpr,
-    /// A end expression tag, e.g. `}}`
+    /// End expression delimiter, e.g. `}}`
     EndExpr,
-    /// A begin block tag, e.g. `{%`
+    /// Begin block delimiter, e.g. `{%`
     BeginBlock,
-    /// An end block tag, e.g. `%}`
+    /// End block delimiter, e.g. `%}`
     EndBlock,
     /// `.`
     Period,
@@ -33,54 +36,18 @@ pub enum Token {
     Pipe,
     /// `,`
     Comma,
-    /// A sequence of tab (0x09) and/or spaces (0x20)
+    /// Sequence of tab (0x09) and/or spaces (0x20)
     Whitespace,
-    /// An attribute, variable, or possible literal
+    /// An attribute or variable
     Ident,
-    /// A keyword.
+    /// A keyword like `if` or `for`
     Keyword,
 }
 
-impl Token {
-    pub fn human(&self) -> &'static str {
-        match self {
-            Self::Raw => "raw template",
-            Self::BeginExpr => "begin tag",
-            Self::EndExpr => "end tag",
-            Self::BeginBlock => "begin tag",
-            Self::EndBlock => "end tag",
-            Self::Period => "period",
-            Self::Pipe => "pipe",
-            Self::Comma => "comma",
-            Self::Whitespace => "whitespace",
-            Self::Ident => "identifier",
-            Self::Keyword => "keyword",
-        }
-    }
-
-    fn pair(&self) -> Self {
-        match self {
-            Self::BeginExpr => Self::EndExpr,
-            Self::EndExpr => Self::BeginExpr,
-            Self::BeginBlock => Self::EndBlock,
-            Self::EndBlock => Self::BeginBlock,
-            _ => panic!("not a tag"),
-        }
-    }
-
-    fn is_begin_tag(&self) -> bool {
-        matches!(self, Self::BeginExpr | Self::BeginBlock)
-    }
-
-    pub fn is_whitespace(&self) -> bool {
-        matches!(self, Self::Whitespace)
-    }
-}
-
-impl<'e, 't> Lexer<'e, 't> {
-    pub(crate) fn new(source: &'t str, delims: &'e Delimiters<'e>) -> Self {
+impl<'engine, 'source> Lexer<'engine, 'source> {
+    pub fn new(engine: &'engine Engine<'engine>, source: &'source str) -> Self {
         Self {
-            delims,
+            engine,
             source,
             state: State::Template,
             cursor: 0,
@@ -88,6 +55,7 @@ impl<'e, 't> Lexer<'e, 't> {
         }
     }
 
+    /// Returns the next non-whitespace token.
     pub fn next(&mut self) -> Result<Option<(Token, Span)>> {
         loop {
             match self.lex()? {
@@ -109,15 +77,15 @@ impl<'e, 't> Lexer<'e, 't> {
             return Ok(None);
         }
 
-        // Looks for a tag at position `i`
-        let try_lex_tag = |i| {
+        // Looks for a delimiter at position `i`
+        let try_lex_delim = |i| {
             let mut result = None;
             let bytes = &self.source.as_bytes()[i..];
-            for (tag, needle) in [
-                (Token::BeginExpr, self.delims.begin_expr),
-                (Token::EndExpr, self.delims.end_expr),
-                (Token::BeginBlock, self.delims.begin_block),
-                (Token::EndBlock, self.delims.end_block),
+            for (delim, needle) in [
+                (Token::BeginExpr, self.engine.begin_expr),
+                (Token::EndExpr, self.engine.end_expr),
+                (Token::BeginBlock, self.engine.begin_block),
+                (Token::EndBlock, self.engine.end_block),
             ] {
                 let len = needle.len();
                 if bytes.len() >= len && &bytes[..len] == needle.as_bytes() {
@@ -127,37 +95,36 @@ impl<'e, 't> Lexer<'e, 't> {
                         Some(_) => false,
                     };
                     if update {
-                        result = Some((tag, len));
+                        result = Some((delim, len));
                     }
                 }
             }
-            result.map(|(tag, len)| (tag, i + len))
+            result.map(|(delim, len)| (delim, i + len))
         };
 
         match self.state {
             State::Template => {
                 let mut lex = |tk: Token, m, n| match tk {
-                    tk if tk.is_begin_tag() => {
+                    tk if tk.is_begin_delim() => {
                         let begin = Span::from(m..n);
                         let end = tk.pair();
                         self.cursor = n;
                         self.state = State::InBlock { begin, end };
                         Ok(Some((tk, begin)))
                     }
-                    _ => Err(Error::span(
+                    _ => Err(Error::new(
                         format!("unexpected {}", tk.human()),
                         self.source,
                         m..n,
                     )),
                 };
 
-                match (i..self.source.len())
-                    .find_map(|j| try_lex_tag(j).map(|(tag, k)| (tag, j, k)))
+                match (i..self.source.len()).find_map(|j| try_lex_delim(j).map(|(d, k)| (d, j, k)))
                 {
-                    Some((tag, j, k)) if i == j => lex(tag, j, k),
-                    Some((tag, j, k)) => {
+                    Some((delim, j, k)) if i == j => lex(delim, j, k),
+                    Some((delim, j, k)) => {
                         let now = (Token::Raw, Span::from(i..j));
-                        self.next = lex(tag, j, k)?;
+                        self.next = lex(delim, j, k)?;
                         Ok(Some(now))
                     }
                     None => {
@@ -192,28 +159,28 @@ impl<'e, 't> Lexer<'e, 't> {
 
                     // Any other character
                     c => {
-                        match try_lex_tag(i) {
-                            // A matching end tag
+                        match try_lex_delim(i) {
+                            // A matching end delimiter
                             Some((tk, j)) if tk == end => {
                                 self.state = State::Template;
                                 (tk, j)
                             }
-                            Some((tk, _)) if tk.is_begin_tag() => {
-                                return Err(Error::span(
+                            Some((tk, _)) if tk.is_begin_delim() => {
+                                return Err(Error::new(
                                     format!("unclosed {}", end.pair().human()),
                                     self.source,
                                     begin,
                                 ))
                             }
                             Some((tk, j)) => {
-                                return Err(Error::span(
+                                return Err(Error::new(
                                     format!("unexpected {}", tk.human()),
                                     self.source,
                                     i..j,
                                 ))
                             }
                             None => {
-                                return Err(Error::span(
+                                return Err(Error::new(
                                     "unexpected character",
                                     self.source,
                                     i..(i + c.len_utf8()),
@@ -242,6 +209,43 @@ impl<'e, 't> Lexer<'e, 't> {
                 None => return self.source.len(),
             }
         }
+    }
+}
+
+impl Token {
+    pub fn human(&self) -> &'static str {
+        match self {
+            Self::Raw => "raw template",
+            Self::BeginExpr => "begin expression",
+            Self::EndExpr => "end expression",
+            Self::BeginBlock => "begin block",
+            Self::EndBlock => "end block",
+            Self::Period => "period",
+            Self::Pipe => "pipe",
+            Self::Comma => "comma",
+            Self::Whitespace => "whitespace",
+            Self::Ident => "identifier",
+            Self::Keyword => "keyword",
+        }
+    }
+
+    /// Returns the corresponding delimiter if this token is a delimiter.
+    fn pair(&self) -> Self {
+        match self {
+            Self::BeginExpr => Self::EndExpr,
+            Self::EndExpr => Self::BeginExpr,
+            Self::BeginBlock => Self::EndBlock,
+            Self::EndBlock => Self::BeginBlock,
+            _ => panic!("not a delimiter"),
+        }
+    }
+
+    fn is_begin_delim(&self) -> bool {
+        matches!(self, Self::BeginExpr | Self::BeginBlock)
+    }
+
+    fn is_whitespace(&self) -> bool {
+        matches!(self, Self::Whitespace)
     }
 }
 
@@ -367,8 +371,8 @@ mod tests {
 
     #[track_caller]
     fn lex(source: &str) -> Result<Vec<(Token, &str)>> {
-        let delims = Delimiters::default();
-        let mut lexer = Lexer::new(source, &delims);
+        let engine = Engine::default();
+        let mut lexer = Lexer::new(&engine, source);
         let mut tokens = Vec::new();
         while let Some((tk, sp)) = lexer.lex()? {
             tokens.push((tk, &source[sp]));

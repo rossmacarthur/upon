@@ -5,7 +5,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::span::Span;
 
-/// A convenient type alias for results in this crate.
+/// A type alias for results in this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An error that can occur during template compilation or rendering.
@@ -16,8 +16,8 @@ pub struct Error {
 }
 
 impl Error {
-    pub(crate) fn span(msg: impl Into<String>, source: &str, span: impl Into<Span>) -> Self {
-        assert!(!source.is_empty(), "source must be populated");
+    pub(crate) fn new(msg: impl Into<String>, source: &str, span: impl Into<Span>) -> Self {
+        debug_assert!(!source.is_empty(), "source must be populated");
         Self {
             msg: msg.into(),
             span: Some((source.to_string(), span.into())),

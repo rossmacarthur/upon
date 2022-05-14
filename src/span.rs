@@ -1,17 +1,10 @@
 use std::cmp::{max, min};
-use std::fmt;
 use std::ops::{Index, Range};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub m: usize,
     pub n: usize,
-}
-
-impl fmt::Debug for Span {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {})", self.m, self.n)
-    }
 }
 
 impl Span {

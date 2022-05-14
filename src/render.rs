@@ -6,29 +6,33 @@ use std::slice::Iter;
 use crate::ast;
 use crate::{Engine, Error, Result, Value};
 
-enum State<'t> {
+enum State<'source> {
     Block {
-        stmts: Iter<'t, ast::Stmt<'t>>,
+        stmts: Iter<'source, ast::Stmt<'source>>,
     },
     Loop {
-        vars: LoopVars<'t>,
+        vars: LoopVars<'source>,
         iter: IntoIter,
-        body: &'t ast::Scope<'t>,
+        body: &'source ast::Scope<'source>,
     },
 }
 
-impl<'t> State<'t> {
-    fn new(scope: &'t ast::Scope<'t>) -> Self {
+impl<'source> State<'source> {
+    fn new(scope: &'source ast::Scope<'source>) -> Self {
         Self::Block {
             stmts: scope.stmts.iter(),
         }
     }
 }
 
-pub fn template<'t>(engine: &Engine<'_>, t: &ast::Template<'_>, globals: Value) -> Result<String> {
+pub fn template<'engine, 'source>(
+    engine: &Engine<'engine>,
+    template: &ast::Template<'source>,
+    globals: Value,
+) -> Result<String> {
     let mut buf = String::new();
 
-    let mut stack = vec![State::new(&t.scope)];
+    let mut stack = vec![State::new(&template.scope)];
     let mut locals = vec![globals];
 
     'outer: while let Some(state) = stack.last_mut() {
@@ -42,7 +46,7 @@ pub fn template<'t>(engine: &Engine<'_>, t: &ast::Template<'_>, globals: Value) 
                         }
 
                         ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
-                            let value = eval(engine, t.source, &locals, expr)?;
+                            let value = eval(engine, template.source, &locals, expr)?;
                             write!(buf, "{}", value).unwrap();
                             continue;
                         }
@@ -52,15 +56,15 @@ pub fn template<'t>(engine: &Engine<'_>, t: &ast::Template<'_>, globals: Value) 
                             then_branch,
                             else_branch,
                         }) => {
-                            let cond = match eval(engine, t.source, &locals, cond)? {
+                            let cond = match eval(engine, template.source, &locals, cond)? {
                                 Value::Bool(cond) => cond,
                                 val => {
-                                    return Err(Error::span(
+                                    return Err(Error::new(
                                         format!(
                                             "expected bool, but expression evaluated to {}",
                                             val.human()
                                         ),
-                                        t.source,
+                                        template.source,
                                         cond.span(),
                                     ));
                                 }
@@ -81,46 +85,48 @@ pub fn template<'t>(engine: &Engine<'_>, t: &ast::Template<'_>, globals: Value) 
                             iterable,
                             body,
                         }) => {
-                            let (vars, iter) = match eval(engine, t.source, &locals, iterable)? {
-                                Value::List(list) => match vars {
-                                    ast::LoopVars::Item(item) => {
-                                        let vars = LoopVars::Item(item.value);
-                                        let iter = IntoIter::List(list.into_iter());
-                                        (vars, iter)
-                                    }
-                                    ast::LoopVars::KeyValue(kv) => {
-                                        return Err(Error::span(
-                                            "cannot unpack list item into two variables",
-                                            t.source,
-                                            kv.span,
+                            let (vars, iter) =
+                                match eval(engine, template.source, &locals, iterable)? {
+                                    Value::List(list) => match vars {
+                                        ast::LoopVars::Item(item) => {
+                                            let vars = LoopVars::Item(item.value);
+                                            let iter = IntoIter::List(list.into_iter());
+                                            (vars, iter)
+                                        }
+                                        ast::LoopVars::KeyValue(kv) => {
+                                            return Err(Error::new(
+                                                "cannot unpack list item into two variables",
+                                                template.source,
+                                                kv.span,
+                                            ));
+                                        }
+                                    },
+                                    Value::Map(map) => match vars {
+                                        ast::LoopVars::Item(item) => {
+                                            return Err(Error::new(
+                                                "cannot unpack map item into one variable",
+                                                template.source,
+                                                item.span,
+                                            ));
+                                        }
+                                        ast::LoopVars::KeyValue(kv) => {
+                                            let iter = IntoIter::Map(map.into_iter());
+                                            let vars =
+                                                LoopVars::KeyValue(kv.key.value, kv.value.value);
+                                            (vars, iter)
+                                        }
+                                    },
+                                    val => {
+                                        return Err(Error::new(
+                                            format!(
+                                                "expected iterable, but expression evaluated to {}",
+                                                val.human()
+                                            ),
+                                            template.source,
+                                            iterable.span(),
                                         ));
                                     }
-                                },
-                                Value::Map(map) => match vars {
-                                    ast::LoopVars::Item(item) => {
-                                        return Err(Error::span(
-                                            "cannot unpack map item into one variable",
-                                            t.source,
-                                            item.span,
-                                        ));
-                                    }
-                                    ast::LoopVars::KeyValue(kv) => {
-                                        let iter = IntoIter::Map(map.into_iter());
-                                        let vars = LoopVars::KeyValue(kv.key.value, kv.value.value);
-                                        (vars, iter)
-                                    }
-                                },
-                                val => {
-                                    return Err(Error::span(
-                                        format!(
-                                            "expected iterable, but expression evaluated to {}",
-                                            val.human()
-                                        ),
-                                        t.source,
-                                        iterable.span(),
-                                    ));
-                                }
-                            };
+                                };
                             locals.push(Value::None); // dummy
                             stack.push(State::Loop { vars, iter, body });
                             continue 'outer;
@@ -146,7 +152,7 @@ pub fn template<'t>(engine: &Engine<'_>, t: &ast::Template<'_>, globals: Value) 
     Ok(buf)
 }
 
-fn eval<'v>(
+fn eval(
     engine: &Engine<'_>,
     source: &str,
     locals: &[Value],
@@ -158,7 +164,7 @@ fn eval<'v>(
             let func = engine
                 .filters
                 .get(name.value)
-                .ok_or_else(|| Error::span("unknown filter function", source, name.span))?;
+                .ok_or_else(|| Error::new("unknown filter function", source, name.span))?;
             Ok((func)(eval(engine, source, locals, receiver)?))
         }
     }
@@ -183,21 +189,25 @@ fn resolve(locals: &[Value], source: &str, path: &[ast::Ident]) -> Result<Value>
         }
         return Ok(result.clone());
     }
-    return Err(Error::span("not found in map", source, path[0].span));
+    Err(Error::new("not found in map", source, path[0].span))
 }
 
-fn lookup<'r>(source: &str, data: &'r Value, idx: &ast::Ident<'_>) -> Result<&'r Value> {
+fn lookup<'render>(
+    source: &str,
+    data: &'render Value,
+    idx: &ast::Ident<'_>,
+) -> Result<&'render Value> {
     let ast::Ident { value: idx, span } = idx;
     match data {
         Value::List(list) => match idx.parse::<usize>() {
             Ok(i) => Ok(&list[i]),
-            Err(_) => Err(Error::span("cannot index list with string", source, *span)),
+            Err(_) => Err(Error::new("cannot index list with string", source, *span)),
         },
         Value::Map(map) => match map.get(*idx) {
             Some(value) => Ok(value),
-            None => Err(Error::span("not found in map", source, *span)),
+            None => Err(Error::new("not found in map", source, *span)),
         },
-        val => Err(Error::span(
+        val => Err(Error::new(
             format!("cannot index into {}", val.human()),
             source,
             *span,
@@ -219,9 +229,9 @@ impl Value {
     }
 }
 
-enum LoopVars<'t> {
-    Item(&'t str),
-    KeyValue(&'t str, &'t str),
+enum LoopVars<'source> {
+    Item(&'source str),
+    KeyValue(&'source str, &'source str),
 }
 
 enum IntoIter {

@@ -1,13 +1,16 @@
 use crate::ast;
 use crate::lex::{Lexer, Token};
-use crate::{Delimiters, Error, Result, Span};
+use crate::{Engine, Error, Result, Span};
 
-pub(crate) fn template<'t>(source: &'t str, delims: &Delimiters<'_>) -> Result<ast::Template<'t>> {
-    Parser::new(source, delims).expect_template()
+pub(crate) fn template<'engine, 'source>(
+    engine: &'engine Engine<'engine>,
+    source: &'source str,
+) -> Result<ast::Template<'source>> {
+    Parser::new(engine, source).parse_template()
 }
 
-pub struct Parser<'e, 't> {
-    tokens: Lexer<'e, 't>,
+struct Parser<'engine, 'source> {
+    tokens: Lexer<'engine, 'source>,
     peeked: Option<Option<(Token, Span)>>,
 }
 
@@ -21,47 +24,47 @@ pub(crate) enum Keyword {
     EndFor,
 }
 
-enum State<'t> {
-    If(ast::Expr<'t>, Span),
+enum State<'source> {
+    If(ast::Expr<'source>, Span),
     Else(Span),
-    For(ast::LoopVars<'t>, ast::Expr<'t>, Span),
+    For(ast::LoopVars<'source>, ast::Expr<'source>, Span),
 }
 
-enum Block<'t> {
-    If(ast::Expr<'t>),
+enum Block<'source> {
+    If(ast::Expr<'source>),
     Else,
     EndIf,
-    For(ast::LoopVars<'t>, ast::Expr<'t>),
+    For(ast::LoopVars<'source>, ast::Expr<'source>),
     EndFor,
 }
 
-impl<'e, 't> Parser<'e, 't> {
-    fn new(source: &'t str, delims: &'e Delimiters<'e>) -> Self {
+impl<'engine, 'source> Parser<'engine, 'source> {
+    fn new(engine: &'engine Engine<'engine>, source: &'source str) -> Self {
         Self {
-            tokens: Lexer::new(source, delims),
+            tokens: Lexer::new(engine, source),
             peeked: None,
         }
     }
 
-    fn expect_template(mut self) -> Result<ast::Template<'t>> {
-        let mut blocks: Vec<State<'t>> = vec![];
-        let mut scopes: Vec<ast::Scope<'t>> = vec![ast::Scope::new()];
+    fn parse_template(mut self) -> Result<ast::Template<'source>> {
+        let mut blocks: Vec<State<'_>> = vec![];
+        let mut scopes: Vec<ast::Scope<'_>> = vec![ast::Scope::new()];
 
         while let Some(next) = self.next()? {
             let stmt = match next {
                 (Token::Raw, span) => ast::Stmt::Raw(&self.source()[span]),
 
-                (Token::BeginExpr, begin_tag) => {
-                    let expr = self.expect_expr()?;
-                    let end_tag = self.expect(Token::EndExpr)?;
-                    let span = begin_tag.combine(end_tag);
+                (Token::BeginExpr, begin) => {
+                    let expr = self.parse_expr()?;
+                    let end = self.parse(Token::EndExpr)?;
+                    let span = begin.combine(end);
                     ast::Stmt::InlineExpr(ast::InlineExpr { expr, span })
                 }
 
-                (Token::BeginBlock, begin_tag) => {
-                    let block = self.expect_block()?;
-                    let end_tag = self.expect(Token::EndBlock)?;
-                    let span = begin_tag.combine(end_tag);
+                (Token::BeginBlock, begin) => {
+                    let block = self.parse_block()?;
+                    let end = self.parse(Token::EndBlock)?;
+                    let span = begin.combine(end);
                     match block {
                         Block::If(cond) => {
                             blocks.push(State::If(cond, span));
@@ -77,7 +80,7 @@ impl<'e, 't> Parser<'e, 't> {
 
                         Block::EndIf => {
                             let err =
-                                || Error::span("unexpected `endif` block", self.source(), span);
+                                || Error::new("unexpected `endif` block", self.source(), span);
 
                             let mut last = blocks.pop().ok_or_else(err)?;
                             let mut else_branch = None;
@@ -96,7 +99,7 @@ impl<'e, 't> Parser<'e, 't> {
                                     }
                                 }
                                 state => {
-                                    return Err(Error::span(
+                                    return Err(Error::new(
                                         format!("unexpected `{}` block", state.human()),
                                         self.source(),
                                         state.span(),
@@ -115,7 +118,7 @@ impl<'e, 't> Parser<'e, 't> {
 
                         Block::EndFor => {
                             let last = blocks.pop().ok_or_else(|| {
-                                Error::span("unexpected `endfor` block", self.source(), span)
+                                Error::new("unexpected `endfor` block", self.source(), span)
                             })?;
                             let for_loop = match last {
                                 State::For(vars, iterable, _) => {
@@ -127,7 +130,7 @@ impl<'e, 't> Parser<'e, 't> {
                                     }
                                 }
                                 state => {
-                                    return Err(Error::span(
+                                    return Err(Error::new(
                                         format!("unexpected `{}` block", state.human()),
                                         self.source(),
                                         state.span(),
@@ -152,7 +155,7 @@ impl<'e, 't> Parser<'e, 't> {
                 State::Else(sp) => ("unexpected `else` block", sp),
                 State::For(_, _, sp) => ("unclosed `for` block", sp),
             };
-            return Err(Error::span(msg, self.source(), *span));
+            return Err(Error::new(msg, self.source(), *span));
         }
 
         assert!(blocks.is_empty());
@@ -164,23 +167,23 @@ impl<'e, 't> Parser<'e, 't> {
         })
     }
 
-    fn expect_block(&mut self) -> Result<Block<'t>> {
-        let (kw, span) = self.expect_keyword()?;
+    fn parse_block(&mut self) -> Result<Block<'source>> {
+        let (kw, span) = self.parse_keyword()?;
         match kw {
             Keyword::If => {
-                let expr = self.expect_expr()?;
+                let expr = self.parse_expr()?;
                 Ok(Block::If(expr))
             }
             Keyword::Else => Ok(Block::Else),
             Keyword::EndIf => Ok(Block::EndIf),
             Keyword::For => {
-                let vars = self.expect_loop_vars()?;
-                self.expect_keyword_exact(Keyword::In)?;
-                let iterable = self.expect_expr()?;
+                let vars = self.parse_loop_vars()?;
+                self.parse_keyword_exact(Keyword::In)?;
+                let iterable = self.parse_expr()?;
                 Ok(Block::For(vars, iterable))
             }
             Keyword::EndFor => Ok(Block::EndFor),
-            _ => Err(Error::span(
+            _ => Err(Error::new(
                 format!("unexpected keyword `{}`", kw.human()),
                 self.source(),
                 span,
@@ -188,22 +191,22 @@ impl<'e, 't> Parser<'e, 't> {
         }
     }
 
-    fn expect_loop_vars(&mut self) -> Result<ast::LoopVars<'t>> {
-        let key = self.expect_ident()?;
+    fn parse_loop_vars(&mut self) -> Result<ast::LoopVars<'source>> {
+        let key = self.parse_ident()?;
         if !self.is_next(Token::Comma)? {
             return Ok(ast::LoopVars::Item(key));
         }
-        self.expect(Token::Comma)?;
-        let value = self.expect_ident()?;
+        self.parse(Token::Comma)?;
+        let value = self.parse_ident()?;
         let span = key.span.combine(value.span);
         Ok(ast::LoopVars::KeyValue(ast::KeyValue { key, value, span }))
     }
 
-    fn expect_expr(&mut self) -> Result<ast::Expr<'t>> {
-        let mut expr = ast::Expr::Var(self.expect_var()?);
+    fn parse_expr(&mut self) -> Result<ast::Expr<'source>> {
+        let mut expr = ast::Expr::Var(self.parse_var()?);
         while self.is_next(Token::Pipe)? {
-            self.expect(Token::Pipe)?;
-            let name = self.expect_ident()?;
+            self.parse(Token::Pipe)?;
+            let name = self.parse_ident()?;
             let span = name.span.combine(expr.span());
             expr = ast::Expr::Call(ast::Call {
                 name,
@@ -214,12 +217,12 @@ impl<'e, 't> Parser<'e, 't> {
         Ok(expr)
     }
 
-    fn expect_var(&mut self) -> Result<ast::Var<'t>> {
+    fn parse_var(&mut self) -> Result<ast::Var<'source>> {
         let mut path = Vec::new();
         loop {
-            path.push(self.expect_ident()?);
+            path.push(self.parse_ident()?);
             if self.is_next(Token::Period)? {
-                self.expect(Token::Period)?;
+                self.parse(Token::Period)?;
                 continue;
             }
             break;
@@ -228,10 +231,10 @@ impl<'e, 't> Parser<'e, 't> {
         Ok(ast::Var { path, span })
     }
 
-    fn expect_keyword_exact(&mut self, exp: Keyword) -> Result<Span> {
-        let (kw, span) = self.expect_keyword()?;
+    fn parse_keyword_exact(&mut self, exp: Keyword) -> Result<Span> {
+        let (kw, span) = self.parse_keyword()?;
         if kw != exp {
-            return Err(Error::span(
+            return Err(Error::new(
                 format!(
                     "expected keyword `{}`, found keyword `{}`",
                     exp.human(),
@@ -244,8 +247,8 @@ impl<'e, 't> Parser<'e, 't> {
         Ok(span)
     }
 
-    fn expect_keyword(&mut self) -> Result<(Keyword, Span)> {
-        let span = self.expect(Token::Keyword)?;
+    fn parse_keyword(&mut self) -> Result<(Keyword, Span)> {
+        let span = self.parse(Token::Keyword)?;
         let kw = &self.source()[span];
         match Keyword::from_str(kw) {
             Some(kw) => Ok((kw, span)),
@@ -253,23 +256,23 @@ impl<'e, 't> Parser<'e, 't> {
         }
     }
 
-    fn expect_ident(&mut self) -> Result<ast::Ident<'t>> {
-        let span = self.expect(Token::Ident)?;
+    fn parse_ident(&mut self) -> Result<ast::Ident<'source>> {
+        let span = self.parse(Token::Ident)?;
         let value = &self.source()[span];
         Ok(ast::Ident { value, span })
     }
 
-    fn expect(&mut self, exp: Token) -> Result<Span> {
+    fn parse(&mut self, exp: Token) -> Result<Span> {
         match self.next()? {
             Some((tk, sp)) if tk == exp => Ok(sp),
-            Some((tk, sp)) => Err(Error::span(
+            Some((tk, sp)) => Err(Error::new(
                 format!("expected {}, found {}", exp.human(), tk.human()),
                 self.source(),
                 sp,
             )),
             None => {
                 let n = self.source().len();
-                Err(Error::span(
+                Err(Error::new(
                     format!("expected {}, found EOF", exp.human()),
                     self.source(),
                     n..n,
@@ -296,7 +299,7 @@ impl<'e, 't> Parser<'e, 't> {
         }
     }
 
-    fn source(&self) -> &'t str {
+    fn source(&self) -> &'source str {
         self.tokens.source
     }
 }

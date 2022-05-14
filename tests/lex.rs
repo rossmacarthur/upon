@@ -10,7 +10,7 @@ fn lex_unexpected_end_expr() {
         "
    |
  1 | lorem ipsum }} dolor sit amet
-   |             ^^ unexpected end tag
+   |             ^^ unexpected end expression
 "
     );
 }
@@ -25,7 +25,7 @@ fn lex_unexpected_end_block() {
         "
    |
  1 | lorem ipsum %} dolor sit amet
-   |             ^^ unexpected end tag
+   |             ^^ unexpected end block
 "
     );
 }
@@ -40,7 +40,7 @@ fn lex_unclosed_begin_expr() {
         "
    |
  1 | lorem ipsum {{ {{ dolor sit amet
-   |             ^^ unclosed begin tag
+   |             ^^ unclosed begin expression
 "
     );
 }
@@ -55,7 +55,7 @@ fn lex_unclosed_begin_block() {
         "
    |
  1 | lorem ipsum {% {{ dolor sit amet
-   |             ^^ unclosed begin tag
+   |             ^^ unclosed begin block
 "
     );
 }
@@ -70,7 +70,7 @@ fn lex_unexpected_end_tag() {
         "
    |
  1 | lorem ipsum {{ %} dolor sit amet
-   |                ^^ unexpected end tag
+   |                ^^ unexpected end block
 "
     );
 }

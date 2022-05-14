@@ -7,45 +7,35 @@
 //! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Customizable filter functions: `{{ value | my_filter }}`
 //! - Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
-//! - Render any [`serde`][serde] serializable values.
+//! - Supports any [`serde`][serde] serializable values.
 //! - Macro for quick rendering: `data!{ name: "John", age: 42 }`
 //!
 //! # Introduction
 //!
 //! Your entry point is the compilation and rendering [`Engine`], this stores
-//! the delimiter settings, registered templates, and filter functions.
-//! Generally, you only need to construct one engine.
+//! the delimiter settings and filter functions. Generally, you only need to
+//! construct one engine.
 //!
 //! ```
-//! let mut engine = upon::Engine::new();
+//! let engine = upon::Engine::new();
 //! ```
 //!
-//! Add templates to the engine using `.add_template()` either using a string
-//! literal or using [`include_str!`].
+//! Compiling a template returns a reference to it bound to the lifetime of the
+//! engine and the template source.
 //!
 //! ```
-//! # let mut engine = upon::Engine::new();
-//! engine.add_template("hello", "Hello {{ user.name }}!")?;
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! Now render the template using its name.
-//!
-//! ```
-//! # let mut engine = upon::Engine::new();
-//! # engine.add_template("hello", "Hello {{ user.name }}!")?;
-//! let result = engine.render("hello", upon::data!{ user: { name: "John" } })?;
-//! assert_eq!(result, "Hello John!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! For convenience you can also compile and render templates without storing
-//! the template in the engine.
-//!
-//! ```
-//! # let mut engine = upon::Engine::new();
+//! # let engine = upon::Engine::new();
 //! let template = engine.compile("Hello {{ user.name }}!")?;
-//! template.render(upon::data!{ user: { name: "John" } })?;
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! The template can then be rendered by calling `.render()`.
+//!
+//! ```
+//! # let engine = upon::Engine::new();
+//! # let template = engine.compile("Hello {{ user.name }}!")?;
+//! let result = template.render(upon::data!{ user: { name: "John Smith" }})?;
+//! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
@@ -53,22 +43,18 @@
 //!
 //! ### Render using structured data
 //!
+//! Here is the same example as above except using derived data.
+//!
 //! ```
-//! use upon::Engine;
-//! use serde::Serialize;
+//! #[derive(serde::Serialize)]
+//! struct Data { user: User }
+//! #[derive(serde::Serialize)]
+//! struct User { name: String }
 //!
-//! #[derive(Serialize)]
-//! struct Data {
-//!     user: User,
-//! }
-//! #[derive(Serialize)]
-//! struct User {
-//!     name: String,
-//! }
-//!
+//! let engine = upon::Engine::new();
 //! let data = Data { user: User { name: "John Smith".into() } };
-//!
-//! let result = Engine::new().compile("Hello {{ user.name }}")?.render(data)?;
+//! let template = engine.compile("Hello {{ user.name }}")?;
+//! let result = template.render(&data)?;
 //!
 //! assert_eq!(result, "Hello John Smith");
 //! # Ok::<(), upon::Error>(())
@@ -76,22 +62,23 @@
 //!
 //! ### Transform data using filters
 //!
-//! ```
-//! use upon::{data, Engine, Value};
+//! Data can be transformed using registered filters.
 //!
-//! fn lower(mut v: Value) -> Value {
-//!     if let Value::String(s) = &mut v {
+//! ```
+//! // If the value is a string, make it lowercase
+//! fn lower(mut v: upon::Value) -> upon::Value {
+//!     if let upon::Value::String(s) = &mut v {
 //!         *s = s.to_lowercase();
 //!     }
 //!     v
 //! }
 //!
-//! let mut engine = Engine::new();
+//! let mut engine = upon::Engine::new();
 //! engine.add_filter("lower", lower);
 //!
 //! let result = engine
 //!     .compile("Hello {{ value | lower }}")?
-//!     .render(data! { value: "WORLD!" })?;
+//!     .render(upon::data! { value: "WORLD!" })?;
 //!
 //! assert_eq!(result, "Hello world!");
 //! # Ok::<(), upon::Error>(())
@@ -101,10 +88,10 @@
 //!
 //! ```
 //! let result = upon::Engine::with_delims("<?", "?>", "<%", "%>")
-//!     .compile("Hello <? value ?>")?
-//!     .render(upon::data! { value: "World!" })?;
+//!     .compile("Hello <? user.name ?>")?
+//!     .render(upon::data!{ user: { name: "John Smith" }})?;
 //!
-//! assert_eq!(result, "Hello World!");
+//! assert_eq!(result, "Hello John Smith");
 //! # Ok::<(), upon::Error>(())
 //! ```
 
@@ -117,10 +104,8 @@ mod render;
 mod span;
 pub mod value;
 
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt;
-use std::hash::Hash;
 use std::sync::Arc;
 
 pub use crate::error::{Error, Result};
@@ -129,104 +114,24 @@ pub use crate::value::{to_value, Value};
 
 /// The compilation and rendering engine.
 #[derive(Clone)]
-pub struct Engine<'e> {
-    delims: Delimiters<'e>,
-    templates: HashMap<String, ast::Template<'e>>,
-    filters: HashMap<String, Arc<dyn Fn(Value) -> Value + Send + Sync + 'e>>,
-}
-
-/// Delimiter configuration.
-#[derive(Debug, Clone)]
-struct Delimiters<'e> {
-    begin_expr: &'e str,
-    end_expr: &'e str,
-    begin_block: &'e str,
-    end_block: &'e str,
+pub struct Engine<'engine> {
+    begin_expr: &'engine str,
+    end_expr: &'engine str,
+    begin_block: &'engine str,
+    end_block: &'engine str,
+    filters: HashMap<String, Arc<dyn Fn(Value) -> Value + Send + Sync + 'engine>>,
 }
 
 /// A compiled template.
 #[derive(Debug, Clone)]
-pub struct Template<'e> {
-    engine: &'e Engine<'e>,
-    template: ast::Template<'e>,
+pub struct Template<'engine, 'source> {
+    engine: &'engine Engine<'engine>,
+    template: ast::Template<'source>,
 }
 
-impl<'e> Default for Engine<'e> {
+impl Default for Engine<'_> {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl<'e> Engine<'e> {
-    pub fn new() -> Self {
-        Self {
-            delims: Delimiters::default(),
-            templates: HashMap::new(),
-            filters: HashMap::new(),
-        }
-    }
-
-    pub fn with_delims(
-        begin_expr: &'e str,
-        end_expr: &'e str,
-        begin_block: &'e str,
-        end_block: &'e str,
-    ) -> Self {
-        Self {
-            delims: Delimiters::new(begin_expr, end_expr, begin_block, end_block),
-            templates: HashMap::new(),
-            filters: HashMap::new(),
-        }
-    }
-
-    pub fn add_filter<F>(&mut self, name: impl Into<String>, f: F)
-    where
-        F: Fn(Value) -> Value + Send + Sync + 'e,
-    {
-        self.filters.insert(name.into(), Arc::new(f));
-    }
-
-    pub fn remove_filter<Q: ?Sized>(&mut self, name: &Q)
-    where
-        String: Borrow<Q>,
-        Q: Hash + Eq,
-    {
-        self.filters.remove(name);
-    }
-
-    /// Add a new named template to the engine.
-    pub fn add_template(&mut self, name: impl Into<String>, source: &'e str) -> Result<()> {
-        let t = compile::template(source, &self.delims)?;
-        self.templates.insert(name.into(), t);
-        Ok(())
-    }
-
-    /// Remove a named template from the engine.
-    ///
-    /// # Panics
-    ///
-    /// If the template does not exist.
-    #[track_caller]
-    pub fn remove_template(&mut self, name: &'e str) {
-        self.templates.remove(name).unwrap();
-    }
-
-    /// Compile an unamed template and return it.
-    pub fn compile(&'e self, source: &'e str) -> Result<Template<'e>> {
-        Template::compile(self, source)
-    }
-
-    /// Render a named template to a string using the provided data.
-    ///
-    /// # Panics
-    ///
-    /// If the template does not exist.
-    pub fn render<S>(&'e self, name: &str, data: S) -> Result<String>
-    where
-        S: serde::Serialize,
-    {
-        let t = self.templates.get(name).unwrap();
-        render::template(self, t, to_value(data)?)
     }
 }
 
@@ -237,45 +142,63 @@ impl fmt::Debug for Engine<'_> {
             .entries(self.filters.keys().map(|k| (k, "<filter>")))
             .finish();
         f.debug_struct("Engine")
-            .field("delims", &self.delims)
-            .field("templates", &self.templates)
+            .field("begin_expr", &self.begin_expr)
+            .field("end_expr", &self.end_expr)
+            .field("begin_block", &self.begin_block)
+            .field("end_block", &self.end_block)
             .field("filters", &filters)
             .finish()
     }
 }
 
-impl Default for Delimiters<'_> {
-    fn default() -> Self {
-        Self::new("{{", "}}", "{%", "%}")
+impl<'engine> Engine<'engine> {
+    /// Construct a new engine.
+    pub fn new() -> Self {
+        Self {
+            begin_expr: "{{",
+            end_expr: "}}",
+            begin_block: "{%",
+            end_block: "%}",
+            filters: HashMap::new(),
+        }
     }
-}
 
-impl<'e> Delimiters<'e> {
-    /// Returns a new tag configuration.
-    const fn new(
-        begin_expr: &'e str,
-        end_expr: &'e str,
-        begin_block: &'e str,
-        end_block: &'e str,
+    /// Construct a new engine with custom delimiters.
+    pub fn with_delims(
+        begin_expr: &'engine str,
+        end_expr: &'engine str,
+        begin_block: &'engine str,
+        end_block: &'engine str,
     ) -> Self {
         Self {
             begin_expr,
             end_expr,
             begin_block,
             end_block,
+            filters: HashMap::new(),
         }
+    }
+
+    /// Add a new filter to the engine.
+    pub fn add_filter<F>(&mut self, name: impl Into<String>, f: F)
+    where
+        F: Fn(Value) -> Value + Send + Sync + 'engine,
+    {
+        self.filters.insert(name.into(), Arc::new(f));
+    }
+
+    /// Compile a template.
+    pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
+        let template = compile::template(self, source)?;
+        Ok(Template {
+            engine: self,
+            template,
+        })
     }
 }
 
-impl<'e> Template<'e> {
-    #[inline]
-    fn compile(engine: &'e Engine<'e>, source: &'e str) -> Result<Self> {
-        let template = compile::template(source, &engine.delims)?;
-        Ok(Self { engine, template })
-    }
-
-    #[inline]
-    pub fn source(&self) -> &'e str {
+impl<'engine, 'source> Template<'engine, 'source> {
+    pub fn source(&self) -> &'source str {
         self.template.source
     }
 
