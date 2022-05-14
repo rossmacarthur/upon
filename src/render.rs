@@ -11,7 +11,7 @@ enum State<'source> {
         stmts: Iter<'source, ast::Stmt<'source>>,
     },
     Loop {
-        vars: LoopVars<'source>,
+        vars: &'source ast::LoopVars<'source>,
         iter: IntoIter,
         body: &'source ast::Scope<'source>,
     },
@@ -87,35 +87,8 @@ pub fn template<'engine, 'source>(
                         }) => {
                             let (vars, iter) =
                                 match eval(engine, template.source, &locals, iterable)? {
-                                    Value::List(list) => match vars {
-                                        ast::LoopVars::Item(item) => {
-                                            let vars = LoopVars::Item(item.value);
-                                            let iter = IntoIter::List(list.into_iter());
-                                            (vars, iter)
-                                        }
-                                        ast::LoopVars::KeyValue(kv) => {
-                                            return Err(Error::new(
-                                                "cannot unpack list item into two variables",
-                                                template.source,
-                                                kv.span,
-                                            ));
-                                        }
-                                    },
-                                    Value::Map(map) => match vars {
-                                        ast::LoopVars::Item(item) => {
-                                            return Err(Error::new(
-                                                "cannot unpack map item into one variable",
-                                                template.source,
-                                                item.span,
-                                            ));
-                                        }
-                                        ast::LoopVars::KeyValue(kv) => {
-                                            let iter = IntoIter::Map(map.into_iter());
-                                            let vars =
-                                                LoopVars::KeyValue(kv.key.value, kv.value.value);
-                                            (vars, iter)
-                                        }
-                                    },
+                                    Value::List(list) => (vars, IntoIter::List(list.into_iter())),
+                                    Value::Map(map) => (vars, IntoIter::Map(map.into_iter())),
                                     val => {
                                         return Err(Error::new(
                                             format!(
@@ -138,7 +111,7 @@ pub fn template<'engine, 'source>(
             State::Loop { vars, iter, body } => {
                 let body: &ast::Scope<'_> = *body; // needed for some reason
 
-                if let Some(next_locals) = iter.next(vars) {
+                if let Some(next_locals) = iter.next(template, vars)? {
                     *locals.last_mut().unwrap() = next_locals;
                     stack.push(State::new(body));
                     continue 'outer;
@@ -163,7 +136,7 @@ fn eval(
         ast::Expr::Call(ast::Call { name, receiver, .. }) => {
             let func = engine
                 .filters
-                .get(name.value)
+                .get(name.raw)
                 .ok_or_else(|| Error::new("unknown filter function", source, name.span))?;
             Ok((func)(eval(engine, source, locals, receiver)?))
         }
@@ -197,7 +170,7 @@ fn lookup<'render>(
     data: &'render Value,
     idx: &ast::Ident<'_>,
 ) -> Result<&'render Value> {
-    let ast::Ident { value: idx, span } = idx;
+    let ast::Ident { raw: idx, span } = idx;
     match data {
         Value::List(list) => match idx.parse::<usize>() {
             Ok(i) => Ok(&list[i]),
@@ -229,33 +202,52 @@ impl Value {
     }
 }
 
-enum LoopVars<'source> {
-    Item(&'source str),
-    KeyValue(&'source str, &'source str),
-}
-
 enum IntoIter {
     List(crate::value::ListIntoIter),
     Map(crate::value::MapIntoIter),
 }
 
 impl IntoIter {
-    fn next(&mut self, vars: &LoopVars<'_>) -> Option<Value> {
+    fn next(
+        &mut self,
+        template: &ast::Template<'_>,
+        vars: &ast::LoopVars<'_>,
+    ) -> Result<Option<Value>> {
         match self {
             IntoIter::List(list) => {
-                let item = list.next()?;
+                let v = match list.next() {
+                    Some(v) => v,
+                    None => return Ok(None),
+                };
                 match vars {
-                    LoopVars::Item(var) => Some(Value::from([(*var, item)])),
-                    LoopVars::KeyValue(_, _) => unreachable!(),
+                    ast::LoopVars::Item(item) => Ok(Some(Value::from([(item.raw, v)]))),
+                    ast::LoopVars::KeyValue(kv) => {
+                        return Err(Error::new(
+                            "cannot unpack list item into two variables",
+                            template.source,
+                            kv.span,
+                        ));
+                    }
                 }
             }
             IntoIter::Map(map) => {
-                let (left, right) = map.next()?;
+                let (vk, vv) = match map.next() {
+                    Some(v) => v,
+                    None => return Ok(None),
+                };
+
                 match vars {
-                    LoopVars::Item(_) => unreachable!(),
-                    LoopVars::KeyValue(k, v) => {
-                        Some(Value::from([(*k, Value::from(left)), (*v, right)]))
+                    ast::LoopVars::Item(item) => {
+                        return Err(Error::new(
+                            "cannot unpack map item into one variable",
+                            template.source,
+                            item.span,
+                        ));
                     }
+                    ast::LoopVars::KeyValue(kv) => Ok(Some(Value::from([
+                        (kv.key.raw, Value::from(vk)),
+                        (kv.value.raw, vv),
+                    ]))),
                 }
             }
         }

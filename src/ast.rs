@@ -75,7 +75,7 @@ pub struct Call<'t> {
 
 #[derive(Debug, Clone)]
 pub struct Ident<'t> {
-    pub value: &'t str,
+    pub raw: &'t str,
     pub span: Span,
 }
 

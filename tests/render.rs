@@ -196,7 +196,7 @@ fn render_for_statement_list_with_two_vars() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: [] })
+        .render(data! { dolor: ["sit", "amet"] })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
@@ -213,7 +213,7 @@ fn render_for_statement_map_with_one_var() {
     let err = Engine::new()
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: {} })
+        .render(data! { dolor: { sit: "amet" }})
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),

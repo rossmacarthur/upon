@@ -259,7 +259,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse_ident(&mut self) -> Result<ast::Ident<'source>> {
         let span = self.parse(Token::Ident)?;
         let value = &self.source()[span];
-        Ok(ast::Ident { value, span })
+        Ok(ast::Ident { raw: value, span })
     }
 
     fn parse(&mut self, exp: Token) -> Result<Span> {
