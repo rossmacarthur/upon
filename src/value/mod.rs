@@ -3,7 +3,6 @@ mod ser;
 
 pub use std::collections::hash_map;
 pub use std::collections::HashMap as Map;
-use std::fmt;
 use std::mem;
 use std::vec;
 pub use std::vec::Vec as List;
@@ -40,37 +39,3 @@ impl PartialEq for Value {
 }
 
 impl Eq for Value {}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Value::None => fmt::Display::fmt("", f),
-            Value::Bool(b) => fmt::Display::fmt(b, f),
-            Value::Integer(n) => fmt::Display::fmt(n, f),
-            Value::Float(n) => fmt::Display::fmt(n, f),
-            Value::String(s) => fmt::Display::fmt(s, f),
-            Value::List(list) => {
-                f.write_str("[")?;
-                for (i, entry) in list.iter().enumerate() {
-                    if i != 0 {
-                        f.write_str(", ")?;
-                    }
-                    write!(f, "{}", entry)?;
-                }
-                f.write_str("]")?;
-                Ok(())
-            }
-            Value::Map(map) => {
-                f.write_str("{")?;
-                for (i, (k, v)) in map.iter().enumerate() {
-                    if i != 0 {
-                        f.write_str(", ")?;
-                    }
-                    write!(f, "{}: {}", k, v)?;
-                }
-                f.write_str("}")?;
-                Ok(())
-            }
-        }
-    }
-}

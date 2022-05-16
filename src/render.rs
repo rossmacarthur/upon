@@ -46,8 +46,23 @@ pub fn template<'engine, 'source>(
                         }
 
                         ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
-                            let value = eval(engine, template.source, &locals, expr)?;
-                            write!(buf, "{}", value).unwrap();
+                            match eval(engine, template.source, &locals, expr)? {
+                                Value::None => {}
+                                Value::Bool(b) => write!(buf, "{}", b).unwrap(),
+                                Value::Integer(n) => write!(buf, "{}", n).unwrap(),
+                                Value::Float(n) => write!(buf, "{}", n).unwrap(),
+                                Value::String(s) => write!(buf, "{}", s).unwrap(),
+                                val => {
+                                    return Err(Error::new(
+                                        format!(
+                                        "expeced renderable value, but expression evaluated to {}",
+                                        val.human()
+                                    ),
+                                        template.source,
+                                        expr.span(),
+                                    ));
+                                }
+                            }
                             continue;
                         }
 
