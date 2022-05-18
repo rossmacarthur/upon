@@ -2,13 +2,13 @@
 //!
 //! # Features
 //!
-//! - Rendering values: `{{ user.name }}`
+//! - Expressions: `{{ user.name }}`
 //! - Conditionals: `{% if user.enabled %} ... {% endif %}`
 //! - Loops: `{% for user in users %} ... {% endfor %}`
-//! - Customizable filter functions: `{{ value | my_filter }}`
+//! - Customizable filter functions: `{{ user.name | lower }}`
 //! - Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
 //! - Supports any [`serde`][serde] serializable values.
-//! - Macro for quick rendering: `data!{ name: "John", age: 42 }`
+//! - Macro for quick rendering: `value!{ name: "John", age: 42 }`
 //!
 //! # Introduction
 //!
@@ -34,7 +34,7 @@
 //! ```
 //! # let engine = upon::Engine::new();
 //! # let template = engine.compile("Hello {{ user.name }}!")?;
-//! let result = template.render(upon::data!{ user: { name: "John Smith" }})?;
+//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -78,7 +78,7 @@
 //!
 //! let result = engine
 //!     .compile("Hello {{ value | lower }}")?
-//!     .render(upon::data! { value: "WORLD!" })?;
+//!     .render(upon::value! { value: "WORLD!" })?;
 //!
 //! assert_eq!(result, "Hello world!");
 //! # Ok::<(), upon::Error>(())
@@ -89,7 +89,7 @@
 //! ```
 //! let result = upon::Engine::with_delims("<?", "?>", "<%", "%>")
 //!     .compile("Hello <? user.name ?>")?
-//!     .render(upon::data!{ user: { name: "John Smith" }})?;
+//!     .render(upon::value!{ user: { name: "John Smith" }})?;
 //!
 //! assert_eq!(result, "Hello John Smith");
 //! # Ok::<(), upon::Error>(())

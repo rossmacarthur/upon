@@ -1,11 +1,11 @@
-use upon::{data, Engine, Value};
+use upon::{value, Engine, Value};
 
 #[test]
 fn render_inline_expr_normal() {
     let result = Engine::new()
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(data! { ipsum: "dolor" })
+        .render(value! { ipsum: "dolor" })
         .unwrap();
     assert_eq!(result, "lorem dolor");
 }
@@ -15,7 +15,7 @@ fn render_inline_expr_map_index() {
     let result = Engine::new()
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(data! { ipsum: { dolor: "sit"} })
+        .render(value! { ipsum: { dolor: "sit"} })
         .unwrap();
     assert_eq!(result, "lorem sit");
 }
@@ -25,7 +25,7 @@ fn render_inline_expr_list_index() {
     let result = Engine::new()
         .compile("lorem {{ ipsum.1 }}")
         .unwrap()
-        .render(data! { ipsum: ["sit", "amet"] })
+        .render(value! { ipsum: ["sit", "amet"] })
         .unwrap();
     assert_eq!(result, "lorem amet");
 }
@@ -103,7 +103,7 @@ fn render_inline_expr_err_not_found_in_map() {
     let err = Engine::new()
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(data! { dolor: "testing..." })
+        .render(value! { dolor: "testing..." })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
@@ -120,7 +120,7 @@ fn render_if_statement_cond_true() {
     let result = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
         .unwrap()
-        .render(data! { ipsum: { dolor: true }, sit: "consectetur" })
+        .render(value! { ipsum: { dolor: true }, sit: "consectetur" })
         .unwrap();
     assert_eq!(result, "lorem consectetur")
 }
@@ -130,7 +130,7 @@ fn render_if_statement_cond_false() {
     let result = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
         .unwrap()
-        .render(data! { ipsum: { dolor: false }, amet: "consectetur" })
+        .render(value! { ipsum: { dolor: false }, amet: "consectetur" })
         .unwrap();
     assert_eq!(result, "lorem consectetur")
 }
@@ -140,7 +140,7 @@ fn render_if_statement_err_cond_not_bool() {
     let err = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% endif %}")
         .unwrap()
-        .render(data! { ipsum: { dolor: { } } })
+        .render(value! { ipsum: { dolor: { } } })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
@@ -157,7 +157,7 @@ fn render_for_statement_list() {
     let result = Engine::new()
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: ["t", "e", "s", "t"] })
+        .render(value! { dolor: ["t", "e", "s", "t"] })
         .unwrap();
     assert_eq!(result, "lorem test");
 }
@@ -169,7 +169,7 @@ fn render_for_statement_map() {
     let result = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: { a: "t", b: "e", c: "s", d: "t" } })
+        .render(value! { dolor: { a: "t", b: "e", c: "s", d: "t" } })
         .unwrap();
     assert_eq!(result, "lorem test");
 }
@@ -179,7 +179,7 @@ fn render_for_statement_err_not_iterable() {
     let err = Engine::new()
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: true })
+        .render(value! { dolor: true })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
@@ -196,7 +196,7 @@ fn render_for_statement_err_list_with_two_vars() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: ["sit", "amet"] })
+        .render(value! { dolor: ["sit", "amet"] })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
@@ -213,7 +213,7 @@ fn render_for_statement_err_map_with_one_var() {
     let err = Engine::new()
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(data! { dolor: { sit: "amet" }})
+        .render(value! { dolor: { sit: "amet" }})
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
@@ -230,7 +230,7 @@ fn render_for_statement_err_loop_var_scope() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %}{% endfor %}{{ ipsum }}")
         .unwrap()
-        .render(data! { dolor: { ipsum: false }})
+        .render(value! { dolor: { ipsum: false }})
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
