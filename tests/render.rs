@@ -1,7 +1,47 @@
 use upon::{value, Engine, Value};
 
 #[test]
-fn render_inline_expr_normal() {
+fn render_inline_expr_bool() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render(value! { ipsum: true })
+        .unwrap();
+    assert_eq!(result, "lorem true");
+}
+
+#[test]
+fn render_inline_expr_i32() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render(value! { ipsum: 123_i32 })
+        .unwrap();
+    assert_eq!(result, "lorem 123");
+}
+
+#[test]
+fn render_inline_expr_i64() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render(value! { ipsum: 123_i64 })
+        .unwrap();
+    assert_eq!(result, "lorem 123");
+}
+
+#[test]
+fn render_inline_expr_f64() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render(value! { ipsum: 123.4_f64  })
+        .unwrap();
+    assert_eq!(result, "lorem 123.4");
+}
+
+#[test]
+fn render_inline_expr_string() {
     let result = Engine::new()
         .compile("lorem {{ ipsum }}")
         .unwrap()
@@ -48,18 +88,35 @@ fn render_inline_expr_err_unknown_function() {
 }
 
 #[test]
-fn render_inline_expr_err_cannot_index_into_none() {
+fn render_inline_expr_err_unrenderable() {
     let err = Engine::new()
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(Value::None)
+        .render(value! { ipsum: {} })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
  1 | lorem {{ ipsum }}
-   |          ^^^^^ cannot index into none
+   |          ^^^^^ expected renderable value, but expression evaluated to map
+"
+    );
+}
+
+#[test]
+fn render_inline_expr_err_cannot_index_into_none() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum.dolor }}")
+        .unwrap()
+        .render(value! { ipsum: None })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum.dolor }}
+   |                ^^^^^ cannot index into none
 "
     );
 }
@@ -67,16 +124,16 @@ fn render_inline_expr_err_cannot_index_into_none() {
 #[test]
 fn render_inline_expr_err_cannot_index_into_string() {
     let err = Engine::new()
-        .compile("lorem {{ ipsum }}")
+        .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(Value::from("test"))
+        .render(value! { ipsum: "testing..." })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem {{ ipsum }}
-   |          ^^^^^ cannot index into string
+ 1 | lorem {{ ipsum.dolor }}
+   |                ^^^^^ cannot index into string
 "
     );
 }
@@ -84,16 +141,16 @@ fn render_inline_expr_err_cannot_index_into_string() {
 #[test]
 fn render_inline_expr_err_cannot_index_list_with_string() {
     let err = Engine::new()
-        .compile("lorem {{ ipsum }}")
+        .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(Value::from(["test", "ing..."]))
+        .render(value! { ipsum: ["test", "ing..."] })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem {{ ipsum }}
-   |          ^^^^^ cannot index list with string
+ 1 | lorem {{ ipsum.dolor }}
+   |                ^^^^^ cannot index list with string
 "
     );
 }
@@ -101,16 +158,16 @@ fn render_inline_expr_err_cannot_index_list_with_string() {
 #[test]
 fn render_inline_expr_err_not_found_in_map() {
     let err = Engine::new()
-        .compile("lorem {{ ipsum }}")
+        .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(value! { dolor: "testing..." })
+        .render(value! { ipsum : { } })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem {{ ipsum }}
-   |          ^^^^^ not found in map
+ 1 | lorem {{ ipsum.dolor }}
+   |                ^^^^^ not found in map
 "
     );
 }

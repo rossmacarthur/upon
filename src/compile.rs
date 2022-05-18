@@ -322,7 +322,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             self.expect(Token::Period)?;
         }
         let span = match path.len() {
-            0 => path[0].span,
+            1 => path[0].span,
             n => path[0].span.combine(path[n - 1].span),
         };
         Ok(ast::Var { path, span })

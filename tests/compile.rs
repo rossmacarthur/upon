@@ -190,14 +190,29 @@ fn compile_if_statement_err_unexpected_endif_block() {
 #[test]
 fn compile_if_statement_err_unexpected_else_block() {
     let err = Engine::new()
-        .compile("lorem {% else %} {% else %} {% endif %} ipsum")
+        .compile("lorem {% else %} {% endif %} ipsum")
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem {% else %} {% else %} {% endif %} ipsum
+ 1 | lorem {% else %} {% endif %} ipsum
    |       ^^^^^^^^^^ unexpected `else` block
+"
+    );
+}
+
+#[test]
+fn compile_if_statement_err_unexpected_endfor_block() {
+    let err = Engine::new()
+        .compile("lorem {% if ipsum %} {% endfor %} dolor")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% if ipsum %} {% endfor %} dolor
+   |                      ^^^^^^^^^^^^ unexpected `endfor` block
 "
     );
 }
@@ -228,6 +243,21 @@ fn compile_for_statement_err_trailing_comma() {
    |
  1 | lorem {% for ipsum, in dolor %} sit
    |                     ^^ expected identifier, found keyword
+"
+    );
+}
+
+#[test]
+fn compile_for_statement_err_unexpected_keyword() {
+    let err = Engine::new()
+        .compile("lorem {% for ipsum endif %} dolor")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% for ipsum endif %} dolor
+   |                    ^^^^^ expected keyword `in`, found keyword `endif`
 "
     );
 }
@@ -265,29 +295,29 @@ fn compile_for_statement_err_unexpected_endfor_block() {
 #[test]
 fn compile_for_statement_err_unexpected_else_block() {
     let err = Engine::new()
-        .compile("lorem {% else %} {% endfor %} ipsum")
+        .compile("lorem {% for _, ipsum in dolor %} {% else %} {% endif %}")
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem {% else %} {% endfor %} ipsum
-   |       ^^^^^^^^^^ unexpected `else` block
+ 1 | lorem {% for _, ipsum in dolor %} {% else %} {% endif %}
+   |                                   ^^^^^^^^^^ unexpected `else` block
 "
     );
 }
 
 #[test]
-fn compile_if_statement_err_unexpected_endfor_block() {
+fn compile_for_statement_err_unexpected_endif_block() {
     let err = Engine::new()
-        .compile("lorem {% if ipsum %} {% endfor %} dolor")
+        .compile("lorem {% for _, ipsum in dolor %} {% endif %}")
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem {% if ipsum %} {% endfor %} dolor
-   |                      ^^^^^^^^^^^^ unexpected `endfor` block
+ 1 | lorem {% for _, ipsum in dolor %} {% endif %}
+   |                                   ^^^^^^^^^^^ unexpected `endif` block
 "
     );
 }

@@ -1,17 +1,13 @@
 use std::cmp::{max, min};
 use std::ops::{Index, Range};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub m: usize,
     pub n: usize,
 }
 
 impl Span {
-    pub fn new(m: usize, n: usize) -> Self {
-        Self { m, n }
-    }
-
     pub fn combine(self, other: Self) -> Self {
         let m = min(self.m, other.m);
         let n = max(self.n, other.n);

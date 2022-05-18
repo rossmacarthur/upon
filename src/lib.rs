@@ -113,7 +113,6 @@ use crate::span::Span;
 pub use crate::value::{to_value, Value};
 
 /// The compilation and rendering engine.
-#[derive(Clone)]
 pub struct Engine<'engine> {
     begin_expr: &'engine str,
     end_expr: &'engine str,
@@ -123,7 +122,7 @@ pub struct Engine<'engine> {
 }
 
 /// A compiled template.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: ast::Template<'source>,
@@ -198,6 +197,7 @@ impl<'engine> Engine<'engine> {
 }
 
 impl<'engine, 'source> Template<'engine, 'source> {
+    /// Returns the original template source.
     pub fn source(&self) -> &'source str {
         self.template.source
     }

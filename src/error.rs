@@ -9,7 +9,6 @@ use crate::span::Span;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An error that can occur during template compilation or rendering.
-#[derive(Clone)]
 pub struct Error {
     msg: String,
     span: Option<(String, Span)>,

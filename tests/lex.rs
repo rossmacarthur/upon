@@ -1,9 +1,31 @@
 use upon::Engine;
 
 #[test]
+fn lex_while_eof() {
+    let err = Engine::with_delims("{", "}", "{{", "}}")
+        .compile("lorem { ipsum")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem { ipsum
+   |              ^ expected end expression, found EOF
+"
+    );
+}
+
+#[test]
 fn lex_overlapping_delimiters() {
     Engine::with_delims("{", "}", "{{", "}}")
         .compile("lorem { ipsum } {{ if dolor }} {{ endif }} sit amet")
+        .unwrap();
+}
+
+#[test]
+fn lex_overlapping_delimiters_flipped() {
+    Engine::with_delims("{{", "}}", "{", "}")
+        .compile("lorem {{ ipsum }} { if dolor } { endif } sit amet")
         .unwrap();
 }
 
