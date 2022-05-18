@@ -202,12 +202,12 @@ impl<'engine, 'source> Template<'engine, 'source> {
         self.template.source
     }
 
-    /// Render the template to a string using the provided data.
+    /// Render the template to a string using the provided value.
     #[inline]
-    pub fn render<S>(&self, data: S) -> Result<String>
+    pub fn render<S>(&self, s: S) -> Result<String>
     where
         S: serde::Serialize,
     {
-        render::Renderer::new(&self.engine, &self.template).render(to_value(data)?)
+        render::Renderer::new(&self.engine, &self.template).render(to_value(s)?)
     }
 }

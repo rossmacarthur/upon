@@ -1,3 +1,5 @@
+//! Defines the [`Value`] enum, representing any valid renderable data.
+
 mod from;
 mod ser;
 
@@ -9,8 +11,8 @@ pub use std::vec::Vec as List;
 
 pub use crate::value::ser::to_value;
 
-pub type MapIntoIter = hash_map::IntoIter<String, Value>;
-pub type ListIntoIter = vec::IntoIter<Value>;
+pub(crate) type MapIntoIter = hash_map::IntoIter<String, Value>;
+pub(crate) type ListIntoIter = vec::IntoIter<Value>;
 
 /// Data to be rendered represented as a recursive enum.
 #[derive(Debug, Clone)]

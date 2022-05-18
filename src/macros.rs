@@ -70,7 +70,7 @@ macro_rules! _value {
     // TT muncher for parsing the inside of a map {...}. Each entry is
     // inserted into the given map variable.
     //
-    // Must be invoked as: data!(@map $map () ($($tt)*) ($($tt)*))
+    // Must be invoked as: value!(@map $map () ($($tt)*) ($($tt)*))
     //
     // We require two copies of the input tokens so that we can match on one
     // copy and trigger errors on the other copy.
@@ -164,7 +164,7 @@ macro_rules! _value {
     //////////////////////////////////////////////////////////////////////////
     // The main implementation.
     //
-    // Must be invoked as: data!($($data)+)
+    // Must be invoked as: value!($($value)+)
     //////////////////////////////////////////////////////////////////////////
     (None) => {
         $crate::Value::None
@@ -204,7 +204,7 @@ macro_rules! _value {
     };
 }
 
-// The data macro above cannot invoke vec directly because it uses
+// The `value!` macro above cannot invoke vec directly because it uses
 // local_inner_macros. A vec invocation there would resolve to $crate::vec.
 // Instead invoke vec here outside of local_inner_macros.
 #[macro_export]
@@ -232,13 +232,13 @@ mod tests {
     use crate::value::{List, Map, Value};
 
     #[test]
-    fn data_none() {
+    fn value_none() {
         let v = value! { field: None };
         assert_eq!(v, Value::from([(String::from("field"), Value::None)]));
     }
 
     #[test]
-    fn data_string() {
+    fn value_string() {
         let v = value! { field: "testing..." };
         assert_eq!(
             v,
@@ -247,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn data_list() {
+    fn value_list() {
         let v = value! { field: ["testing...", None, {}, []] };
         assert_eq!(
             v,
@@ -264,7 +264,7 @@ mod tests {
     }
 
     #[test]
-    fn data_map() {
+    fn value_map() {
         let v = value! { field: { x: "hello" } };
         let exp = Value::from([(String::from("field"), Value::from([("x", "hello")]))]);
         assert_eq!(v, exp);

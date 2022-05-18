@@ -31,7 +31,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
         Self { engine, template }
     }
 
-    /// Renders a template using the provided data.
+    /// Renders a template using the provided value.
     ///
     /// This function works using two stacks:
     /// - A stack of blocks containing the state of a scope or for loop.

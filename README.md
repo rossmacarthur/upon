@@ -4,13 +4,13 @@ A tiny template engine.
 
 ## Features
 
-- Rendering values: `{{ user.name }}`
+- Expressions: `{{ user.name }}`
 - Conditionals: `{% if user.enabled %} ... {% endif %}`
 - Loops: `{% for user in users %} ... {% endfor %}`
-- Customizable filter functions: `{{ value | my_filter }}`
+- Customizable filter functions: `{{ user.name | lower }}`
 - Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
-- Render any [`serde`][serde] serializable values.
-- Macro for quick rendering: `data!{ name: "John", age: 42 }`
+- Supports any `serde` serializable values.
+- Macro for quick rendering: `value!{ name: "John", age: 42 }`
 
 ## License
 
