@@ -1,6 +1,13 @@
 use upon::Engine;
 
 #[test]
+fn lex_overlapping_delimiters() {
+    Engine::with_delims("{", "}", "{{", "}}")
+        .compile("lorem { ipsum } {{ if dolor }} {{ endif }} sit amet")
+        .unwrap();
+}
+
+#[test]
 fn lex_unexpected_end_expr() {
     let err = Engine::new()
         .compile("lorem ipsum }} dolor sit amet")

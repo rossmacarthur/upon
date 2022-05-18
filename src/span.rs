@@ -12,7 +12,7 @@ impl Span {
         Self { m, n }
     }
 
-    pub fn combine(self, other: Span) -> Self {
+    pub fn combine(self, other: Self) -> Self {
         let m = min(self.m, other.m);
         let n = max(self.n, other.n);
         Self { m, n }

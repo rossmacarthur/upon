@@ -6,200 +6,237 @@ use std::slice::Iter;
 use crate::ast;
 use crate::{Engine, Error, Result, Value};
 
+/// A renderer that can render a compiled template as a string.
+pub struct Renderer<'engine, 'source> {
+    engine: &'engine Engine<'engine>,
+    template: &'source ast::Template<'source>,
+}
+
 enum State<'source> {
-    Block {
+    Scope {
         stmts: Iter<'source, ast::Stmt<'source>>,
     },
-    Loop {
+    ForLoop {
         vars: &'source ast::LoopVars<'source>,
         iter: IntoIter,
         body: &'source ast::Scope<'source>,
     },
 }
 
-impl<'source> State<'source> {
-    fn new(scope: &'source ast::Scope<'source>) -> Self {
-        Self::Block {
-            stmts: scope.stmts.iter(),
-        }
+impl<'engine, 'source> Renderer<'engine, 'source> {
+    pub fn new(
+        engine: &'engine Engine<'engine>,
+        template: &'source ast::Template<'source>,
+    ) -> Self {
+        Self { engine, template }
     }
-}
 
-pub fn template<'engine, 'source>(
-    engine: &Engine<'engine>,
-    template: &ast::Template<'source>,
-    globals: Value,
-) -> Result<String> {
-    let mut buf = String::new();
+    /// Renders a template using the provided data.
+    ///
+    /// This function works using two stacks:
+    /// - A stack of blocks containing the state of a scope or for loop.
+    /// - A stack of variables for each state.
+    pub fn render(&self, globals: Value) -> Result<String> {
+        let mut buf = String::new();
 
-    let mut stack = vec![State::new(&template.scope)];
-    let mut locals = vec![globals];
+        let mut blocks = vec![State::scope(&self.template.scope)];
+        let mut locals = vec![globals];
 
-    'outer: while let Some(state) = stack.last_mut() {
-        match state {
-            State::Block { stmts } => {
-                for stmt in stmts {
-                    match stmt {
-                        ast::Stmt::Raw(raw) => {
-                            buf.push_str(raw);
-                            continue;
-                        }
-
-                        ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
-                            match eval(engine, template.source, &locals, expr)? {
-                                Value::None => {}
-                                Value::Bool(b) => write!(buf, "{}", b).unwrap(),
-                                Value::Integer(n) => write!(buf, "{}", n).unwrap(),
-                                Value::Float(n) => write!(buf, "{}", n).unwrap(),
-                                Value::String(s) => write!(buf, "{}", s).unwrap(),
-                                val => {
-                                    return Err(Error::new(
-                                        format!(
-                                        "expeced renderable value, but expression evaluated to {}",
-                                        val.human()
-                                    ),
-                                        template.source,
-                                        expr.span(),
-                                    ));
-                                }
+        'blocks: while let Some(state) = blocks.last_mut() {
+            match state {
+                // Currently iterating over a scope. Advance to the next
+                // statement and optionally start a new state.
+                State::Scope { stmts } => {
+                    for stmt in stmts {
+                        match stmt {
+                            // Raw template, simply write it to the buffer.
+                            ast::Stmt::Raw(raw) => {
+                                buf.push_str(raw);
                             }
-                            continue;
-                        }
 
-                        ast::Stmt::IfElse(ast::IfElse {
-                            cond,
-                            then_branch,
-                            else_branch,
-                        }) => {
-                            let cond = match eval(engine, template.source, &locals, cond)? {
-                                Value::Bool(cond) => cond,
-                                val => {
-                                    return Err(Error::new(
-                                        format!(
-                                            "expected bool, but expression evaluated to {}",
-                                            val.human()
-                                        ),
-                                        template.source,
-                                        cond.span(),
-                                    ));
-                                }
-                            };
-                            if cond {
-                                stack.push(State::new(then_branch));
-                                continue 'outer;
-                            } else if let Some(else_branch) = &else_branch {
-                                stack.push(State::new(else_branch));
-                                continue 'outer;
-                            } else {
-                                continue;
-                            }
-                        }
-
-                        ast::Stmt::ForLoop(ast::ForLoop {
-                            vars,
-                            iterable,
-                            body,
-                        }) => {
-                            let (vars, iter) =
-                                match eval(engine, template.source, &locals, iterable)? {
-                                    Value::List(list) => (vars, IntoIter::List(list.into_iter())),
-                                    Value::Map(map) => (vars, IntoIter::Map(map.into_iter())),
+                            // An inline expression, simply evaluate it and
+                            // write the rendered value to the buffer.
+                            ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
+                                match self.eval_expr(&locals, expr)? {
+                                    Value::None => {}
+                                    Value::Bool(b) => write!(buf, "{}", b).unwrap(),
+                                    Value::Integer(n) => write!(buf, "{}", n).unwrap(),
+                                    Value::Float(n) => write!(buf, "{}", n).unwrap(),
+                                    Value::String(s) => write!(buf, "{}", s).unwrap(),
                                     val => {
                                         return Err(Error::new(
                                             format!(
-                                                "expected iterable, but expression evaluated to {}",
-                                                val.human()
+                                            "expected renderable value, but expression evaluated to {}",
+                                            val.human()
+                                        ),
+                                            self.source(),
+                                            expr.span(),
+                                        ));
+                                    }
+                                }
+                            }
+
+                            // An `if` statement. We need to evaluate the
+                            // condition first and push the correct branch scope
+                            // to the block scope.
+                            ast::Stmt::IfElse(ast::IfElse {
+                                cond,
+                                then_branch,
+                                else_branch,
+                            }) => {
+                                let cond = match self.eval_expr(&locals, cond)? {
+                                    Value::Bool(cond) => cond,
+                                    value => {
+                                        return Err(Error::new(
+                                            format!(
+                                                "expected bool, but expression evaluated to {}",
+                                                value.human()
                                             ),
-                                            template.source,
+                                            self.source(),
+                                            cond.span(),
+                                        ));
+                                    }
+                                };
+                                if cond {
+                                    blocks.push(State::scope(then_branch));
+                                    continue 'blocks;
+                                } else if let Some(else_branch) = &else_branch {
+                                    blocks.push(State::scope(else_branch));
+                                    continue 'blocks;
+                                }
+                            }
+
+                            // A `for` statement. We need to evaluate the
+                            // iterable and create an iterator.
+                            ast::Stmt::ForLoop(ast::ForLoop {
+                                vars,
+                                iterable,
+                                body,
+                            }) => {
+                                let (vars, iter) = match self.eval_expr(&locals, iterable)? {
+                                    Value::List(list) => (vars, IntoIter::List(list.into_iter())),
+                                    Value::Map(map) => (vars, IntoIter::Map(map.into_iter())),
+                                    value => {
+                                        return Err(Error::new(
+                                            format!(
+                                                "expected iterable, but expression evaluated to {}",
+                                                value.human()
+                                            ),
+                                            self.source(),
                                             iterable.span(),
                                         ));
                                     }
                                 };
-                            locals.push(Value::None); // dummy
-                            stack.push(State::Loop { vars, iter, body });
-                            continue 'outer;
+                                // Push a dummy variable, that will be replaced
+                                // by the first loop variable.
+                                locals.push(Value::None);
+                                blocks.push(State::ForLoop { vars, iter, body });
+                                continue 'blocks;
+                            }
+                        }
+                    }
+                }
+
+                // Currently iterating over a `for` statement. Advance by one
+                // element and push the body on to the stack.
+                State::ForLoop { vars, iter, body } => {
+                    match iter.next(&self.template, vars)? {
+                        Some(next_locals) => {
+                            *locals.last_mut().unwrap() = next_locals;
+                            let body: &ast::Scope<'_> = *body; // ¯\_(ツ)_/¯
+                            blocks.push(State::scope(body));
+                            continue 'blocks;
+                        }
+                        None => {
+                            locals.pop().unwrap();
                         }
                     }
                 }
             }
 
-            State::Loop { vars, iter, body } => {
-                let body: &ast::Scope<'_> = *body; // needed for some reason
+            blocks.pop().unwrap();
+        }
 
-                if let Some(next_locals) = iter.next(template, vars)? {
-                    *locals.last_mut().unwrap() = next_locals;
-                    stack.push(State::new(body));
-                    continue 'outer;
-                }
+        Ok(buf)
+    }
+
+    /// Recursively evaluates an expression.
+    fn eval_expr(&self, locals: &[Value], expr: &ast::Expr<'_>) -> Result<Value> {
+        match expr {
+            ast::Expr::Var(ast::Var { path, .. }) => self.resolve_value(locals, path),
+            ast::Expr::Call(ast::Call { name, receiver, .. }) => {
+                let func = self.engine.filters.get(name.raw).ok_or_else(|| {
+                    Error::new("unknown filter function", self.source(), name.span)
+                })?;
+                Ok((func)(self.eval_expr(locals, receiver)?))
             }
         }
-
-        stack.pop().unwrap();
     }
 
-    Ok(buf)
-}
-
-fn eval(
-    engine: &Engine<'_>,
-    source: &str,
-    locals: &[Value],
-    expr: &ast::Expr<'_>,
-) -> Result<Value> {
-    match expr {
-        ast::Expr::Var(ast::Var { path, .. }) => resolve(locals, source, path),
-        ast::Expr::Call(ast::Call { name, receiver, .. }) => {
-            let func = engine
-                .filters
-                .get(name.raw)
-                .ok_or_else(|| Error::new("unknown filter function", source, name.span))?;
-            Ok((func)(eval(engine, source, locals, receiver)?))
-        }
-    }
-}
-
-fn resolve(locals: &[Value], source: &str, path: &[ast::Ident]) -> Result<Value> {
-    'outer: for (i, vars) in locals.iter().enumerate().rev() {
-        let mut result = vars;
-        for (j, segment) in path.iter().enumerate() {
-            result = match lookup(source, result, segment) {
-                Ok(d) => d,
-                Err(err) => {
-                    // If it is the first segment of the path then we can try
-                    // another locals. If we are on the last locals then error
-                    // anyway.
-                    if j == 0 && i != 0 {
-                        continue 'outer;
+    /// Resolves a path to a value in the given locals stack.
+    fn resolve_value(&self, locals: &[Value], path: &[ast::Ident]) -> Result<Value> {
+        'outer: for vars in locals.iter().rev() {
+            let mut result = vars;
+            for (i, segment) in path.iter().enumerate() {
+                result = match self.lookup_value(result, segment) {
+                    Ok(d) => d,
+                    Err(err) => {
+                        // If it is the first segment of the path then we can
+                        // try another locals.
+                        if i == 0 {
+                            continue 'outer;
+                        }
+                        return Err(err);
                     }
-                    return Err(err);
-                }
-            };
+                };
+            }
+            return Ok(result.clone());
         }
-        return Ok(result.clone());
+        Err(Error::new(
+            "not found in this scope",
+            self.source(),
+            path[0].span,
+        ))
     }
-    Err(Error::new("not found in map", source, path[0].span))
+
+    // Lookup an index in a value.
+    fn lookup_value<'render>(
+        &self,
+        value: &'render Value,
+        idx: &ast::Ident<'_>,
+    ) -> Result<&'render Value> {
+        let ast::Ident { raw, span } = idx;
+        match value {
+            Value::List(list) => match raw.parse::<usize>() {
+                Ok(i) => Ok(&list[i]),
+                Err(_) => Err(Error::new(
+                    "cannot index list with string",
+                    self.source(),
+                    *span,
+                )),
+            },
+            Value::Map(map) => match map.get(*raw) {
+                Some(value) => Ok(value),
+                None => Err(Error::new("not found in map", self.source(), *span)),
+            },
+            val => Err(Error::new(
+                format!("cannot index into {}", val.human()),
+                self.source(),
+                *span,
+            )),
+        }
+    }
+
+    fn source(&self) -> &'source str {
+        self.template.source
+    }
 }
 
-fn lookup<'render>(
-    source: &str,
-    data: &'render Value,
-    idx: &ast::Ident<'_>,
-) -> Result<&'render Value> {
-    let ast::Ident { raw: idx, span } = idx;
-    match data {
-        Value::List(list) => match idx.parse::<usize>() {
-            Ok(i) => Ok(&list[i]),
-            Err(_) => Err(Error::new("cannot index list with string", source, *span)),
-        },
-        Value::Map(map) => match map.get(*idx) {
-            Some(value) => Ok(value),
-            None => Err(Error::new("not found in map", source, *span)),
-        },
-        val => Err(Error::new(
-            format!("cannot index into {}", val.human()),
-            source,
-            *span,
-        )),
+impl<'source> State<'source> {
+    fn scope(scope: &'source ast::Scope<'source>) -> Self {
+        Self::Scope {
+            stmts: scope.stmts.iter(),
+        }
     }
 }
 
@@ -217,12 +254,14 @@ impl Value {
     }
 }
 
+/// Wrapper for an owned [`Value`] iterator.
 enum IntoIter {
     List(crate::value::ListIntoIter),
     Map(crate::value::MapIntoIter),
 }
 
 impl IntoIter {
+    /// Returns the next value in the iterator, or `None` if exhausted.
     fn next(
         &mut self,
         template: &ast::Template<'_>,
@@ -236,13 +275,11 @@ impl IntoIter {
                 };
                 match vars {
                     ast::LoopVars::Item(item) => Ok(Some(Value::from([(item.raw, v)]))),
-                    ast::LoopVars::KeyValue(kv) => {
-                        return Err(Error::new(
-                            "cannot unpack list item into two variables",
-                            template.source,
-                            kv.span,
-                        ));
-                    }
+                    ast::LoopVars::KeyValue(kv) => Err(Error::new(
+                        "cannot unpack list item into two variables",
+                        template.source,
+                        kv.span,
+                    )),
                 }
             }
             IntoIter::Map(map) => {
@@ -250,15 +287,12 @@ impl IntoIter {
                     Some(v) => v,
                     None => return Ok(None),
                 };
-
                 match vars {
-                    ast::LoopVars::Item(item) => {
-                        return Err(Error::new(
-                            "cannot unpack map item into one variable",
-                            template.source,
-                            item.span,
-                        ));
-                    }
+                    ast::LoopVars::Item(item) => Err(Error::new(
+                        "cannot unpack map item into one variable",
+                        template.source,
+                        item.span,
+                    )),
                     ast::LoopVars::KeyValue(kv) => Ok(Some(Value::from([
                         (kv.key.raw, Value::from(vk)),
                         (kv.value.raw, vv),

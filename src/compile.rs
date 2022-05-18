@@ -2,18 +2,52 @@ use crate::ast;
 use crate::lex::{Lexer, Token};
 use crate::{Engine, Error, Result, Span};
 
-pub(crate) fn template<'engine, 'source>(
-    engine: &'engine Engine<'engine>,
-    source: &'source str,
-) -> Result<ast::Template<'source>> {
-    Parser::new(engine, source).parse_template()
-}
-
-struct Parser<'engine, 'source> {
+/// A parser that constructs an AST from a token stream.
+///
+/// The parser is implemented as a simple hand written parser with no recursion.
+/// It sometimes needs to peek at the next token to know how to proceed and uses
+/// the `peeked` buffer to do this.
+pub struct Parser<'engine, 'source> {
+    /// A lexer that tokenizes the template source.
     tokens: Lexer<'engine, 'source>,
+
+    /// Remember a peeked value, even if it was `None`
     peeked: Option<Option<(Token, Span)>>,
 }
 
+/// Stores the state of a statement during parsing.
+enum State<'source> {
+    /// A partial `if` statement.
+    If {
+        /// The condition in the `if` block.
+        cond: ast::Expr<'source>,
+        /// The span of the `if` block.
+        span: Span,
+        /// Whether or not this `if` statement has an `else` clause.
+        has_else: bool,
+    },
+
+    /// A partial `for` statement.
+    For {
+        /// The loop variables.
+        vars: ast::LoopVars<'source>,
+        /// The value we are iterating over.
+        iterable: ast::Expr<'source>,
+        /// The span of the `for` block.
+        span: Span,
+    },
+}
+
+/// A parsed block definition.
+enum Block<'source> {
+    If(ast::Expr<'source>),
+    Else,
+    EndIf,
+    For(ast::LoopVars<'source>, ast::Expr<'source>),
+    EndFor,
+}
+
+/// A keyword in the template syntax.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Keyword {
     If,
@@ -24,73 +58,98 @@ pub(crate) enum Keyword {
     EndFor,
 }
 
-enum State<'source> {
-    If(ast::Expr<'source>, Span),
-    Else(Span),
-    For(ast::LoopVars<'source>, ast::Expr<'source>, Span),
-}
-
-enum Block<'source> {
-    If(ast::Expr<'source>),
-    Else,
-    EndIf,
-    For(ast::LoopVars<'source>, ast::Expr<'source>),
-    EndFor,
-}
-
 impl<'engine, 'source> Parser<'engine, 'source> {
-    fn new(engine: &'engine Engine<'engine>, source: &'source str) -> Self {
+    /// Construct a new parser.
+    pub fn new(engine: &'engine Engine<'engine>, source: &'source str) -> Self {
         Self {
             tokens: Lexer::new(engine, source),
             peeked: None,
         }
     }
 
-    fn parse_template(mut self) -> Result<ast::Template<'source>> {
-        let mut blocks: Vec<State<'_>> = vec![];
-        let mut scopes: Vec<ast::Scope<'_>> = vec![ast::Scope::new()];
+    /// Parses a template.
+    ///
+    /// This function works using two stacks:
+    /// - A stack of blocks e.g. `{% if cond %} ... {% else %}`.
+    /// - A stack of scopes which collect each parsed statement.
+    pub fn parse_template(mut self) -> Result<ast::Template<'source>> {
+        let mut blocks = vec![];
+        let mut scopes = vec![ast::Scope::new()];
 
         while let Some(next) = self.next()? {
             let stmt = match next {
+                // Simply raw template, emit a single statement for it.
                 (Token::Raw, span) => ast::Stmt::Raw(&self.source()[span]),
 
+                // The start of an expression, e.g. `{{ user.name }}`
                 (Token::BeginExpr, begin) => {
                     let expr = self.parse_expr()?;
-                    let end = self.parse(Token::EndExpr)?;
+                    let end = self.expect(Token::EndExpr)?;
                     let span = begin.combine(end);
                     ast::Stmt::InlineExpr(ast::InlineExpr { expr, span })
                 }
 
+                // The start of a block, e.g. `{% if cond %}`
                 (Token::BeginBlock, begin) => {
                     let block = self.parse_block()?;
-                    let end = self.parse(Token::EndBlock)?;
+                    let end = self.expect(Token::EndBlock)?;
                     let span = begin.combine(end);
+
                     match block {
+                        // The start of an `if` statement. For example:
+                        //
+                        //   {% if cond %}
+                        //
+                        // We must push a block to the block stack and a scope
+                        // to the scope stack because an if statement starts a
+                        // new scope.
                         Block::If(cond) => {
-                            blocks.push(State::If(cond, span));
+                            blocks.push(State::If {
+                                cond,
+                                span,
+                                has_else: false,
+                            });
                             scopes.push(ast::Scope::new());
                             continue;
                         }
 
+                        // The `else` clause of an `if` statement. For example:
+                        //
+                        //   {% else %}
+                        //
+                        // We expect that the previous block was an `if` block
+                        // and update it accordingly. We must also push to the
+                        // scope stack since an `else` clause starts a new
+                        // scope.
                         Block::Else => {
-                            blocks.push(State::Else(span));
+                            let err = || Error::new("unexpected `else` block", self.source(), span);
+                            match blocks.last_mut().ok_or_else(err)? {
+                                State::If {
+                                    has_else: has_else @ false,
+                                    ..
+                                } => {
+                                    *has_else = true;
+                                }
+                                _ => return Err(err()),
+                            }
                             scopes.push(ast::Scope::new());
                             continue;
                         }
 
+                        // The end of an `if` statement. For example:
+                        //
+                        //   {% endif %}
+                        //
+                        // We expect that the previous block was an `if` block.
+                        // Making sure to pop an extra scope if it has an `else`
+                        // clause.
                         Block::EndIf => {
                             let err =
                                 || Error::new("unexpected `endif` block", self.source(), span);
 
-                            let mut last = blocks.pop().ok_or_else(err)?;
-                            let mut else_branch = None;
-                            if let State::Else(_) = last {
-                                last = blocks.pop().ok_or_else(err)?;
-                                else_branch = Some(scopes.pop().unwrap());
-                            };
-
-                            let if_else = match last {
-                                State::If(cond, _) => {
+                            let if_else = match blocks.pop().ok_or_else(err)? {
+                                State::If { cond, has_else, .. } => {
+                                    let else_branch = has_else.then(|| scopes.pop().unwrap());
                                     let then_branch = scopes.pop().unwrap();
                                     ast::IfElse {
                                         cond,
@@ -98,30 +157,39 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                                         else_branch,
                                     }
                                 }
-                                state => {
-                                    return Err(Error::new(
-                                        format!("unexpected `{}` block", state.human()),
-                                        self.source(),
-                                        state.span(),
-                                    ));
-                                }
+                                _ => return Err(err()),
                             };
-
                             ast::Stmt::IfElse(if_else)
                         }
 
+                        // The start of a `for` statement. For example:
+                        //
+                        //   {% for var in iterable %}
+                        //
+                        // We must push a block to the block stack and a scope
+                        // to the scope stack because a for statement starts a
+                        // new scope.
                         Block::For(vars, iterable) => {
-                            blocks.push(State::For(vars, iterable, span));
+                            blocks.push(State::For {
+                                vars,
+                                iterable,
+                                span,
+                            });
                             scopes.push(ast::Scope::new());
                             continue;
                         }
 
+                        // The end of a `for` statement. For example:
+                        //
+                        //   {% endfor %}
+                        //
+                        // We expect that the previous block was an `for` block.
                         Block::EndFor => {
-                            let last = blocks.pop().ok_or_else(|| {
-                                Error::new("unexpected `endfor` block", self.source(), span)
-                            })?;
-                            let for_loop = match last {
-                                State::For(vars, iterable, _) => {
+                            let err =
+                                || Error::new("unexpected `endfor` block", self.source(), span);
+
+                            let for_loop = match blocks.pop().ok_or_else(err)? {
+                                State::For { vars, iterable, .. } => {
                                     let body = scopes.pop().unwrap();
                                     ast::ForLoop {
                                         vars,
@@ -129,21 +197,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                                         body,
                                     }
                                 }
-                                state => {
-                                    return Err(Error::new(
-                                        format!("unexpected `{}` block", state.human()),
-                                        self.source(),
-                                        state.span(),
-                                    ));
-                                }
+                                _ => return Err(err()),
                             };
-
                             ast::Stmt::ForLoop(for_loop)
                         }
                     }
                 }
                 (tk, span) => {
-                    panic!("lexer bug, got token `{:?}` at {:?}", tk, span);
+                    panic!("lexer bug: received token `{:?}` at {:?}", tk, span);
                 }
             };
             scopes.last_mut().unwrap().stmts.push(stmt);
@@ -151,15 +212,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
         if let Some(block) = blocks.first() {
             let (msg, span) = match block {
-                State::If(_, sp) => ("unclosed `if` block", sp),
-                State::Else(sp) => ("unexpected `else` block", sp),
-                State::For(_, _, sp) => ("unclosed `for` block", sp),
+                State::If { span, .. } => ("unclosed `if` block", span),
+                State::For { span, .. } => ("unclosed `for` block", span),
             };
             return Err(Error::new(msg, self.source(), *span));
         }
 
-        assert!(blocks.is_empty());
-        assert_eq!(scopes.len(), 1);
+        assert!(
+            scopes.len() == 1,
+            "parser bug: we should end with a single scope"
+        );
 
         Ok(ast::Template {
             source: self.source(),
@@ -167,6 +229,18 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         })
     }
 
+    /// Parses a single block. All of the following are valid blocks.
+    ///
+    ///   if user.is_enabled
+    ///
+    ///   else
+    ///
+    ///   endif
+    ///
+    ///   for uid, user in group.user_map | filter_enabled
+    ///
+    ///   endfor
+    ///
     fn parse_block(&mut self) -> Result<Block<'source>> {
         let (kw, span) = self.parse_keyword()?;
         match kw {
@@ -178,7 +252,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             Keyword::EndIf => Ok(Block::EndIf),
             Keyword::For => {
                 let vars = self.parse_loop_vars()?;
-                self.parse_keyword_exact(Keyword::In)?;
+                self.expect_keyword(Keyword::In)?;
                 let iterable = self.parse_expr()?;
                 Ok(Block::For(vars, iterable))
             }
@@ -191,21 +265,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         }
     }
 
-    fn parse_loop_vars(&mut self) -> Result<ast::LoopVars<'source>> {
-        let key = self.parse_ident()?;
-        if !self.is_next(Token::Comma)? {
-            return Ok(ast::LoopVars::Item(key));
-        }
-        self.parse(Token::Comma)?;
-        let value = self.parse_ident()?;
-        let span = key.span.combine(value.span);
-        Ok(ast::LoopVars::KeyValue(ast::KeyValue { key, value, span }))
-    }
-
+    /// Parses an expression.
+    ///
+    /// This is a variable with zero or more function calls. For example:
+    ///
+    ///   user.name | lower | reverse
+    ///
     fn parse_expr(&mut self) -> Result<ast::Expr<'source>> {
         let mut expr = ast::Expr::Var(self.parse_var()?);
         while self.is_next(Token::Pipe)? {
-            self.parse(Token::Pipe)?;
+            self.expect(Token::Pipe)?;
             let name = self.parse_ident()?;
             let span = name.span.combine(expr.span());
             expr = ast::Expr::Call(ast::Call {
@@ -217,21 +286,50 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(expr)
     }
 
+    /// Parses loop variable(s).
+    ///
+    /// This is either a single identifier or two comma separated identifiers.
+    /// Both of the following are valid:
+    ///
+    ///   item
+    ///
+    ///   key, value
+    ///
+    fn parse_loop_vars(&mut self) -> Result<ast::LoopVars<'source>> {
+        let key = self.parse_ident()?;
+        if !self.is_next(Token::Comma)? {
+            return Ok(ast::LoopVars::Item(key));
+        }
+        self.expect(Token::Comma)?;
+        let value = self.parse_ident()?;
+        let span = key.span.combine(value.span);
+        Ok(ast::LoopVars::KeyValue(ast::KeyValue { key, value, span }))
+    }
+
+    /// Parses a variable.
+    ///
+    /// This is one or more identifiers separated by a period. For example:
+    ///
+    ///   user.name
+    ///
     fn parse_var(&mut self) -> Result<ast::Var<'source>> {
         let mut path = Vec::new();
         loop {
             path.push(self.parse_ident()?);
-            if self.is_next(Token::Period)? {
-                self.parse(Token::Period)?;
-                continue;
+            if !self.is_next(Token::Period)? {
+                break;
             }
-            break;
+            self.expect(Token::Period)?;
         }
-        let span = path[0].span.combine(path[path.len() - 1].span);
+        let span = match path.len() {
+            0 => path[0].span,
+            n => path[0].span.combine(path[n - 1].span),
+        };
         Ok(ast::Var { path, span })
     }
 
-    fn parse_keyword_exact(&mut self, exp: Keyword) -> Result<Span> {
+    /// Expects the given keyword.
+    fn expect_keyword(&mut self, exp: Keyword) -> Result<Span> {
         let (kw, span) = self.parse_keyword()?;
         if kw != exp {
             return Err(Error::new(
@@ -247,22 +345,25 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(span)
     }
 
+    /// Parses a keyword.
     fn parse_keyword(&mut self) -> Result<(Keyword, Span)> {
-        let span = self.parse(Token::Keyword)?;
+        let span = self.expect(Token::Keyword)?;
         let kw = &self.source()[span];
         match Keyword::from_str(kw) {
             Some(kw) => Ok((kw, span)),
-            None => panic!("bug in lexer, got keyword `{}`", kw),
+            None => unreachable!(),
         }
     }
 
+    /// Parses an identifier.
     fn parse_ident(&mut self) -> Result<ast::Ident<'source>> {
-        let span = self.parse(Token::Ident)?;
+        let span = self.expect(Token::Ident)?;
         let value = &self.source()[span];
         Ok(ast::Ident { raw: value, span })
     }
 
-    fn parse(&mut self, exp: Token) -> Result<Span> {
+    /// Parses the specified token and returns its span.
+    fn expect(&mut self, exp: Token) -> Result<Span> {
         match self.next()? {
             Some((tk, sp)) if tk == exp => Ok(sp),
             Some((tk, sp)) => Err(Error::new(
@@ -281,10 +382,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         }
     }
 
+    /// Returns `true` if the next token is equal to the provided one.
     fn is_next(&mut self, token: Token) -> Result<bool> {
         Ok(self.peek()?.map(|(tk, _)| tk == token).unwrap_or(false))
     }
 
+    /// Returns a copy of the next token without affecting the result of the
+    /// following `.next()` call.
     fn peek(&mut self) -> Result<Option<(Token, Span)>> {
         if let o @ None = &mut self.peeked {
             *o = Some(self.tokens.next()?);
@@ -292,6 +396,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(self.peeked.unwrap())
     }
 
+    /// Returns the next token and span in the stream.
     fn next(&mut self) -> Result<Option<(Token, Span)>> {
         match self.peeked.take() {
             Some(v) => Ok(v),
@@ -331,23 +436,5 @@ impl Keyword {
             _ => return None,
         };
         Some(kw)
-    }
-}
-
-impl State<'_> {
-    fn human(&self) -> &'static str {
-        match self {
-            State::If(_, _) => "if",
-            State::Else(_) => "else",
-            State::For(_, _, _) => "for",
-        }
-    }
-
-    fn span(&self) -> Span {
-        match self {
-            State::If(_, span) => *span,
-            State::Else(span) => *span,
-            State::For(_, _, span) => *span,
-        }
     }
 }

@@ -192,7 +192,7 @@ fn render_for_statement_err_not_iterable() {
 }
 
 #[test]
-fn render_for_statement_list_with_two_vars() {
+fn render_for_statement_err_list_with_two_vars() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
@@ -209,7 +209,7 @@ fn render_for_statement_list_with_two_vars() {
 }
 
 #[test]
-fn render_for_statement_map_with_one_var() {
+fn render_for_statement_err_map_with_one_var() {
     let err = Engine::new()
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
@@ -221,6 +221,23 @@ fn render_for_statement_map_with_one_var() {
    |
  1 | lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}
    |              ^^^^^ cannot unpack map item into one variable
+"
+    );
+}
+
+#[test]
+fn render_for_statement_err_loop_var_scope() {
+    let err = Engine::new()
+        .compile("lorem {% for _, ipsum in dolor %}{% endfor %}{{ ipsum }}")
+        .unwrap()
+        .render(data! { dolor: { ipsum: false }})
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% for _, ipsum in dolor %}{% endfor %}{{ ipsum }}
+   |                                                 ^^^^^ not found in this scope
 "
     );
 }

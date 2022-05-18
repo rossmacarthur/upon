@@ -32,6 +32,15 @@ fn compile_if_else_statement() {
 }
 
 #[test]
+fn compile_nested_if_else_statement() {
+    Engine::new()
+        .compile(
+            "lorem {% if ipsum %} dolor {% else %} {% if sit %} amet {% endif %}, consectetur {% endif %}",
+        )
+        .unwrap();
+}
+
+#[test]
 fn compile_for_statement_item() {
     Engine::new()
         .compile("lorem {% for ipsum in dolor %} {{ sit }} {% endfor %} amet")
@@ -269,8 +278,7 @@ fn compile_for_statement_err_unexpected_else_block() {
 }
 
 #[test]
-fn compile_for_statement_err_unexpected_if_block() {
-    // FIXME: Can we get this error message nicer?
+fn compile_if_statement_err_unexpected_endfor_block() {
     let err = Engine::new()
         .compile("lorem {% if ipsum %} {% endfor %} dolor")
         .unwrap_err();
@@ -279,7 +287,7 @@ fn compile_for_statement_err_unexpected_if_block() {
         "
    |
  1 | lorem {% if ipsum %} {% endfor %} dolor
-   |       ^^^^^^^^^^^^^^ unexpected `if` block
+   |                      ^^^^^^^^^^^^ unexpected `endfor` block
 "
     );
 }

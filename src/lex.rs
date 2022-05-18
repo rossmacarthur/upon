@@ -1,20 +1,45 @@
-//! A lexer that tokenizes the template source into distinct chunks to make
-//! parsing easier.
-
 use crate::compile::Keyword;
 use crate::{Engine, Error, Result, Span};
 
+/// A lexer that tokenizes the template source into distinct chunks so that the
+/// parser doesn't have to operate on raw text.
+///
+/// The lexer is implemented as a fallible iterator. The parser should
+/// repeatedly call the [`.next()?`][Lexer::next] method to return the next
+/// non-whitespace token until [`None`] is returned.
 pub struct Lexer<'engine, 'source> {
+    /// A reference to the engine containing the delimiter configuration.
     engine: &'engine Engine<'engine>,
+
+    /// The original template source.
     pub source: &'source str,
-    state: State,
+
+    /// A cursor over the template source.
     cursor: usize,
+
+    /// The current state of the lexer.
+    state: State,
+
+    /// A buffer to store the next token.
     next: Option<(Token, Span)>,
 }
 
+/// The state of the lexer.
+///
+/// The lexer requires state because the tokenization is different when
+/// tokenizing text between expression and block delimiters, e.g. `{{ expr }}`,
+/// `{% if cond %}`.
 enum State {
+    /// Within raw template.
     Template,
-    InBlock { begin: Span, end: Token },
+
+    /// Between expression or block delimiters.
+    InBlock {
+        /// The span of the begin delimiter.
+        begin: Span,
+        /// The end token we are expecting.
+        end: Token,
+    },
 }
 
 /// The unit yielded by the lexer.
@@ -45,17 +70,18 @@ pub enum Token {
 }
 
 impl<'engine, 'source> Lexer<'engine, 'source> {
+    /// Construct a new lexer.
     pub fn new(engine: &'engine Engine<'engine>, source: &'source str) -> Self {
         Self {
             engine,
             source,
-            state: State::Template,
             cursor: 0,
+            state: State::Template,
             next: None,
         }
     }
 
-    /// Returns the next non-whitespace token.
+    /// Returns the next non-whitespace token and its span.
     pub fn next(&mut self) -> Result<Option<(Token, Span)>> {
         loop {
             match self.lex()? {
@@ -66,6 +92,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         }
     }
 
+    /// Returns the next token and span.
     fn lex(&mut self) -> Result<Option<(Token, Span)>> {
         if let Some(next) = self.next.take() {
             return Ok(Some(next));
@@ -77,11 +104,15 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             return Ok(None);
         }
 
-        // Looks for a delimiter at position `i`
+        // Looks for a delimiter at position `i`, matching the longest delimiter
+        // and returns the token and the next cursor value.
+        //
+        // FIXME: Can this be optimized by using a more intelligent algorithm
+        //        like Aho-Corasick?
         let try_lex_delim = |i| {
             let mut result = None;
             let bytes = &self.source.as_bytes()[i..];
-            for (delim, needle) in [
+            for (tk, needle) in [
                 (Token::BeginExpr, self.engine.begin_expr),
                 (Token::EndExpr, self.engine.end_expr),
                 (Token::BeginBlock, self.engine.begin_block),
@@ -89,21 +120,28 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             ] {
                 let len = needle.len();
                 if bytes.len() >= len && &bytes[..len] == needle.as_bytes() {
-                    let update = match result {
+                    // Set the result if it is unset or this match is longer
+                    // than any previous match.
+                    if match result {
                         None => true,
                         Some((_, curr)) if len > curr => true,
                         Some(_) => false,
-                    };
-                    if update {
-                        result = Some((delim, len));
+                    } {
+                        result = Some((tk, len));
                     }
                 }
             }
-            result.map(|(delim, len)| (delim, i + len))
+            result.map(|(tk, len)| (tk, i + len))
         };
 
         match self.state {
             State::Template => {
+                // We are within raw template, that means all we have to do is
+                // lookout for begin delimiters.
+
+                // Checks if the given token is a begin delimiter. If it is then
+                // this function updates the current lexer cursor and state and
+                // returns the token and span.
                 let mut lex = |tk: Token, m, n| match tk {
                     tk if tk.is_begin_delim() => {
                         let begin = Span::from(m..n);
@@ -119,13 +157,25 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     )),
                 };
 
-                match (i..self.source.len()).find_map(|j| try_lex_delim(j).map(|(d, k)| (d, j, k)))
+                // Find the next begin delimiter starting at `i` and any
+                // relevant cursor indexes. The following diagram helps describe
+                // the variable naming.
+                //
+                // xxxxxxx{{xxxxxxxxx
+                //    ^   ^ ^
+                //    i   j k
+                match (i..self.source.len())
+                    .find_map(|j| try_lex_delim(j).map(|(tk, k)| (tk, j, k)))
                 {
-                    Some((delim, j, k)) if i == j => lex(delim, j, k),
-                    Some((delim, j, k)) => {
-                        let now = (Token::Raw, Span::from(i..j));
-                        self.next = lex(delim, j, k)?;
-                        Ok(Some(now))
+                    Some((tk, j, k)) if i == j => {
+                        // The current cursor is exactly at a begin delimiter.
+                        lex(tk, j, k)
+                    }
+                    Some((tk, j, k)) => {
+                        // We must first emit the raw token, so we store the
+                        // begin delimiter token in the `next` buffer.
+                        self.next = lex(tk, j, k)?;
+                        Ok(Some((Token::Raw, Span::from(i..j))))
                     }
                     None => {
                         let j = self.source.len();
@@ -136,63 +186,91 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             }
 
             State::InBlock { begin, end } => {
+                // We are between two delimiters {{ ... }} that means must parse
+                // template syntax relevant tokens and also lookout for the
+                // corresponding end delimiter `end`.
+
+                // We iterate over chars because that is nicer than operating on
+                // raw bytes. The map function here fixes the index to be
+                // relative to the actual template source.
                 let mut iter = self.source[i..].char_indices().map(|(d, c)| (i + d, c));
+
+                // We can `.unwrap()` since we've already checked that there is
+                // more text remaining.
                 let (i, c) = iter.next().unwrap();
-                let (token, j) = match c {
-                    // Single character to token mappings
+
+                let (tk, j) = match c {
+                    // Single character to token mappings.
                     '.' => (Token::Period, i + 1),
                     '|' => (Token::Pipe, i + 1),
                     ',' => (Token::Comma, i + 1),
 
-                    // Multi character tokens with a distinct starting character
-                    c if is_whitespace(c) => {
-                        (Token::Whitespace, self.lex_while(iter, is_whitespace))
-                    }
-                    c if is_ident(c) => {
-                        let j = self.lex_while(iter, is_ident);
-                        let tk = match Keyword::all().contains(&&self.source[i..j]) {
-                            true => Token::Keyword,
-                            false => Token::Ident,
-                        };
-                        (tk, j)
-                    }
+                    // Multi-character tokens with a distinct start character.
+                    c if is_whitespace(c) => self.lex_whitespace(iter),
+                    c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
 
-                    // Any other character
-                    c => {
+                    // Any other character...
+                    _ => {
                         match try_lex_delim(i) {
-                            // A matching end delimiter
                             Some((tk, j)) if tk == end => {
+                                // A matching end delimiter! Update the state
+                                // and return the token.
                                 self.state = State::Template;
                                 (tk, j)
                             }
                             Some((tk, _)) if tk.is_begin_delim() => {
+                                // The previous begin delimiter was not closed
+                                // correctly.
                                 return Err(Error::new(
                                     format!("unclosed {}", end.pair().human()),
                                     self.source,
                                     begin,
-                                ))
+                                ));
                             }
                             Some((tk, j)) => {
+                                // We got an unexpected delimiter.
                                 return Err(Error::new(
                                     format!("unexpected {}", tk.human()),
                                     self.source,
                                     i..j,
-                                ))
+                                ));
                             }
                             None => {
                                 return Err(Error::new(
                                     "unexpected character",
                                     self.source,
                                     i..(i + c.len_utf8()),
-                                ))
+                                ));
                             }
                         }
                     }
                 };
+
+                // Finally, we need to update the cursor.
                 self.cursor = j;
-                Ok(Some((token, Span::from(i..j))))
+
+                Ok(Some((tk, Span::from(i..j))))
             }
         }
+    }
+
+    fn lex_whitespace<I>(&mut self, iter: I) -> (Token, usize)
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        (Token::Whitespace, self.lex_while(iter, is_whitespace))
+    }
+
+    fn lex_ident_or_keyword<I>(&mut self, iter: I, i: usize) -> (Token, usize)
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        let j = self.lex_while(iter, is_ident);
+        let tk = match Keyword::all().contains(&&self.source[i..j]) {
+            true => Token::Keyword,
+            false => Token::Ident,
+        };
+        (tk, j)
     }
 
     fn lex_while<I, P>(&mut self, mut iter: I, pred: P) -> usize

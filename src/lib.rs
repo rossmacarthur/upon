@@ -189,7 +189,7 @@ impl<'engine> Engine<'engine> {
 
     /// Compile a template.
     pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let template = compile::template(self, source)?;
+        let template = compile::Parser::new(self, source).parse_template()?;
         Ok(Template {
             engine: self,
             template,
@@ -208,6 +208,6 @@ impl<'engine, 'source> Template<'engine, 'source> {
     where
         S: serde::Serialize,
     {
-        render::template(self.engine, &self.template, to_value(data)?)
+        render::Renderer::new(&self.engine, &self.template).render(to_value(data)?)
     }
 }
