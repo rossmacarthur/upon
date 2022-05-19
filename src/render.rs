@@ -37,7 +37,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     /// - A stack of blocks containing the state of a scope or for loop.
     /// - A stack of variables for each state.
     pub fn render(&self, globals: Value) -> Result<String> {
-        let mut buf = String::new();
+        let mut buf = String::with_capacity(self.source().len());
 
         let mut blocks = vec![State::scope(&self.template.scope)];
         let mut locals = vec![globals];

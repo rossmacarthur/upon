@@ -39,6 +39,10 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
+//! You can also use [`add_template(name, ...)`][Engine::add_template] and
+//! [`get_template(name).render(...)`][Engine::get_template] to store a template
+//! by name in the engine.
+//!
 //! # Examples
 //!
 //! ### Render using structured data
@@ -96,10 +100,10 @@
 //! ```
 
 mod ast;
-mod compile;
 mod error;
 mod lex;
 mod macros;
+mod parse;
 mod render;
 mod span;
 pub mod value;
@@ -118,7 +122,8 @@ pub struct Engine<'engine> {
     end_expr: &'engine str,
     begin_block: &'engine str,
     end_block: &'engine str,
-    filters: HashMap<String, Arc<dyn Fn(Value) -> Value + Send + Sync + 'engine>>,
+    filters: HashMap<&'engine str, Arc<dyn Fn(Value) -> Value + Sync + Send + 'static>>,
+    templates: HashMap<&'engine str, ast::Template<'engine>>,
 }
 
 /// A compiled template.
@@ -128,7 +133,14 @@ pub struct Template<'engine, 'source> {
     template: ast::Template<'source>,
 }
 
-impl Default for Engine<'_> {
+/// A compiled template.
+#[derive(Debug)]
+pub struct TemplateRef<'engine> {
+    engine: &'engine Engine<'engine>,
+    template: &'engine ast::Template<'engine>,
+}
+
+impl<'engine> Default for Engine<'engine> {
     fn default() -> Self {
         Self::new()
     }
@@ -146,23 +158,27 @@ impl fmt::Debug for Engine<'_> {
             .field("begin_block", &self.begin_block)
             .field("end_block", &self.end_block)
             .field("filters", &filters)
+            .field("templates", &self.templates)
             .finish()
     }
 }
 
 impl<'engine> Engine<'engine> {
     /// Construct a new engine.
-    pub fn new() -> Self {
+    #[inline]
+    pub fn new() -> Engine<'engine> {
         Self {
             begin_expr: "{{",
             end_expr: "}}",
             begin_block: "{%",
             end_block: "%}",
             filters: HashMap::new(),
+            templates: HashMap::new(),
         }
     }
 
     /// Construct a new engine with custom delimiters.
+    #[inline]
     pub fn with_delims(
         begin_expr: &'engine str,
         end_expr: &'engine str,
@@ -175,21 +191,45 @@ impl<'engine> Engine<'engine> {
             begin_block,
             end_block,
             filters: HashMap::new(),
+            templates: HashMap::new(),
         }
     }
 
     /// Add a new filter to the engine.
-    pub fn add_filter<F>(&mut self, name: impl Into<String>, f: F)
+    #[inline]
+    pub fn add_filter<F>(&mut self, name: &'engine str, f: F)
     where
-        F: Fn(Value) -> Value + Send + Sync + 'engine,
+        F: Fn(Value) -> Value + Send + Sync + 'static,
     {
-        self.filters.insert(name.into(), Arc::new(f));
+        self.filters.insert(name, Arc::new(f));
     }
 
     /// Compile a template.
+    #[inline]
     pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let template = compile::Parser::new(self, source).parse_template()?;
+        let template = parse::Parser::new(self, source).parse_template()?;
         Ok(Template {
+            engine: self,
+            template,
+        })
+    }
+
+    /// Compile a template and store it with the given name.
+    ///
+    /// When using this function over [`.compile(..)`][Engine::compile] the
+    /// template source lifetime needs to be as least as long as the engine
+    /// lifetime.
+    #[inline]
+    pub fn add_template(&mut self, name: &'engine str, source: &'engine str) -> Result<()> {
+        let template = parse::Parser::new(self, source).parse_template()?;
+        self.templates.insert(name, template);
+        Ok(())
+    }
+
+    /// Lookup a template by name.
+    #[inline]
+    pub fn get_template(&self, name: &str) -> Option<TemplateRef<'_>> {
+        self.templates.get(name).map(|template| TemplateRef {
             engine: self,
             template,
         })
@@ -198,7 +238,25 @@ impl<'engine> Engine<'engine> {
 
 impl<'engine, 'source> Template<'engine, 'source> {
     /// Returns the original template source.
+    #[inline]
     pub fn source(&self) -> &'source str {
+        self.template.source
+    }
+
+    /// Render the template to a string using the provided value.
+    #[inline]
+    pub fn render<S>(&self, s: S) -> Result<String>
+    where
+        S: serde::Serialize,
+    {
+        render::Renderer::new(&self.engine, &self.template).render(to_value(s)?)
+    }
+}
+
+impl<'engine> TemplateRef<'engine> {
+    /// Returns the original template source.
+    #[inline]
+    pub fn source(&self) -> &'engine str {
         self.template.source
     }
 
