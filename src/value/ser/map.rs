@@ -13,9 +13,9 @@ pub struct SerializeMap {
 }
 
 impl SerializeMap {
-    pub fn with_capacity(len: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            map: Map::with_capacity(len),
+            map: Map::new(),
             next_key: None,
         }
     }

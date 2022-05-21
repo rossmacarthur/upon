@@ -3,15 +3,15 @@
 mod from;
 mod ser;
 
-pub use std::collections::hash_map;
-pub use std::collections::HashMap as Map;
+pub use std::collections::btree_map;
+pub use std::collections::BTreeMap as Map;
 use std::mem;
 use std::vec;
 pub use std::vec::Vec as List;
 
 pub use crate::value::ser::to_value;
 
-pub(crate) type MapIntoIter = hash_map::IntoIter<String, Value>;
+pub(crate) type MapIntoIter = btree_map::IntoIter<String, Value>;
 pub(crate) type ListIntoIter = vec::IntoIter<Value>;
 
 /// Data to be rendered represented as a recursive enum.

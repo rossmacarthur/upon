@@ -204,8 +204,8 @@ impl serde::Serializer for Serializer {
         })
     }
 
-    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
-        Ok(SerializeMap::with_capacity(len.unwrap_or(0)))
+    fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap> {
+        Ok(SerializeMap::new())
     }
 
     fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
@@ -217,11 +217,11 @@ impl serde::Serializer for Serializer {
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         Ok(SerializeStructVariant {
             name: variant.to_owned(),
-            map: Map::with_capacity(len),
+            map: Map::new(),
         })
     }
 }
