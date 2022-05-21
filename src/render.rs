@@ -98,8 +98,8 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     let func = self.engine.filters.get(name.raw).ok_or_else(|| {
                         Error::new("unknown filter function", self.source(), name.span)
                     })?;
-                    let value = values.pop().unwrap();
-                    values.push(func(value));
+                    let value = values.last_mut().unwrap();
+                    func(value);
                 }
             }
             pc += 1;

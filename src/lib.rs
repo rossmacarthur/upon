@@ -70,11 +70,10 @@
 //!
 //! ```
 //! // If the value is a string, make it lowercase
-//! fn lower(mut v: upon::Value) -> upon::Value {
-//!     if let upon::Value::String(s) = &mut v {
+//! fn lower(v: &mut upon::Value) {
+//!     if let upon::Value::String(s) = v {
 //!         *s = s.to_lowercase();
 //!     }
-//!     v
 //! }
 //!
 //! let mut engine = upon::Engine::new();
@@ -124,7 +123,7 @@ pub struct Engine<'engine> {
     end_expr: &'engine str,
     begin_block: &'engine str,
     end_block: &'engine str,
-    filters: HashMap<&'engine str, Arc<dyn Fn(Value) -> Value + Sync + Send + 'static>>,
+    filters: HashMap<&'engine str, Arc<dyn Fn(&mut Value) + Sync + Send + 'static>>,
     templates: HashMap<&'engine str, instr::Template<'engine>>,
 }
 
@@ -201,7 +200,7 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn add_filter<F>(&mut self, name: &'engine str, f: F)
     where
-        F: Fn(Value) -> Value + Send + Sync + 'static,
+        F: Fn(&mut Value) + Send + Sync + 'static,
     {
         self.filters.insert(name, Arc::new(f));
     }
