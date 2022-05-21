@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+</head>
+<body>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Age</th>
+        </tr>
+      {{#each users }}
+        {{#if is_enabled }}
+            <tr>
+                <td>{{ name }}</td>
+                <td>{{ age }}</td>
+            </tr>
+        {{/if}}
+      {{/each}}
+    </table>
+</body>
+</html>

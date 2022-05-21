@@ -1,0 +1,21 @@
+[package]
+name = "benches"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+handlebars = "4.3.0"
+minijinja = "0.15.0"
+rand = "0.8.5"
+serde = { version = "1.0.137", features = ["derive"] }
+tera = "1.15.0"
+tinytemplate = "1.2.1"
+upon = { path = ".." }
+
+[dev-dependencies]
+criterion = { version = "0.3.5", features = ["html_reports"] }
+
+[[bench]]
+name = "engines"
+harness = false
