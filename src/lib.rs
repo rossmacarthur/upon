@@ -100,7 +100,9 @@
 //! ```
 
 mod ast;
+mod compile;
 mod error;
+mod instr;
 mod lex;
 mod macros;
 mod parse;
@@ -123,21 +125,21 @@ pub struct Engine<'engine> {
     begin_block: &'engine str,
     end_block: &'engine str,
     filters: HashMap<&'engine str, Arc<dyn Fn(Value) -> Value + Sync + Send + 'static>>,
-    templates: HashMap<&'engine str, ast::Template<'engine>>,
+    templates: HashMap<&'engine str, instr::Template<'engine>>,
 }
 
 /// A compiled template.
 #[derive(Debug)]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
-    template: ast::Template<'source>,
+    template: instr::Template<'source>,
 }
 
 /// A compiled template.
 #[derive(Debug)]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
-    template: &'engine ast::Template<'engine>,
+    template: &'engine instr::Template<'engine>,
 }
 
 impl<'engine> Default for Engine<'engine> {
@@ -207,7 +209,8 @@ impl<'engine> Engine<'engine> {
     /// Compile a template.
     #[inline]
     pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let template = parse::Parser::new(self, source).parse_template()?;
+        let ast = parse::Parser::new(self, source).parse_template()?;
+        let template = compile::Compiler::new().compile_template(ast);
         Ok(Template {
             engine: self,
             template,
@@ -221,7 +224,8 @@ impl<'engine> Engine<'engine> {
     /// lifetime.
     #[inline]
     pub fn add_template(&mut self, name: &'engine str, source: &'engine str) -> Result<()> {
-        let template = parse::Parser::new(self, source).parse_template()?;
+        let ast = parse::Parser::new(self, source).parse_template()?;
+        let template = compile::Compiler::new().compile_template(ast);
         self.templates.insert(name, template);
         Ok(())
     }

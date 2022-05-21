@@ -62,9 +62,11 @@ pub enum Expr<'source> {
 
 #[derive(Debug, Clone)]
 pub struct Var<'source> {
-    pub path: Vec<Ident<'source>>,
+    pub path: Path<'source>,
     pub span: Span,
 }
+
+pub type Path<'source> = Vec<Ident<'source>>;
 
 #[derive(Debug, Clone)]
 pub struct Call<'source> {

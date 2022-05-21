@@ -1,182 +1,226 @@
-//! Renders a compiled template.
-
 use std::fmt::Write;
-use std::slice::Iter;
 
-use crate::ast;
-use crate::{Engine, Error, Result, Value};
+use crate::instr::{Instr, Template};
+use crate::span::Span;
+use crate::{ast, Engine, Error, Result, Value};
 
 /// A renderer that can render a compiled template as a string.
 pub struct Renderer<'engine, 'source> {
     engine: &'engine Engine<'engine>,
-    template: &'source ast::Template<'source>,
+    template: &'source Template<'source>,
 }
 
-enum State<'source> {
-    Scope {
-        stmts: Iter<'source, ast::Stmt<'source>>,
+enum LoopState<'source> {
+    List {
+        item: &'source ast::Ident<'source>,
+        iter: crate::value::ListIntoIter,
     },
-    ForLoop {
-        vars: &'source ast::LoopVars<'source>,
-        iter: IntoIter,
-        body: &'source ast::Scope<'source>,
+    Map {
+        kv: &'source ast::KeyValue<'source>,
+        iter: crate::value::MapIntoIter,
     },
 }
 
 impl<'engine, 'source> Renderer<'engine, 'source> {
-    pub fn new(
-        engine: &'engine Engine<'engine>,
-        template: &'source ast::Template<'source>,
-    ) -> Self {
+    pub fn new(engine: &'engine Engine<'engine>, template: &'source Template<'source>) -> Self {
         Self { engine, template }
     }
 
-    /// Renders a template using the provided value.
-    ///
-    /// This function works using two stacks:
-    /// - A stack of blocks containing the state of a scope or for loop.
-    /// - A stack of variables for each state.
     pub fn render(&self, globals: Value) -> Result<String> {
         let mut buf = String::with_capacity(self.source().len());
 
-        let mut blocks = vec![State::scope(&self.template.scope)];
-        let mut locals = vec![globals];
+        let mut pc = 0;
 
-        'blocks: while let Some(state) = blocks.last_mut() {
-            match state {
-                // Currently iterating over a scope. Advance to the next
-                // statement and optionally start a new state.
-                State::Scope { stmts } => {
-                    for stmt in stmts {
-                        match stmt {
-                            // Raw template, simply write it to the buffer.
-                            ast::Stmt::Raw(raw) => {
-                                buf.push_str(raw);
-                            }
+        let mut scopes = vec![globals];
+        let mut loops = vec![];
+        let mut values = vec![];
 
-                            // An inline expression, simply evaluate it and
-                            // write the rendered value to the buffer.
-                            ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
-                                match self.eval_expr(&locals, expr)? {
-                                    Value::None => {}
-                                    Value::Bool(b) => write!(buf, "{}", b).unwrap(),
-                                    Value::Integer(n) => write!(buf, "{}", n).unwrap(),
-                                    Value::Float(n) => write!(buf, "{}", n).unwrap(),
-                                    Value::String(s) => write!(buf, "{}", s).unwrap(),
-                                    val => {
-                                        return Err(Error::new(
-                                            format!(
-                                            "expected renderable value, but expression evaluated to {}",
-                                            val.human()
-                                        ),
-                                            self.source(),
-                                            expr.span(),
-                                        ));
-                                    }
-                                }
-                            }
-
-                            // An `if` statement. We need to evaluate the
-                            // condition first and push the correct branch scope
-                            // to the block scope.
-                            ast::Stmt::IfElse(ast::IfElse {
-                                cond,
-                                then_branch,
-                                else_branch,
-                            }) => {
-                                let cond = match self.eval_expr(&locals, cond)? {
-                                    Value::Bool(cond) => cond,
-                                    value => {
-                                        return Err(Error::new(
-                                            format!(
-                                                "expected bool, but expression evaluated to {}",
-                                                value.human()
-                                            ),
-                                            self.source(),
-                                            cond.span(),
-                                        ));
-                                    }
-                                };
-                                if cond {
-                                    blocks.push(State::scope(then_branch));
-                                    continue 'blocks;
-                                } else if let Some(else_branch) = &else_branch {
-                                    blocks.push(State::scope(else_branch));
-                                    continue 'blocks;
-                                }
-                            }
-
-                            // A `for` statement. We need to evaluate the
-                            // iterable and create an iterator.
-                            ast::Stmt::ForLoop(ast::ForLoop {
-                                vars,
-                                iterable,
-                                body,
-                            }) => {
-                                let (vars, iter) = match self.eval_expr(&locals, iterable)? {
-                                    Value::List(list) => (vars, IntoIter::List(list.into_iter())),
-                                    Value::Map(map) => (vars, IntoIter::Map(map.into_iter())),
-                                    value => {
-                                        return Err(Error::new(
-                                            format!(
-                                                "expected iterable, but expression evaluated to {}",
-                                                value.human()
-                                            ),
-                                            self.source(),
-                                            iterable.span(),
-                                        ));
-                                    }
-                                };
-                                // Push a dummy variable, that will be replaced
-                                // by the first loop variable.
-                                locals.push(Value::None);
-                                blocks.push(State::ForLoop { vars, iter, body });
-                                continue 'blocks;
-                            }
-                        }
-                    }
+        while let Some(instr) = self.template.instrs.get(pc) {
+            match instr {
+                Instr::EmitRaw(raw) => {
+                    buf.push_str(raw);
                 }
 
-                // Currently iterating over a `for` statement. Advance by one
-                // element and push the body on to the stack.
-                State::ForLoop { vars, iter, body } => {
-                    match iter.next(&self.template, vars)? {
-                        Some(next_locals) => {
-                            *locals.last_mut().unwrap() = next_locals;
-                            let body: &ast::Scope<'_> = *body; // ¯\_(ツ)_/¯
-                            blocks.push(State::scope(body));
-                            continue 'blocks;
+                Instr::StartLoop(j, vars, span) => {
+                    let iterable = values.pop().unwrap();
+                    let mut loop_state = self.loop_state(vars, iterable, *span)?;
+                    match self.iterate(&mut loop_state) {
+                        Some(scope) => {
+                            loops.push(loop_state);
+                            scopes.push(scope);
                         }
                         None => {
-                            locals.pop().unwrap();
+                            // nothing to loop, jump to end
+                            pc = *j;
+                            continue;
                         }
                     }
                 }
-            }
 
-            blocks.pop().unwrap();
+                Instr::Iterate(j) => {
+                    match self.iterate(loops.last_mut().unwrap()) {
+                        Some(scope) => {
+                            *scopes.last_mut().unwrap() = scope;
+                            pc = *j;
+                            continue;
+                        }
+                        None => {
+                            scopes.pop().unwrap();
+                        }
+                    };
+                }
+
+                Instr::JumpIfTrue(j, span) => {
+                    if self.if_cond(values.last().unwrap(), *span)? {
+                        pc = *j;
+                        continue;
+                    }
+                }
+
+                Instr::JumpIfFalse(j, span) => {
+                    if !self.if_cond(values.last().unwrap(), *span)? {
+                        pc = *j;
+                        continue;
+                    }
+                }
+
+                Instr::Push(path) => {
+                    let value = self.resolve_path(&scopes, path)?;
+                    values.push(value);
+                }
+
+                Instr::PopEmit(span) => {
+                    let value = values.pop().unwrap();
+                    self.render_value(&mut buf, &value, *span)?;
+                }
+
+                Instr::Call(name) => {
+                    let func = self.engine.filters.get(name.raw).ok_or_else(|| {
+                        Error::new("unknown filter function", self.source(), name.span)
+                    })?;
+                    let value = values.pop().unwrap();
+                    values.push(func(value));
+                }
+            }
+            pc += 1;
         }
+
+        assert!(pc == self.template.instrs.len());
 
         Ok(buf)
     }
 
-    /// Recursively evaluates an expression.
-    fn eval_expr(&self, locals: &[Value], expr: &ast::Expr<'_>) -> Result<Value> {
-        match expr {
-            ast::Expr::Var(ast::Var { path, .. }) => self.resolve_value(locals, path),
-            ast::Expr::Call(ast::Call { name, receiver, .. }) => {
-                let func = self.engine.filters.get(name.raw).ok_or_else(|| {
-                    Error::new("unknown filter function", self.source(), name.span)
-                })?;
-                Ok((func)(self.eval_expr(locals, receiver)?))
+    fn render_value(&self, buf: &mut String, value: &Value, span: Span) -> Result<()> {
+        match value {
+            Value::None => {}
+            Value::Bool(b) => write!(buf, "{}", b).unwrap(),
+            Value::Integer(n) => write!(buf, "{}", n).unwrap(),
+            Value::Float(n) => write!(buf, "{}", n).unwrap(),
+            Value::String(s) => write!(buf, "{}", s).unwrap(),
+            val => {
+                return Err(Error::new(
+                    format!(
+                        "expected renderable value, but expression evaluated to {}",
+                        val.human()
+                    ),
+                    self.source(),
+                    span,
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn if_cond(&self, value: &Value, span: Span) -> Result<bool> {
+        match value {
+            Value::Bool(cond) => Ok(*cond),
+            value => {
+                return Err(Error::new(
+                    format!(
+                        "expected bool, but expression evaluated to {}",
+                        value.human()
+                    ),
+                    self.source(),
+                    span,
+                ));
             }
         }
     }
 
-    /// Resolves a path to a value in the given locals stack.
-    fn resolve_value(&self, locals: &[Value], path: &[ast::Ident]) -> Result<Value> {
-        'outer: for vars in locals.iter().rev() {
-            let mut result = vars;
+    fn loop_state(
+        &self,
+        vars: &'source ast::LoopVars,
+        value: Value,
+        span: Span,
+    ) -> Result<LoopState<'source>> {
+        match value {
+            Value::List(list) => {
+                let item = match vars {
+                    ast::LoopVars::Item(item) => item,
+                    ast::LoopVars::KeyValue(kv) => {
+                        return Err(Error::new(
+                            "cannot unpack list item into two variables",
+                            self.source(),
+                            kv.span,
+                        ));
+                    }
+                };
+                Ok(LoopState::List {
+                    item,
+                    iter: list.into_iter(),
+                })
+            }
+
+            Value::Map(map) => {
+                let kv = match vars {
+                    ast::LoopVars::Item(item) => {
+                        return Err(Error::new(
+                            "cannot unpack map item into one variable",
+                            self.source(),
+                            item.span,
+                        ));
+                    }
+                    ast::LoopVars::KeyValue(kv) => kv,
+                };
+                Ok(LoopState::Map {
+                    kv,
+                    iter: map.into_iter(),
+                })
+            }
+
+            value => {
+                return Err(Error::new(
+                    format!(
+                        "expected iterable, but expression evaluated to {}",
+                        value.human()
+                    ),
+                    self.source(),
+                    span,
+                ));
+            }
+        }
+    }
+
+    fn iterate(&self, loop_state: &mut LoopState<'source>) -> Option<Value> {
+        match loop_state {
+            LoopState::List { item, iter } => {
+                let v = iter.next()?;
+                Some(Value::from([(item.raw, v)]))
+            }
+            LoopState::Map {
+                kv: ast::KeyValue { key, value, .. },
+                iter,
+            } => {
+                let (k, v) = iter.next()?;
+                Some(Value::from([(key.raw, Value::from(k)), (value.raw, v)]))
+            }
+        }
+    }
+
+    /// Resolves a path to a value in the given stack.
+    fn resolve_path(&self, scopes: &[Value], path: &ast::Path<'source>) -> Result<Value> {
+        'outer: for value in scopes.iter().rev() {
+            let mut result = value;
             for (i, segment) in path.iter().enumerate() {
                 result = match self.lookup_value(result, segment) {
                     Ok(d) => d,
@@ -200,11 +244,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     }
 
     // Lookup an index in a value.
-    fn lookup_value<'render>(
-        &self,
-        value: &'render Value,
-        idx: &ast::Ident<'_>,
-    ) -> Result<&'render Value> {
+    fn lookup_value<'v>(&self, value: &'v Value, idx: &ast::Ident<'_>) -> Result<&'v Value> {
         let ast::Ident { raw, span } = idx;
         match value {
             Value::List(list) => match raw.parse::<usize>() {
@@ -232,14 +272,6 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     }
 }
 
-impl<'source> State<'source> {
-    fn scope(scope: &'source ast::Scope<'source>) -> Self {
-        Self::Scope {
-            stmts: scope.stmts.iter(),
-        }
-    }
-}
-
 impl Value {
     fn human(&self) -> &'static str {
         match self {
@@ -250,55 +282,6 @@ impl Value {
             Value::String(_) => "string",
             Value::List(_) => "list",
             Value::Map(_) => "map",
-        }
-    }
-}
-
-/// Wrapper for an owned [`Value`] iterator.
-enum IntoIter {
-    List(crate::value::ListIntoIter),
-    Map(crate::value::MapIntoIter),
-}
-
-impl IntoIter {
-    /// Returns the next value in the iterator, or `None` if exhausted.
-    fn next(
-        &mut self,
-        template: &ast::Template<'_>,
-        vars: &ast::LoopVars<'_>,
-    ) -> Result<Option<Value>> {
-        match self {
-            IntoIter::List(list) => {
-                let v = match list.next() {
-                    Some(v) => v,
-                    None => return Ok(None),
-                };
-                match vars {
-                    ast::LoopVars::Item(item) => Ok(Some(Value::from([(item.raw, v)]))),
-                    ast::LoopVars::KeyValue(kv) => Err(Error::new(
-                        "cannot unpack list item into two variables",
-                        template.source,
-                        kv.span,
-                    )),
-                }
-            }
-            IntoIter::Map(map) => {
-                let (vk, vv) = match map.next() {
-                    Some(v) => v,
-                    None => return Ok(None),
-                };
-                match vars {
-                    ast::LoopVars::Item(item) => Err(Error::new(
-                        "cannot unpack map item into one variable",
-                        template.source,
-                        item.span,
-                    )),
-                    ast::LoopVars::KeyValue(kv) => Ok(Some(Value::from([
-                        (kv.key.raw, Value::from(vk)),
-                        (kv.value.raw, vv),
-                    ]))),
-                }
-            }
         }
     }
 }

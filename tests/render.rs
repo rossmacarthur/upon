@@ -1,4 +1,4 @@
-use upon::{value, Engine, Value};
+use upon::{value, Engine};
 
 #[test]
 fn render_inline_expr_bool() {
@@ -75,7 +75,7 @@ fn render_inline_expr_err_unknown_function() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | unknown }}")
         .unwrap()
-        .render(Value::None)
+        .render(value! { ipsum: true })
         .unwrap_err();
     assert_eq!(
         format!("{:#}", err),
