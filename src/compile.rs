@@ -50,13 +50,15 @@ impl<'source> Compiler<'source> {
                 // then branch
                 let j = self.push(Instr::JumpIfFalse(FIXME, span));
                 self.compile_scope(then_branch);
-                self.update_jump(j);
 
                 if let Some(else_branch) = else_branch {
                     // else branch
-                    let j = self.push(Instr::JumpIfTrue(FIXME, span));
+                    let j2 = self.push(Instr::Jump(FIXME));
+                    self.update_jump(j);
                     self.compile_scope(else_branch);
-                    self.update_jump(j)
+                    self.update_jump(j2)
+                } else {
+                    self.update_jump(j);
                 }
             }
 
@@ -67,10 +69,10 @@ impl<'source> Compiler<'source> {
             }) => {
                 let span = iterable.span();
                 self.compile_expr(iterable);
-                let j = self.push(Instr::StartLoop(FIXME, vars, span));
-                let i = self.instrs.len();
+                self.push(Instr::StartLoop(vars, span));
+                let j = self.push(Instr::Iterate(FIXME));
                 self.compile_scope(body);
-                self.push(Instr::Iterate(i));
+                self.push(Instr::Jump(j));
                 self.update_jump(j);
             }
         }
@@ -91,7 +93,7 @@ impl<'source> Compiler<'source> {
     fn update_jump(&mut self, i: usize) {
         let n = self.instrs.len();
         let j = match &mut self.instrs[i] {
-            Instr::StartLoop(j, _, _) | Instr::JumpIfTrue(j, _) | Instr::JumpIfFalse(j, _) => j,
+            Instr::Jump(j) | Instr::JumpIfFalse(j, _) | Instr::Iterate(j) => j,
             _ => panic!("not a jump instr"),
         };
         *j = n;

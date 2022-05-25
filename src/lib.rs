@@ -252,7 +252,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     where
         S: serde::Serialize,
     {
-        render::Renderer::new(&self.engine, &self.template).render(to_value(s)?)
+        render::Renderer::new(self.engine, &self.template).render(to_value(s)?)
     }
 }
 
@@ -269,6 +269,6 @@ impl<'engine> TemplateRef<'engine> {
     where
         S: serde::Serialize,
     {
-        render::Renderer::new(&self.engine, &self.template).render(to_value(s)?)
+        render::Renderer::new(self.engine, self.template).render(to_value(s)?)
     }
 }

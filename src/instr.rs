@@ -18,13 +18,12 @@ pub enum Instr<'source> {
     EmitRaw(&'source str),
 
     /// Start a loop over value items
-    StartLoop(usize, ast::LoopVars<'source>, Span),
+    StartLoop(ast::LoopVars<'source>, Span),
 
     /// Iterate the loop on the stack
     Iterate(usize),
 
-    /// Jump to the instruction if the value is true
-    JumpIfTrue(usize, Span),
+    Jump(usize),
 
     /// Jump to the instruction if the value is false
     JumpIfFalse(usize, Span),
