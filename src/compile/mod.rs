@@ -1,23 +1,42 @@
-use crate::ast;
-use crate::instr::{Instr, Template, FIXME};
+//! Compile the template into a program that can be executed by the renderer.
+//!
+//! This process has three stages:
+//! - The lexer chunks the template source into tokens.
+//! - The parser constructs an AST from the token stream.
+//! - The compiler takes the AST and constructs the program.
 
-/// A compiler that constructs a program from the AST.
-pub struct Compiler<'source> {
+mod lex;
+mod parse;
+
+use crate::types::ast;
+use crate::types::prog::{Instr, Template, FIXME};
+use crate::{Engine, Result};
+
+/// Compile a template into a program.
+pub fn template<'engine, 'source>(
+    engine: &'engine Engine<'engine>,
+    source: &'source str,
+) -> Result<Template<'source>> {
+    let ast = parse::Parser::new(engine, source).parse_template()?;
+    Ok(Compiler::new().compile_template(ast))
+}
+
+/// A compiler that constructs a program from an AST.
+struct Compiler<'source> {
     instrs: Vec<Instr<'source>>,
 }
 
 impl<'source> Compiler<'source> {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { instrs: Vec::new() }
     }
 
-    pub fn compile_template(mut self, template: ast::Template<'source>) -> Template<'source> {
+    fn compile_template(mut self, template: ast::Template<'source>) -> Template<'source> {
         let ast::Template { source, scope } = template;
         self.compile_scope(scope);
         Template {
             source,
             instrs: self.instrs,
-            spans: Vec::new(),
         }
     }
 
@@ -51,14 +70,17 @@ impl<'source> Compiler<'source> {
                 let j = self.push(Instr::JumpIfFalse(FIXME, span));
                 self.compile_scope(then_branch);
 
-                if let Some(else_branch) = else_branch {
-                    // else branch
-                    let j2 = self.push(Instr::Jump(FIXME));
-                    self.update_jump(j);
-                    self.compile_scope(else_branch);
-                    self.update_jump(j2)
-                } else {
-                    self.update_jump(j);
+                match else_branch {
+                    Some(else_branch) => {
+                        // else branch
+                        let j2 = self.push(Instr::Jump(FIXME));
+                        self.update_jump(j);
+                        self.compile_scope(else_branch);
+                        self.update_jump(j2)
+                    }
+                    None => {
+                        self.update_jump(j);
+                    }
                 }
             }
 

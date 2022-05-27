@@ -220,9 +220,7 @@ fn render_for_statement_list() {
 }
 
 #[test]
-#[ignore]
 fn render_for_statement_map() {
-    // FIXME: enable when indexmap
     let result = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()

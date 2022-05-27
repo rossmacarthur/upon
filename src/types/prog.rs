@@ -1,17 +1,17 @@
-use crate::ast;
-use crate::span::Span;
+//! Defines a compiled [`Template`] which is a sequence of [`Instr`] that can be
+//! executed by the renderer.
+
+use crate::types::ast;
+use crate::types::span::Span;
 
 pub const FIXME: usize = !0;
 
-/// Represents a compiled template.
 #[derive(Debug)]
 pub struct Template<'source> {
     pub source: &'source str,
     pub instrs: Vec<Instr<'source>>,
-    pub spans: Vec<Span>,
 }
 
-/// Represents an instruction in a template program.
 #[derive(Debug)]
 pub enum Instr<'source> {
     /// Emit raw template
@@ -23,6 +23,7 @@ pub enum Instr<'source> {
     /// Iterate the loop on the stack
     Iterate(usize),
 
+    /// Jump to an instruction
     Jump(usize),
 
     /// Jump to the instruction if the value is false

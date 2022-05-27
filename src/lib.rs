@@ -87,7 +87,7 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! ### Render a template using custom tags
+//! ### Render a template using custom syntax
 //!
 //! ```
 //! let result = upon::Engine::with_delims("<?", "?>", "<%", "%>")
@@ -98,15 +98,11 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 
-mod ast;
 mod compile;
 mod error;
-mod instr;
-mod lex;
 mod macros;
-mod parse;
 mod render;
-mod span;
+mod types;
 pub mod value;
 
 use std::collections::HashMap;
@@ -114,7 +110,7 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use crate::error::{Error, Result};
-use crate::span::Span;
+use crate::types::prog;
 pub use crate::value::{to_value, Value};
 
 /// The compilation and rendering engine.
@@ -124,21 +120,21 @@ pub struct Engine<'engine> {
     begin_block: &'engine str,
     end_block: &'engine str,
     filters: HashMap<&'engine str, Arc<dyn Fn(&mut Value) + Sync + Send + 'static>>,
-    templates: HashMap<&'engine str, instr::Template<'engine>>,
+    templates: HashMap<&'engine str, prog::Template<'engine>>,
 }
 
 /// A compiled template.
 #[derive(Debug)]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
-    template: instr::Template<'source>,
+    template: prog::Template<'source>,
 }
 
-/// A compiled template.
+/// A reference to a compiled template in an [`Engine`].
 #[derive(Debug)]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
-    template: &'engine instr::Template<'engine>,
+    template: &'engine prog::Template<'engine>,
 }
 
 impl<'engine> Default for Engine<'engine> {
@@ -208,8 +204,7 @@ impl<'engine> Engine<'engine> {
     /// Compile a template.
     #[inline]
     pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let ast = parse::Parser::new(self, source).parse_template()?;
-        let template = compile::Compiler::new().compile_template(ast);
+        let template = compile::template(self, source)?;
         Ok(Template {
             engine: self,
             template,
@@ -223,8 +218,7 @@ impl<'engine> Engine<'engine> {
     /// lifetime.
     #[inline]
     pub fn add_template(&mut self, name: &'engine str, source: &'engine str) -> Result<()> {
-        let ast = parse::Parser::new(self, source).parse_template()?;
-        let template = compile::Compiler::new().compile_template(ast);
+        let template = compile::template(self, source)?;
         self.templates.insert(name, template);
         Ok(())
     }
@@ -252,7 +246,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     where
         S: serde::Serialize,
     {
-        render::Renderer::new(self.engine, &self.template).render(to_value(s)?)
+        render::template(self.engine, &self.template, to_value(s)?)
     }
 }
 
@@ -269,6 +263,6 @@ impl<'engine> TemplateRef<'engine> {
     where
         S: serde::Serialize,
     {
-        render::Renderer::new(self.engine, self.template).render(to_value(s)?)
+        render::template(self.engine, self.template, to_value(s)?)
     }
 }

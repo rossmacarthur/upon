@@ -1,5 +1,6 @@
-use crate::ast;
-use crate::render::iter::{LoopState, ValueCow};
+use crate::render::iter::LoopState;
+use crate::render::value::{index, ValueCow};
+use crate::types::ast;
 use crate::{Error, Result, Value};
 
 pub struct Stack<'source, 'render> {
@@ -97,29 +98,5 @@ impl<'source, 'render> Stack<'source, 'render> {
 
     fn source(&self) -> &'source str {
         self.source
-    }
-}
-
-/// Index the value with the given path segement.
-pub fn index<'render>(
-    source: &str,
-    value: &'render Value,
-    p: &ast::Ident<'_>,
-) -> Result<&'render Value> {
-    let ast::Ident { raw, span } = p;
-    match value {
-        Value::List(list) => match raw.parse::<usize>() {
-            Ok(i) => Ok(&list[i]),
-            Err(_) => Err(Error::new("cannot index list with string", source, *span)),
-        },
-        Value::Map(map) => match map.get(*raw) {
-            Some(value) => Ok(value),
-            None => Err(Error::new("not found in map", source, *span)),
-        },
-        value => Err(Error::new(
-            format!("cannot index into {}", value.human()),
-            source,
-            *span,
-        )),
     }
 }

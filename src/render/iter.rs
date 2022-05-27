@@ -1,28 +1,36 @@
-use std::ops::Deref;
 use std::slice;
 
-use crate::ast;
-use crate::render::stack::index;
+use crate::render::value::{index, ValueCow};
+use crate::types::ast;
+use crate::types::span::Span;
 use crate::value::list;
 use crate::value::map;
-use crate::{Error, Result, Span, Value};
+use crate::{Error, Result, Value};
 
+/// The state of a loop iteration.
 pub enum LoopState<'source, 'render> {
+    /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
         item: &'source ast::Ident<'source>,
         iter: slice::Iter<'render, Value>,
         value: Option<&'render Value>,
     },
+
+    /// An iterator over an owned list and the last item yielded
     ListOwned {
         item: &'source ast::Ident<'source>,
         iter: list::IntoIter<Value>,
         value: Option<Value>,
     },
+
+    /// An iterator over a borrowed map and the last key and value yielded
     MapBorrowed {
         kv: &'source ast::KeyValue<'source>,
         iter: map::Iter<'render, String, Value>,
         value: Option<(&'render String, &'render Value)>,
     },
+
+    /// An iterator over an owned map and the last key and value yielded
     MapOwned {
         kv: &'source ast::KeyValue<'source>,
         iter: map::IntoIter<String, Value>,
@@ -31,6 +39,7 @@ pub enum LoopState<'source, 'render> {
 }
 
 impl<'source, 'render> LoopState<'source, 'render> {
+    /// Constructs the initial loop state.
     pub fn new(
         source: &'source str,
         vars: &'source ast::LoopVars<'source>,
@@ -206,23 +215,6 @@ impl<'source, 'render> LoopState<'source, 'render> {
             }
 
             _ => Ok(None),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub enum ValueCow<'a> {
-    Borrowed(&'a Value),
-    Owned(Value),
-}
-
-impl Deref for ValueCow<'_> {
-    type Target = Value;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Borrowed(v) => v,
-            Self::Owned(v) => &*v,
         }
     }
 }

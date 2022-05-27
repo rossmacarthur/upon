@@ -1,3 +1,6 @@
+//! Defines a [`Span`] which is used to represent a region in the template
+//! source code.
+
 use std::cmp::{max, min};
 use std::ops::{Index, Range};
 

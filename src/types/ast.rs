@@ -1,6 +1,6 @@
-//! AST for a template.
+//! AST representing a template.
 
-use crate::span::Span;
+use crate::types::span::Span;
 
 #[derive(Debug, Clone)]
 pub struct Template<'source> {

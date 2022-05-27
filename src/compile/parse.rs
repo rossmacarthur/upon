@@ -1,6 +1,7 @@
-use crate::ast;
-use crate::lex::{Lexer, Token};
-use crate::{Engine, Error, Result, Span};
+use crate::compile::lex::{Lexer, Token};
+use crate::types::ast;
+use crate::types::span::Span;
+use crate::{Engine, Error, Result};
 
 /// A parser that constructs an AST from a token stream.
 ///
