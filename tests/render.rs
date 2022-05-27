@@ -1,4 +1,4 @@
-use upon::{value, Engine};
+use upon::{value, Engine, Value};
 
 #[test]
 fn render_inline_expr_bool() {
@@ -220,13 +220,45 @@ fn render_for_statement_list() {
 }
 
 #[test]
+fn render_for_statement_filtered_list() {
+    let mut engine = Engine::new();
+    engine.add_filter("pop", |v| {
+        if let Value::List(list) = v {
+            list.pop();
+        }
+    });
+    let result = engine
+        .compile("lorem {% for ipsum in dolor | pop %}{{ ipsum }}{% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .unwrap();
+    assert_eq!(result, "lorem tes");
+}
+
+#[test]
 fn render_for_statement_map() {
     let result = Engine::new()
-        .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
+        .compile("lorem {% for ipsum, dolor in sit %}{{ ipsum }},{{ dolor.0 }} {% endfor %}")
         .unwrap()
-        .render(value! { dolor: { a: "t", b: "e", c: "s", d: "t" } })
+        .render(value! { sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } })
         .unwrap();
-    assert_eq!(result, "lorem test");
+    assert_eq!(result, "lorem a,t b,e c,s d,t ");
+}
+
+#[test]
+fn render_for_statement_filtered_map() {
+    let mut engine = Engine::new();
+    engine.add_filter("rm", |v| {
+        if let Value::Map(map) = v {
+            map.remove("d");
+        }
+    });
+    let result = engine
+        .compile("lorem {% for ipsum, dolor in sit | rm %}{{ ipsum }},{{ dolor.0 }} {% endfor %}")
+        .unwrap()
+        .render(value! { sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } })
+        .unwrap();
+    assert_eq!(result, "lorem a,t b,e c,s ");
 }
 
 #[test]

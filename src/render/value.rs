@@ -6,7 +6,6 @@ use crate::types::ast;
 use crate::types::span::Span;
 use crate::{Error, Result, Value};
 
-#[derive(Clone)]
 pub enum ValueCow<'a> {
     Borrowed(&'a Value),
     Owned(Value),

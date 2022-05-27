@@ -90,7 +90,7 @@ fn lex_unclosed_begin_block() {
 }
 
 #[test]
-fn lex_unexpected_end_tag() {
+fn lex_unexpected_end_block_after_start() {
     let err = Engine::new()
         .compile("lorem ipsum {{ %} dolor sit amet")
         .unwrap_err();
