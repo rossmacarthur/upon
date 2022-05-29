@@ -6,7 +6,7 @@ use std::fmt::Write;
 
 use crate::render::iter::LoopState;
 use crate::render::stack::{Stack, State};
-use crate::types::prog::{Instr, Template};
+use crate::types::program::{Instr, Template};
 use crate::types::span::Span;
 use crate::{Engine, Error, Result, Value};
 
@@ -62,6 +62,13 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                 Instr::Jump(j) => {
                     pc = *j;
                     continue;
+                }
+
+                Instr::JumpIfTrue(j, span) => {
+                    if stack.pop_expr().as_bool(self.source(), *span)? {
+                        pc = *j;
+                        continue;
+                    }
                 }
 
                 Instr::JumpIfFalse(j, span) => {

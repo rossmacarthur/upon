@@ -96,7 +96,7 @@ struct Context {
 struct User {
     name: String,
     age: u32,
-    is_enabled: bool,
+    is_disabled: bool,
 }
 
 fn random_context(n: usize) -> Context {
@@ -106,7 +106,7 @@ fn random_context(n: usize) -> Context {
         .map(|_| User {
             name: (0..20).map(|_| rng.gen_range('a'..='z')).collect(),
             age: rng.gen_range(21..100),
-            is_enabled: rng.gen_ratio(3, 4),
+            is_disabled: rng.gen_ratio(1, 4),
         })
         .collect();
     Context { title, users }

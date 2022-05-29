@@ -9,7 +9,7 @@ mod lex;
 mod parse;
 
 use crate::types::ast;
-use crate::types::prog::{Instr, Template, FIXME};
+use crate::types::program::{Instr, Template, FIXME};
 use crate::{Engine, Result};
 
 /// Compile a template into a program.
@@ -59,6 +59,7 @@ impl<'source> Compiler<'source> {
             }
 
             ast::Stmt::IfElse(ast::IfElse {
+                not,
                 cond,
                 then_branch,
                 else_branch,
@@ -67,7 +68,12 @@ impl<'source> Compiler<'source> {
                 self.compile_expr(cond);
 
                 // then branch
-                let j = self.push(Instr::JumpIfFalse(FIXME, span));
+                let instr = if not {
+                    Instr::JumpIfTrue(FIXME, span)
+                } else {
+                    Instr::JumpIfFalse(FIXME, span)
+                };
+                let j = self.push(instr);
                 self.compile_scope(then_branch);
 
                 match else_branch {
@@ -105,6 +111,7 @@ impl<'source> Compiler<'source> {
             ast::Expr::Var(ast::Var { path, .. }) => {
                 self.push(Instr::Push(path));
             }
+
             ast::Expr::Call(ast::Call { name, receiver, .. }) => {
                 self.compile_expr(*receiver);
                 self.push(Instr::Call(name));
@@ -115,7 +122,10 @@ impl<'source> Compiler<'source> {
     fn update_jump(&mut self, i: usize) {
         let n = self.instrs.len();
         let j = match &mut self.instrs[i] {
-            Instr::Jump(j) | Instr::JumpIfFalse(j, _) | Instr::Iterate(j) => j,
+            Instr::Jump(j)
+            | Instr::JumpIfTrue(j, _)
+            | Instr::JumpIfFalse(j, _)
+            | Instr::Iterate(j) => j,
             _ => panic!("not a jump instr"),
         };
         *j = n;

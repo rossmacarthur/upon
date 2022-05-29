@@ -20,6 +20,8 @@ pub struct Parser<'engine, 'source> {
 enum State<'source> {
     /// A partial `if` statement.
     If {
+        /// Whether this is an an `if not` or a `if` statement.
+        not: bool,
         /// The condition in the `if` block.
         cond: ast::Expr<'source>,
         /// The span of the `if` block.
@@ -41,7 +43,7 @@ enum State<'source> {
 
 /// A parsed block definition.
 enum Block<'source> {
-    If(ast::Expr<'source>),
+    If(bool, ast::Expr<'source>),
     Else,
     EndIf,
     For(ast::LoopVars<'source>, ast::Expr<'source>),
@@ -52,6 +54,7 @@ enum Block<'source> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Keyword {
     If,
+    Not,
     Else,
     EndIf,
     For,
@@ -104,8 +107,9 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // We must push a block to the block stack and a scope
                         // to the scope stack because an if statement starts a
                         // new scope.
-                        Block::If(cond) => {
+                        Block::If(not, cond) => {
                             blocks.push(State::If {
+                                not,
                                 cond,
                                 span,
                                 has_else: false,
@@ -149,10 +153,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                                 || Error::new("unexpected `endif` block", self.source(), span);
 
                             let if_else = match blocks.pop().ok_or_else(err)? {
-                                State::If { cond, has_else, .. } => {
+                                State::If {
+                                    not,
+                                    cond,
+                                    has_else,
+                                    ..
+                                } => {
                                     let else_branch = has_else.then(|| scopes.pop().unwrap());
                                     let then_branch = scopes.pop().unwrap();
                                     ast::IfElse {
+                                        not,
                                         cond,
                                         then_branch,
                                         else_branch,
@@ -246,8 +256,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         let (kw, span) = self.parse_keyword()?;
         match kw {
             Keyword::If => {
-                let expr = self.parse_expr()?;
-                Ok(Block::If(expr))
+                let (not, expr) = self.parse_if_cond()?;
+                Ok(Block::If(not, expr))
             }
             Keyword::Else => Ok(Block::Else),
             Keyword::EndIf => Ok(Block::EndIf),
@@ -263,6 +273,26 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 self.source(),
                 span,
             )),
+        }
+    }
+
+    /// Parses an if condition.
+    ///
+    /// This is an expression with an optional `not`.
+    ///
+    ///   not user.is_enabled
+    ///
+    fn parse_if_cond(&mut self) -> Result<(bool, ast::Expr<'source>)> {
+        match self.peek()? {
+            Some((Token::Keyword, span)) if Keyword::from_str(&self.source()[span]).is_not() => {
+                self.expect_keyword(Keyword::Not)?;
+                let expr = self.parse_expr()?;
+                Ok((true, expr))
+            }
+            _ => {
+                let expr = self.parse_expr()?;
+                Ok((false, expr))
+            }
         }
     }
 
@@ -350,10 +380,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse_keyword(&mut self) -> Result<(Keyword, Span)> {
         let span = self.expect(Token::Keyword)?;
         let kw = &self.source()[span];
-        match Keyword::from_str(kw) {
-            Some(kw) => Ok((kw, span)),
-            None => unreachable!(),
-        }
+        Ok((Keyword::from_str(kw), span))
     }
 
     /// Parses an identifier.
@@ -411,13 +438,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 }
 
 impl Keyword {
-    pub(crate) fn all() -> &'static [&'static str] {
-        &["if", "else", "endif", "for", "in", "endfor"]
+    pub(crate) const fn all() -> &'static [&'static str] {
+        &["if", "not", "else", "endif", "for", "in", "endfor"]
     }
 
-    fn human(&self) -> &'static str {
+    const fn human(&self) -> &'static str {
         match self {
             Self::If => "if",
+            Self::Not => "not",
             Self::Else => "else",
             Self::EndIf => "endif",
             Self::For => "for",
@@ -426,16 +454,20 @@ impl Keyword {
         }
     }
 
-    fn from_str(s: &str) -> Option<Self> {
-        let kw = match s {
+    fn from_str(s: &str) -> Self {
+        match s {
             "if" => Self::If,
+            "not" => Self::Not,
             "else" => Self::Else,
             "endif" => Self::EndIf,
             "for" => Self::For,
             "in" => Self::In,
             "endfor" => Self::EndFor,
-            _ => return None,
-        };
-        Some(kw)
+            _ => unreachable!(),
+        }
+    }
+
+    fn is_not(&self) -> bool {
+        matches!(self, Self::Not)
     }
 }

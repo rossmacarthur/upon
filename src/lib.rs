@@ -110,7 +110,7 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use crate::error::{Error, Result};
-use crate::types::prog;
+use crate::types::program;
 pub use crate::value::{to_value, Value};
 
 /// The compilation and rendering engine.
@@ -120,21 +120,21 @@ pub struct Engine<'engine> {
     begin_block: &'engine str,
     end_block: &'engine str,
     filters: HashMap<&'engine str, Arc<dyn Fn(&mut Value) + Sync + Send + 'static>>,
-    templates: HashMap<&'engine str, prog::Template<'engine>>,
+    templates: HashMap<&'engine str, program::Template<'engine>>,
 }
 
 /// A compiled template.
 #[derive(Debug)]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
-    template: prog::Template<'source>,
+    template: program::Template<'source>,
 }
 
 /// A reference to a compiled template in an [`Engine`].
 #[derive(Debug)]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
-    template: &'engine prog::Template<'engine>,
+    template: &'engine program::Template<'engine>,
 }
 
 impl<'engine> Default for Engine<'engine> {

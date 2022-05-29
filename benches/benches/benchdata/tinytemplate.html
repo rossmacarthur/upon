@@ -10,7 +10,7 @@
             <th>Age</th>
         </tr>
       {{ for user in users }}
-        {{ if user.is_enabled }}
+        {{ if not user.is_disabled }}
             <tr>
                 <td>{ user.name }</td>
                 <td>{ user.age }</td>

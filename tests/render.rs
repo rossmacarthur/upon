@@ -193,6 +193,16 @@ fn render_if_statement_cond_false() {
 }
 
 #[test]
+fn render_if_statement_cond_not() {
+    let result = Engine::new()
+        .compile("lorem {% if not ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
+        .unwrap()
+        .render(value! { ipsum: { dolor: false }, sit: "consectetur" })
+        .unwrap();
+    assert_eq!(result, "lorem consectetur")
+}
+
+#[test]
 fn render_if_statement_err_cond_not_bool() {
     let err = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% endif %}")
@@ -205,6 +215,23 @@ fn render_if_statement_err_cond_not_bool() {
    |
  1 | lorem {% if ipsum.dolor %}{{ sit }}{% endif %}
    |             ^^^^^^^^^^^ expected bool, but expression evaluated to map
+"
+    );
+}
+
+#[test]
+fn render_if_statement_err_cond_not_not_bool() {
+    let err = Engine::new()
+        .compile("lorem {% if not ipsum.dolor %}{{ sit }}{% endif %}")
+        .unwrap()
+        .render(value! { ipsum: { dolor: { } } })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% if not ipsum.dolor %}{{ sit }}{% endif %}
+   |                 ^^^^^^^^^^^ expected bool, but expression evaluated to map
 "
     );
 }

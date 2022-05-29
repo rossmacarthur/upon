@@ -29,6 +29,7 @@ pub struct InlineExpr<'source> {
 
 #[derive(Debug, Clone)]
 pub struct IfElse<'source> {
+    pub not: bool,
     pub cond: Expr<'source>,
     pub then_branch: Scope<'source>,
     pub else_branch: Option<Scope<'source>>,

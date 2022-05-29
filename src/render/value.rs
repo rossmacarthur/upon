@@ -14,6 +14,7 @@ pub enum ValueCow<'a> {
 impl Deref for ValueCow<'_> {
     type Target = Value;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         match self {
             Self::Borrowed(v) => v,
@@ -26,16 +27,14 @@ impl ValueCow<'_> {
     pub fn as_bool(&self, source: &str, span: Span) -> Result<bool> {
         match &**self {
             Value::Bool(cond) => Ok(*cond),
-            value => {
-                return Err(Error::new(
-                    format!(
-                        "expected bool, but expression evaluated to {}",
-                        value.human()
-                    ),
-                    source,
-                    span,
-                ));
-            }
+            value => Err(Error::new(
+                format!(
+                    "expected bool, but expression evaluated to {}",
+                    value.human()
+                ),
+                source,
+                span,
+            )),
         }
     }
 

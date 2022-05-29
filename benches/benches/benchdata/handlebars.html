@@ -10,7 +10,7 @@
             <th>Age</th>
         </tr>
       {{#each users }}
-        {{#if is_enabled }}
+        {{#if not is_disabled }}
             <tr>
                 <td>{{ name }}</td>
                 <td>{{ age }}</td>

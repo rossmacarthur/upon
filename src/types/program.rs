@@ -26,6 +26,9 @@ pub enum Instr<'source> {
     /// Jump to an instruction
     Jump(usize),
 
+    /// Jump to the instruction if the value is true
+    JumpIfTrue(usize, Span),
+
     /// Jump to the instruction if the value is false
     JumpIfFalse(usize, Span),
 
