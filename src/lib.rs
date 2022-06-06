@@ -1,4 +1,4 @@
-//! A tiny template engine.
+//! A simple, powerful template engine.
 //!
 //! # Features
 //!
@@ -7,8 +7,10 @@
 //! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Customizable filter functions: `{{ user.name | lower }}`
 //! - Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
-//! - Supports any [`serde`][serde] serializable values.
-//! - Macro for quick rendering: `value!{ name: "John", age: 42 }`
+//! - Render using any [`serde`][serde] serializable values.
+//! - Render using a quick context with a convenient macro:
+//!   `upon::value!{ name: "John", age: 42 }`
+//! - Minimal dependencies.
 //!
 //! # Introduction
 //!
@@ -29,7 +31,7 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! The template can then be rendered by calling `.render()`.
+//! The template can then be rendered by calling [`.render()`][TemplateRef::render].
 //!
 //! ```
 //! # let engine = upon::Engine::new();
@@ -43,6 +45,18 @@
 //! [`get_template(name).render(...)`][Engine::get_template] to store a template
 //! by name in the engine.
 //!
+//! ```
+//! let mut engine = upon::Engine::new();
+//! engine.add_template("hello", "Hello {{ user.name }}!")?;
+//!
+//! // later...
+//!
+//! let template = engine.get_template("hello").unwrap();
+//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+//! assert_eq!(result, "Hello John Smith!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
 //! # Examples
 //!
 //! ### Render using structured data
@@ -51,14 +65,16 @@
 //!
 //! ```
 //! #[derive(serde::Serialize)]
-//! struct Data { user: User }
+//! struct Context { user: User }
+//!
 //! #[derive(serde::Serialize)]
 //! struct User { name: String }
 //!
-//! let engine = upon::Engine::new();
-//! let data = Data { user: User { name: "John Smith".into() } };
-//! let template = engine.compile("Hello {{ user.name }}")?;
-//! let result = template.render(&data)?;
+//! let ctx = Context { user: User { name: "John Smith".into() } };
+//!
+//! let result = upon::Engine::new()
+//!     .compile("Hello {{ user.name }}")?
+//!     .render(&ctx)?;
 //!
 //! assert_eq!(result, "Hello John Smith");
 //! # Ok::<(), upon::Error>(())
@@ -69,15 +85,13 @@
 //! Data can be transformed using registered filters.
 //!
 //! ```
-//! // If the value is a string, make it lowercase
-//! fn lower(v: &mut upon::Value) {
+//! let mut engine = upon::Engine::new();
+//!
+//! engine.add_filter("lower", |v| {
 //!     if let upon::Value::String(s) = v {
 //!         *s = s.to_lowercase();
 //!     }
-//! }
-//!
-//! let mut engine = upon::Engine::new();
-//! engine.add_filter("lower", lower);
+//! });
 //!
 //! let result = engine
 //!     .compile("Hello {{ value | lower }}")?
@@ -88,6 +102,9 @@
 //! ```
 //!
 //! ### Render a template using custom syntax
+//!
+//! The template delimiters can be set by constructing an engine using
+//! [`Engine::with_delims`].
 //!
 //! ```
 //! let result = upon::Engine::with_delims("<?", "?>", "<%", "%>")
