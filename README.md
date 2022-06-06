@@ -64,6 +64,25 @@ assert_eq!(result, "Hello John Smith!");
 
 See more in the [docs](https://docs.rs/upon/latest/upon/#examples).
 
+## Benchmarks
+
+The following shows a violin plot of the benchmark results for `upon` compared
+to the following template rendering engines.
+- [handlebars](https://crates.io/crates/handlebars)
+- [minijinja](https://crates.io/crates/minijinja)
+- [tera](https://crates.io/crates/tera)
+- [tinytemplate](https://crates.io/crates/tinytemplate)
+
+Obviously, each of these engines has a completely different feature set so this
+just compares the performance for some of the features that `upon` supports.
+
+![Violin plot of benchmark results](./benches/results/violin.svg)
+
+**Host**
+- MacBook Pro (14-inch, 2021)
+- Chipset: Apple M1 Pro
+- Memory: 16 GB
+
 ## License
 
 Licensed under either of
