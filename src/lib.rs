@@ -103,11 +103,11 @@
 //!
 //! ### Render a template using custom syntax
 //!
-//! The template delimiters can be set by constructing an engine using
-//! [`Engine::with_delims`].
+//! The template syntax can be set by constructing an engine using
+//! [`Engine::with_syntax`].
 //!
 //! ```
-//! let result = upon::Engine::with_delims("<?", "?>", "<%", "%>")
+//! let result = upon::Engine::with_syntax("<?", "?>", "<%", "%>")
 //!     .compile("Hello <? user.name ?>")?
 //!     .render(upon::value!{ user: { name: "John Smith" }})?;
 //!
@@ -119,6 +119,7 @@ mod compile;
 mod error;
 mod macros;
 mod render;
+mod syntax;
 mod types;
 pub mod value;
 
@@ -127,15 +128,13 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use crate::error::{Error, Result};
+use crate::syntax::{Searcher, Syntax};
 use crate::types::program;
 pub use crate::value::{to_value, Value};
 
 /// The compilation and rendering engine.
 pub struct Engine<'engine> {
-    begin_expr: &'engine str,
-    end_expr: &'engine str,
-    begin_block: &'engine str,
-    end_block: &'engine str,
+    searcher: Searcher,
     filters: HashMap<&'engine str, Arc<dyn Fn(&mut Value) + Sync + Send + 'static>>,
     templates: HashMap<&'engine str, program::Template<'engine>>,
 }
@@ -167,10 +166,7 @@ impl fmt::Debug for Engine<'_> {
             .entries(self.filters.keys().map(|k| (k, "<filter>")))
             .finish();
         f.debug_struct("Engine")
-            .field("begin_expr", &self.begin_expr)
-            .field("end_expr", &self.end_expr)
-            .field("begin_block", &self.begin_block)
-            .field("end_block", &self.end_block)
+            .field("searcher", &self.searcher)
             .field("filters", &filters)
             .field("templates", &self.templates)
             .finish()
@@ -182,10 +178,7 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn new() -> Engine<'engine> {
         Self {
-            begin_expr: "{{",
-            end_expr: "}}",
-            begin_block: "{%",
-            end_block: "%}",
+            searcher: Searcher::new(),
             filters: HashMap::new(),
             templates: HashMap::new(),
         }
@@ -193,17 +186,19 @@ impl<'engine> Engine<'engine> {
 
     /// Construct a new engine with custom delimiters.
     #[inline]
-    pub fn with_delims(
+    pub fn with_syntax(
         begin_expr: &'engine str,
         end_expr: &'engine str,
         begin_block: &'engine str,
         end_block: &'engine str,
     ) -> Self {
         Self {
-            begin_expr,
-            end_expr,
-            begin_block,
-            end_block,
+            searcher: Searcher::with_syntax(Syntax {
+                begin_expr,
+                end_expr,
+                begin_block,
+                end_block,
+            }),
             filters: HashMap::new(),
             templates: HashMap::new(),
         }

@@ -2,7 +2,7 @@ use upon::Engine;
 
 #[test]
 fn lex_while_eof() {
-    let err = Engine::with_delims("{", "}", "{{", "}}")
+    let err = Engine::with_syntax("{", "}", "{{", "}}")
         .compile("lorem { ipsum")
         .unwrap_err();
     assert_eq!(
@@ -17,14 +17,14 @@ fn lex_while_eof() {
 
 #[test]
 fn lex_overlapping_delimiters() {
-    Engine::with_delims("{", "}", "{{", "}}")
+    Engine::with_syntax("{", "}", "{{", "}}")
         .compile("lorem { ipsum } {{ if dolor }} {{ endif }} sit amet")
         .unwrap();
 }
 
 #[test]
 fn lex_overlapping_delimiters_flipped() {
-    Engine::with_delims("{{", "}}", "{", "}")
+    Engine::with_syntax("{{", "}}", "{", "}")
         .compile("lorem {{ ipsum }} { if dolor } { endif } sit amet")
         .unwrap();
 }

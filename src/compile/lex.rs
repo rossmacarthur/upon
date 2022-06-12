@@ -105,78 +105,47 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             return Ok(None);
         }
 
-        // Looks for a delimiter at position `i`, matching the longest delimiter
-        // and returns the token and the next cursor value.
-        //
-        // FIXME: Can this be optimized by using a more intelligent algorithm
-        //        like Aho-Corasick?
-        let try_lex_delim = |i| {
-            let mut result = None;
-            let bytes = &self.source.as_bytes()[i..];
-            for (tk, needle) in [
-                (Token::BeginExpr, self.engine.begin_expr),
-                (Token::EndExpr, self.engine.end_expr),
-                (Token::BeginBlock, self.engine.begin_block),
-                (Token::EndBlock, self.engine.end_block),
-            ] {
-                let len = needle.len();
-                if bytes.len() >= len && &bytes[..len] == needle.as_bytes() {
-                    // Set the result if it is unset or this match is longer
-                    // than any previous match.
-                    if match result {
-                        None => true,
-                        Some((_, curr)) if len > curr => true,
-                        Some(_) => false,
-                    } {
-                        result = Some((tk, len));
-                    }
-                }
-            }
-            result.map(|(tk, len)| (tk, i + len))
-        };
-
         match self.state {
             State::Template => {
                 // We are within raw template, that means all we have to do is
-                // lookout for begin delimiters.
-
-                // Checks if the given token is a begin delimiter. If it is then
-                // this function updates the current lexer cursor and state and
-                // returns the token and span.
-                let mut lex = |tk: Token, m, n| match tk {
-                    tk if tk.is_begin_delim() => {
-                        let begin = Span::from(m..n);
-                        let end = tk.pair();
-                        self.cursor = n;
-                        self.state = State::InBlock { begin, end };
-                        Ok(Some((tk, begin)))
-                    }
-                    _ => Err(Error::new(
-                        format!("unexpected {}", tk.human()),
-                        self.source,
-                        m..n,
-                    )),
-                };
-
-                // Find the next begin delimiter starting at `i` and any
-                // relevant cursor indexes. The following diagram helps describe
+                // find the next begin delimiter from `i` and and any relevant
+                // cursor indexes. The following diagram helps describe
                 // the variable naming.
                 //
                 // xxxxxxx{{xxxxxxxxx
                 //    ^   ^ ^
                 //    i   j k
-                match (i..self.source.len())
-                    .find_map(|j| try_lex_delim(j).map(|(tk, k)| (tk, j, k)))
-                {
-                    Some((tk, j, k)) if i == j => {
-                        // The current cursor is exactly at a begin delimiter.
-                        lex(tk, j, k)
-                    }
-                    Some((tk, j, k)) => {
-                        // We must first emit the raw token, so we store the
-                        // begin delimiter token in the `next` buffer.
-                        self.next = lex(tk, j, k)?;
-                        Ok(Some((Token::Raw, Span::from(i..j))))
+                match self.engine.searcher.find_at(&self.source, i) {
+                    Some((kind, j, k)) => {
+                        let tk = Token::from(kind);
+
+                        if !tk.is_begin_delim() {
+                            return Err(Error::new(
+                                format!("unexpected {}", tk.human()),
+                                self.source,
+                                j..k,
+                            ));
+                        }
+
+                        // Updates the current lexer cursor and state and
+                        // returns the token and span.
+                        let mut lex = |tk: Token, m, n| {
+                            let begin = Span::from(m..n);
+                            let end = tk.pair();
+                            self.cursor = n;
+                            self.state = State::InBlock { begin, end };
+                            Ok(Some((tk, begin)))
+                        };
+
+                        if i == j {
+                            // The current cursor is exactly at the token.
+                            lex(tk, j, k)
+                        } else {
+                            // We must first emit the raw token, so we store the
+                            // begin delimiter token in the `next` buffer.
+                            self.next = lex(tk, j, k)?;
+                            Ok(Some((Token::Raw, Span::from(i..j))))
+                        }
                     }
                     None => {
                         let j = self.source.len();
@@ -212,29 +181,30 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
 
                     // Any other character...
                     _ => {
-                        match try_lex_delim(i) {
-                            Some((tk, j)) if tk == end => {
-                                // A matching end delimiter! Update the state
-                                // and return the token.
-                                self.state = State::Template;
-                                (tk, j)
-                            }
-                            Some((tk, _)) if tk.is_begin_delim() => {
-                                // The previous begin delimiter was not closed
-                                // correctly.
-                                return Err(Error::new(
-                                    format!("unclosed {}", end.pair().human()),
-                                    self.source,
-                                    begin,
-                                ));
-                            }
-                            Some((tk, j)) => {
-                                // We got an unexpected delimiter.
-                                return Err(Error::new(
-                                    format!("unexpected {}", tk.human()),
-                                    self.source,
-                                    i..j,
-                                ));
+                        match self.engine.searcher.starts_with(&self.source, i) {
+                            Some((kind, j)) => {
+                                let tk = Token::from(kind);
+                                if tk == end {
+                                    // A matching end delimiter! Update the
+                                    // state and return the token.
+                                    self.state = State::Template;
+                                    (tk, j)
+                                } else if tk.is_begin_delim() {
+                                    // The previous begin delimiter was not closed
+                                    // correctly.
+                                    return Err(Error::new(
+                                        format!("unclosed {}", end.pair().human()),
+                                        self.source,
+                                        begin,
+                                    ));
+                                } else {
+                                    // We got an unexpected delimiter.
+                                    return Err(Error::new(
+                                        format!("unexpected {}", tk.human()),
+                                        self.source,
+                                        i..j,
+                                    ));
+                                }
                             }
                             None => {
                                 return Err(Error::new(
@@ -325,6 +295,17 @@ impl Token {
 
     fn is_whitespace(&self) -> bool {
         matches!(self, Self::Whitespace)
+    }
+}
+
+impl From<crate::syntax::Kind> for Token {
+    fn from(tk: crate::syntax::Kind) -> Self {
+        match tk {
+            crate::syntax::Kind::BeginExpr => Token::BeginExpr,
+            crate::syntax::Kind::EndExpr => Token::EndExpr,
+            crate::syntax::Kind::BeginBlock => Token::BeginBlock,
+            crate::syntax::Kind::EndBlock => Token::EndBlock,
+        }
     }
 }
 
