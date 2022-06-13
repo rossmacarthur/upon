@@ -8,7 +8,7 @@ A simple, powerful template engine.
 - Conditionals: `{% if user.enabled %} ... {% endif %}`
 - Loops: `{% for user in users %} ... {% endfor %}`
 - Customizable filter functions: `{{ user.name | lower }}`
-- Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
+- Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
 - Render using any `serde` serializable values.
 - Render using a quick context with a convenient macro:
   `upon::value!{ name: "John", age: 42 }`
@@ -25,8 +25,8 @@ A simple, powerful template engine.
 ## Getting started
 
 Your entry point is the compilation and rendering `Engine`, this stores the
-delimiter settings and filter functions. Generally, you only need to construct
-one engine.
+syntax config and filter functions. Generally, you only need to construct one
+engine.
 
 ```rust
 let engine = upon::Engine::new();

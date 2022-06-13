@@ -54,7 +54,7 @@ pub struct Builder {
 impl Builder {
     pub fn build<I, P>(mut self, patterns: I) -> AhoCorasick
     where
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = (usize, P)>,
         P: AsRef<[u8]>,
     {
         self.push_state(0); // the fail state
@@ -101,10 +101,10 @@ impl Builder {
     /// state until the end of the pattern.
     fn build_initial_trie<I, P>(&mut self, patterns: I)
     where
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = (usize, P)>,
         P: AsRef<[u8]>,
     {
-        for (pattern_id, pattern) in patterns.into_iter().enumerate() {
+        for (pattern_id, pattern) in patterns.into_iter() {
             let pattern = pattern.as_ref();
 
             let mut id = START;

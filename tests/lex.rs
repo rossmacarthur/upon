@@ -1,30 +1,30 @@
-use upon::Engine;
+use upon::{Engine, Syntax};
 
 #[test]
 fn lex_while_eof() {
-    let err = Engine::with_syntax("{", "}", "{{", "}}")
-        .compile("lorem { ipsum")
-        .unwrap_err();
+    let err = Engine::new().compile("lorem {{ ipsum").unwrap_err();
     assert_eq!(
         format!("{:#}", err),
         "
    |
- 1 | lorem { ipsum
-   |              ^ expected end expression, found EOF
+ 1 | lorem {{ ipsum
+   |               ^ expected end expression, found EOF
 "
     );
 }
 
 #[test]
 fn lex_overlapping_delimiters() {
-    Engine::with_syntax("{", "}", "{{", "}}")
+    let syntax = Syntax::builder().expr("{", "}").block("{{", "}}").build();
+    Engine::with_syntax(syntax)
         .compile("lorem { ipsum } {{ if dolor }} {{ endif }} sit amet")
         .unwrap();
 }
 
 #[test]
 fn lex_overlapping_delimiters_flipped() {
-    Engine::with_syntax("{{", "}}", "{", "}")
+    let syntax = Syntax::builder().expr("{{", "}}").block("{", "}").build();
+    Engine::with_syntax(syntax)
         .compile("lorem {{ ipsum }} { if dolor } { endif } sit amet")
         .unwrap();
 }

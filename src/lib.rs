@@ -6,7 +6,7 @@
 //! - Conditionals: `{% if user.enabled %} ... {% endif %}`
 //! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Customizable filter functions: `{{ user.name | lower }}`
-//! - Configurable template delimiters: `<? user.name ?>`, `(( if user.enabled ))`
+//! - Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
 //! - Render using any [`serde`][serde] serializable values.
 //! - Render using a quick context with a convenient macro:
 //!   `upon::value!{ name: "John", age: 42 }`
@@ -15,7 +15,7 @@
 //! # Introduction
 //!
 //! Your entry point is the compilation and rendering [`Engine`], this stores
-//! the delimiter settings and filter functions. Generally, you only need to
+//! the syntax config and filter functions. Generally, you only need to
 //! construct one engine.
 //!
 //! ```
@@ -107,7 +107,9 @@
 //! [`Engine::with_syntax`].
 //!
 //! ```
-//! let result = upon::Engine::with_syntax("<?", "?>", "<%", "%>")
+//! let syntax = upon::Syntax::builder().expr("<?", "?>").block("<%", "%>").build();
+//!
+//! let result = upon::Engine::with_syntax(syntax)
 //!     .compile("Hello <? user.name ?>")?
 //!     .render(upon::value!{ user: { name: "John Smith" }})?;
 //!
@@ -128,9 +130,11 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use crate::error::{Error, Result};
-use crate::syntax::{Searcher, Syntax};
-use crate::types::program;
+pub use crate::syntax::{Syntax, SyntaxBuilder};
 pub use crate::value::{to_value, Value};
+
+use crate::syntax::Searcher;
+use crate::types::program;
 
 /// The compilation and rendering engine.
 pub struct Engine<'engine> {
@@ -178,27 +182,26 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn new() -> Engine<'engine> {
         Self {
-            searcher: Searcher::new(),
+            searcher: Searcher::new(Syntax::default()),
             filters: HashMap::new(),
             templates: HashMap::new(),
         }
     }
 
-    /// Construct a new engine with custom delimiters.
+    /// Construct a new engine with custom syntax.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use upon::{Engine, Syntax};
+    ///
+    /// let syntax = Syntax::builder().expr("<{", "}>").block("<[", "]>").build();
+    /// let engine = Engine::with_syntax(syntax);
+    /// ```
     #[inline]
-    pub fn with_syntax(
-        begin_expr: &'engine str,
-        end_expr: &'engine str,
-        begin_block: &'engine str,
-        end_block: &'engine str,
-    ) -> Self {
+    pub fn with_syntax(syntax: Syntax<'engine>) -> Self {
         Self {
-            searcher: Searcher::with_syntax(Syntax {
-                begin_expr,
-                end_expr,
-                begin_block,
-                end_block,
-            }),
+            searcher: Searcher::new(syntax),
             filters: HashMap::new(),
             templates: HashMap::new(),
         }

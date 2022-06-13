@@ -34,7 +34,7 @@ pub struct Pattern {
 impl AhoCorasick {
     pub fn new<I, P>(patterns: I) -> Self
     where
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = (usize, P)>,
         P: AsRef<[u8]>,
     {
         Builder::default().build(patterns)
@@ -256,7 +256,7 @@ mod tests {
 
     #[track_caller]
     fn t(patterns: &[&str], haystack: &str, exp: &[(usize, usize, usize)]) {
-        let ac = AhoCorasick::new(patterns);
+        let ac = AhoCorasick::new(patterns.iter().enumerate());
         let matches: Vec<_> = ac
             .find_iter(haystack.as_ref())
             .map(|m| (m.pattern_id(), m.start(), m.end()))

@@ -9,7 +9,7 @@ use crate::{Engine, Error, Result};
 /// repeatedly call the [`.next()?`][Lexer::next] method to return the next
 /// non-whitespace token until [`None`] is returned.
 pub struct Lexer<'engine, 'source> {
-    /// A reference to the engine containing the delimiter configuration.
+    /// A reference to the engine containing the syntax searcher.
     engine: &'engine Engine<'engine>,
 
     /// The original template source.
@@ -28,13 +28,13 @@ pub struct Lexer<'engine, 'source> {
 /// The state of the lexer.
 ///
 /// The lexer requires state because the tokenization is different when
-/// tokenizing text between expression and block delimiters, e.g. `{{ expr }}`,
+/// tokenizing text between expression and block syntax, e.g. `{{ expr }}`,
 /// `{% if cond %}`.
 enum State {
     /// Within raw template.
     Template,
 
-    /// Between expression or block delimiters.
+    /// Between expression or block syntax.
     InBlock {
         /// The span of the begin delimiter.
         begin: Span,
@@ -156,9 +156,9 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             }
 
             State::InBlock { begin, end } => {
-                // We are between two delimiters {{ ... }} that means must parse
-                // template syntax relevant tokens and also lookout for the
-                // corresponding end delimiter `end`.
+                // We are between two delimiters {{ ... }} that means we must
+                // parse template syntax relevant tokens and also lookout for
+                // the corresponding end delimiter `end`.
 
                 // We iterate over chars because that is nicer than operating on
                 // raw bytes. The map function here fixes the index to be
@@ -190,8 +190,8 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                                     self.state = State::Template;
                                     (tk, j)
                                 } else if tk.is_begin_delim() {
-                                    // The previous begin delimiter was not closed
-                                    // correctly.
+                                    // The previous begin delimiter was not
+                                    // closed correctly.
                                     return Err(Error::new(
                                         format!("unclosed {}", end.pair().human()),
                                         self.source,
