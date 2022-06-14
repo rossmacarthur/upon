@@ -1,4 +1,5 @@
 use crate::compile::parse::Keyword;
+use crate::syntax;
 use crate::types::span::Span;
 use crate::{Engine, Error, Result};
 
@@ -20,6 +21,9 @@ pub struct Lexer<'engine, 'source> {
 
     /// The current state of the lexer.
     state: State,
+
+    /// Whether to left trim the next raw token.
+    left_trim: bool,
 
     /// A buffer to store the next token.
     next: Option<(Token, Span)>,
@@ -78,6 +82,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             source,
             cursor: 0,
             state: State::Template,
+            left_trim: false,
             next: None,
         }
     }
@@ -115,9 +120,22 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                 // xxxxxxx{{xxxxxxxxx
                 //    ^   ^ ^
                 //    i   j k
+
+                let mut trim_raw_token = |mut i, mut j, right_trim| {
+                    if right_trim {
+                        j = self.source[..j].trim_end().len();
+                    }
+                    if self.left_trim {
+                        self.left_trim = false;
+                        let s = &self.source[i..j];
+                        i += s.len() - s.trim_start().len();
+                    }
+                    Ok(Some((Token::Raw, Span::from(i..j))))
+                };
+
                 match self.engine.searcher.find_at(&self.source, i) {
                     Some((kind, j, k)) => {
-                        let tk = Token::from(kind);
+                        let (tk, trim) = Token::from_kind(kind);
 
                         if !tk.is_begin_delim() {
                             return Err(Error::new(
@@ -144,13 +162,13 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                             // We must first emit the raw token, so we store the
                             // begin delimiter token in the `next` buffer.
                             self.next = lex(tk, j, k)?;
-                            Ok(Some((Token::Raw, Span::from(i..j))))
+                            trim_raw_token(i, j, trim)
                         }
                     }
                     None => {
                         let j = self.source.len();
                         self.cursor = j;
-                        Ok(Some((Token::Raw, Span::from(i..j))))
+                        trim_raw_token(i, j, false)
                     }
                 }
             }
@@ -183,11 +201,12 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     _ => {
                         match self.engine.searcher.starts_with(&self.source, i) {
                             Some((kind, j)) => {
-                                let tk = Token::from(kind);
+                                let (tk, trim) = Token::from_kind(kind);
                                 if tk == end {
                                     // A matching end delimiter! Update the
                                     // state and return the token.
                                     self.state = State::Template;
+                                    self.left_trim = trim;
                                     (tk, j)
                                 } else if tk.is_begin_delim() {
                                     // The previous begin delimiter was not
@@ -296,15 +315,17 @@ impl Token {
     fn is_whitespace(&self) -> bool {
         matches!(self, Self::Whitespace)
     }
-}
 
-impl From<crate::syntax::Kind> for Token {
-    fn from(tk: crate::syntax::Kind) -> Self {
+    fn from_kind(tk: syntax::Kind) -> (Self, bool) {
         match tk {
-            crate::syntax::Kind::BeginExpr => Token::BeginExpr,
-            crate::syntax::Kind::EndExpr => Token::EndExpr,
-            crate::syntax::Kind::BeginBlock => Token::BeginBlock,
-            crate::syntax::Kind::EndBlock => Token::EndBlock,
+            syntax::Kind::BeginExpr => (Token::BeginExpr, false),
+            syntax::Kind::EndExpr => (Token::EndExpr, false),
+            syntax::Kind::BeginExprTrim => (Token::BeginExpr, true),
+            syntax::Kind::EndExprTrim => (Token::EndExpr, true),
+            syntax::Kind::BeginBlock => (Token::BeginBlock, false),
+            syntax::Kind::EndBlock => (Token::EndBlock, false),
+            syntax::Kind::BeginBlockTrim => (Token::BeginBlock, true),
+            syntax::Kind::EndBlockTrim => (Token::EndBlock, true),
         }
     }
 }
@@ -365,6 +386,49 @@ mod tests {
     }
 
     #[test]
+    fn lex_begin_expr_trim() {
+        let tokens = lex("lorem ipsum \t\n{{-").unwrap();
+        assert_eq!(
+            tokens,
+            [(Token::Raw, "lorem ipsum"), (Token::BeginExpr, "{{-"),]
+        );
+    }
+
+    #[test]
+    fn lex_end_expr_trim() {
+        let tokens = lex("lorem ipsum {{ -}} \t\ndolor sit amet").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginExpr, "{{"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "-}}"),
+                (Token::Raw, "dolor sit amet")
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_double_trim() {
+        let tokens = lex("lorem {{ -}}  {{- }} dolor").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem "),
+                (Token::BeginExpr, "{{"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "-}}"),
+                (Token::Raw, ""),
+                (Token::BeginExpr, "{{-"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "}}"),
+                (Token::Raw, " dolor")
+            ]
+        );
+    }
+
+    #[test]
     fn lex_empty_expr() {
         let tokens = lex("lorem ipsum {{}}").unwrap();
         assert_eq!(
@@ -393,6 +457,26 @@ mod tests {
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),
                 (Token::Raw, " dolor sit amet"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_expr_trim() {
+        let tokens = lex("lorem ipsum    {{- .|\t aZ_0 -}}    dolor sit amet").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum"),
+                (Token::BeginExpr, "{{-"),
+                (Token::Whitespace, " "),
+                (Token::Period, "."),
+                (Token::Pipe, "|"),
+                (Token::Whitespace, "\t "),
+                (Token::Ident, "aZ_0"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "-}}"),
+                (Token::Raw, "dolor sit amet"),
             ]
         );
     }

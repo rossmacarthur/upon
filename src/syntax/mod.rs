@@ -1,5 +1,7 @@
 mod ahocorasick;
 
+use std::marker::PhantomData;
+
 use crate::syntax::ahocorasick::AhoCorasick;
 
 #[derive(Debug)]
@@ -13,7 +15,8 @@ pub struct Searcher {
 /// [`Syntax::builder()`] to create a custom syntax configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Syntax<'a> {
-    patterns: Vec<(Kind, &'a str)>,
+    patterns: Vec<(Kind, String)>,
+    _marker: PhantomData<&'a ()>,
 }
 
 /// A builder for the syntax configuration.
@@ -31,10 +34,18 @@ pub enum Kind {
     BeginExpr = 0,
     /// End expression delimiter, e.g. `}}`
     EndExpr = 1,
+    /// Begin expression delimiter with whitespace trimming, e.g. `{{-`
+    BeginExprTrim = 2,
+    /// End expression delimiter with whitespace trimming, e.g. `-}}`
+    EndExprTrim = 3,
     /// Begin block delimiter, e.g. `{%`
-    BeginBlock = 2,
+    BeginBlock = 4,
     /// End block delimiter, e.g. `%}`
-    EndBlock = 3,
+    EndBlock = 5,
+    /// Begin block delimiter with whitespace trimming, e.g. `{%-`
+    BeginBlockTrim = 6,
+    /// End block delimiter with whitespace trimming, e.g. `-%}`
+    EndBlockTrim = 7,
 }
 
 impl Searcher {
@@ -127,24 +138,35 @@ impl<'a> SyntaxBuilder<'a> {
     pub fn build(&self) -> Syntax<'a> {
         let mut patterns = Vec::new();
         if let Some((begin, end)) = self.expr {
-            patterns.push((Kind::BeginExpr, begin));
-            patterns.push((Kind::EndExpr, end));
+            patterns.push((Kind::BeginExpr, begin.into()));
+            patterns.push((Kind::EndExpr, end.into()));
+            patterns.push((Kind::BeginExprTrim, format!("{}-", begin)));
+            patterns.push((Kind::EndExprTrim, format!("-{}", end)));
         };
         if let Some((begin, end)) = self.block {
-            patterns.push((Kind::BeginBlock, begin));
-            patterns.push((Kind::EndBlock, end));
+            patterns.push((Kind::BeginBlock, begin.into()));
+            patterns.push((Kind::EndBlock, end.into()));
+            patterns.push((Kind::BeginBlockTrim, format!("{}-", begin)));
+            patterns.push((Kind::EndBlockTrim, format!("-{}", end)));
         }
-        Syntax { patterns }
+        Syntax {
+            patterns,
+            _marker: PhantomData,
+        }
     }
 }
 
 impl Kind {
     fn from_usize(id: usize) -> Self {
         match id {
-            0 => Kind::BeginExpr,
-            1 => Kind::EndExpr,
-            2 => Kind::BeginBlock,
-            3 => Kind::EndBlock,
+            0 => Self::BeginExpr,
+            1 => Self::EndExpr,
+            2 => Self::BeginExprTrim,
+            3 => Self::EndExprTrim,
+            4 => Self::BeginBlock,
+            5 => Self::EndBlock,
+            6 => Self::BeginBlockTrim,
+            7 => Self::EndBlockTrim,
             _ => unreachable!(),
         }
     }

@@ -16,7 +16,6 @@ A simple, powerful template engine.
 
 ### Still to come...
 
-- Trimming whitespace
 - Filters with arguments
 - Fallible filters
 - Value formatters
