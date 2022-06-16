@@ -9,14 +9,14 @@
             <th>Name</th>
             <th>Age</th>
         </tr>
-      {{~#each users ~}}
-        {{#if not is_disabled }}
+      {{~ #each users as |user| ~}}
+        {{ #if (not user.is_disabled) }}
             <tr>
-                <td>{{ name }}</td>
-                <td>{{ age }}</td>
+                <td>{{ user.name }}</td>
+                <td>{{ user.age }}</td>
             </tr>
-        {{/if}}
-      {{~/each~}}
+        {{ /if }}
+      {{~ /each ~}}
     </table>
 </body>
 </html>
