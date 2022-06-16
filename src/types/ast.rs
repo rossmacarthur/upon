@@ -2,18 +2,18 @@
 
 use crate::types::span::Span;
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Template<'source> {
     pub source: &'source str,
     pub scope: Scope<'source>,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Scope<'source> {
     pub stmts: Vec<Stmt<'source>>,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub enum Stmt<'source> {
     Raw(&'source str),
     InlineExpr(InlineExpr<'source>),
@@ -21,13 +21,13 @@ pub enum Stmt<'source> {
     ForLoop(ForLoop<'source>),
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct InlineExpr<'source> {
     pub expr: Expr<'source>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct IfElse<'source> {
     pub not: bool,
     pub cond: Expr<'source>,
@@ -35,48 +35,46 @@ pub struct IfElse<'source> {
     pub else_branch: Option<Scope<'source>>,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct ForLoop<'source> {
     pub vars: LoopVars<'source>,
     pub iterable: Expr<'source>,
     pub body: Scope<'source>,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub enum LoopVars<'source> {
     Item(Ident<'source>),
     KeyValue(KeyValue<'source>),
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct KeyValue<'source> {
     pub key: Ident<'source>,
     pub value: Ident<'source>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub enum Expr<'source> {
     Var(Var<'source>),
     Call(Call<'source>),
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Var<'source> {
-    pub path: Path<'source>,
+    pub path: Vec<Ident<'source>>,
     pub span: Span,
 }
 
-pub type Path<'source> = Vec<Ident<'source>>;
-
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Call<'source> {
     pub name: Ident<'source>,
     pub receiver: Box<Expr<'source>>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Ident<'source> {
     pub raw: &'source str,
     pub span: Span,

@@ -3,11 +3,13 @@ use crate::render::value::{index, ValueCow};
 use crate::types::ast;
 use crate::{Error, Result, Value};
 
+#[cfg_attr(test, derive(Debug))]
 pub struct Stack<'source, 'render> {
     source: &'source str,
     stack: Vec<State<'source, 'render>>,
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub enum State<'source, 'render> {
     /// An entire scope of variables, always a map
     Scope(&'render Value),
@@ -28,7 +30,7 @@ impl<'source, 'render> Stack<'source, 'render> {
     }
 
     /// Resolves a path to a variable on the stack.
-    pub fn resolve_path(&self, path: &ast::Path<'source>) -> Result<ValueCow<'render>> {
+    pub fn resolve_path(&self, path: &[ast::Ident<'source>]) -> Result<ValueCow<'render>> {
         'outer: for scope in self.stack.iter().rev() {
             match scope {
                 State::Scope(scope) => {

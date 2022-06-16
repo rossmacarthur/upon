@@ -5,9 +5,6 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::types::span::Span;
 
-/// A type alias for results in this crate.
-pub type Result<T> = std::result::Result<T, Error>;
-
 /// An error that can occur during template compilation or rendering.
 pub struct Error {
     msg: String,

@@ -22,6 +22,7 @@ pub fn template<'engine, 'source>(
 }
 
 /// A compiler that constructs a program from an AST.
+#[cfg_attr(test, derive(Debug))]
 struct Compiler<'source> {
     instrs: Vec<Instr<'source>>,
 }

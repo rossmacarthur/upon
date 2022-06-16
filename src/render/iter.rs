@@ -8,6 +8,7 @@ use crate::value::map;
 use crate::{Error, Result, Value};
 
 /// The state of a loop iteration.
+#[cfg_attr(test, derive(Debug))]
 pub enum LoopState<'source, 'render> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
@@ -139,7 +140,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
     pub fn resolve_path(
         &self,
         source: &str,
-        path: &ast::Path<'source>,
+        path: &[ast::Ident<'source>],
     ) -> Result<Option<ValueCow<'render>>> {
         let name = path[0].raw;
 

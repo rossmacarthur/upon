@@ -6,13 +6,13 @@ use crate::types::span::Span;
 
 pub const FIXME: usize = !0;
 
-#[derive(Debug)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Template<'source> {
     pub source: &'source str,
     pub instrs: Vec<Instr<'source>>,
 }
 
-#[derive(Debug)]
+#[cfg_attr(test, derive(Debug))]
 pub enum Instr<'source> {
     /// Emit raw template
     EmitRaw(&'source str),
@@ -33,7 +33,7 @@ pub enum Instr<'source> {
     JumpIfFalse(usize, Span),
 
     /// Lookup a variable and push it onto the stack
-    Push(ast::Path<'source>),
+    Push(Vec<ast::Ident<'source>>),
 
     /// Pop and emit the value at the top of the stack
     PopEmit(Span),

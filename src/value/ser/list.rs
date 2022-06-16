@@ -1,10 +1,11 @@
 use serde::ser::Serialize;
 
-use crate::error::{Error, Result};
 use crate::value::ser::to_value;
 use crate::value::{List, Value};
+use crate::{Error, Result};
 
 #[derive(Default)]
+#[cfg_attr(test, derive(Debug))]
 pub struct SerializeList {
     list: List<Value>,
 }

@@ -3,6 +3,11 @@ use std::thread;
 use upon::{value, Engine};
 
 #[test]
+fn engine_debug() {
+    format!("{:?}", Engine::new());
+}
+
+#[test]
 fn engine_send_and_sync() {
     let engine = Engine::new();
     thread::spawn(move || {

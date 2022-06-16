@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use crate::syntax::ahocorasick::AhoCorasick;
 
-#[derive(Debug)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Searcher {
     imp: AhoCorasick,
 }
@@ -70,6 +70,13 @@ impl Searcher {
     {
         let (kind, i, j) = self.find_at(haystack, at)?;
         (at == i).then(|| (kind, j))
+    }
+}
+
+#[cfg(not(test))]
+impl std::fmt::Debug for Searcher {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Searcher").finish_non_exhaustive()
     }
 }
 

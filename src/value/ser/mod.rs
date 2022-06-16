@@ -4,11 +4,11 @@ mod variants;
 
 use serde::ser::{Error as _, Serialize};
 
-use crate::error::{Error, Result};
 use crate::value::ser::list::SerializeList;
 use crate::value::ser::map::SerializeMap;
 use crate::value::ser::variants::{SerializeStructVariant, SerializeTupleVariant};
 use crate::value::{List, Map, Value};
+use crate::{Error, Result};
 
 /// Convert a `T` to a `Value`.
 pub fn to_value<T>(value: T) -> Result<Value>

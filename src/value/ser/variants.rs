@@ -1,8 +1,8 @@
 use serde::ser::Serialize;
 
-use crate::error::{Error, Result};
 use crate::value::ser::to_value;
 use crate::value::{List, Map, Value};
+use crate::{Error, Result};
 
 pub struct SerializeTupleVariant {
     pub name: String,

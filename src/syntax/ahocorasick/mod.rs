@@ -14,18 +14,19 @@ mod state;
 use self::build::Builder;
 use self::state::{State, DEAD, FAIL, S, START};
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct AhoCorasick {
     states: Vec<State>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Match {
     pattern: Pattern,
     end: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Pattern {
     id: usize,
     len: usize,

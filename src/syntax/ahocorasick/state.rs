@@ -13,7 +13,7 @@ pub const DEAD: S = 1;
 pub const START: S = 2;
 
 /// A state in an Aho-Corasick automaton.
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct State {
     /// The transitions to the next state.
     pub trans: [S; 256],

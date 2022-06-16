@@ -19,6 +19,7 @@ pub fn template<'engine, 'source>(
 }
 
 /// A renderer that interprets a compiled [`Template`].
+#[cfg_attr(test, derive(Debug))]
 struct Renderer<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: &'source Template<'source>,

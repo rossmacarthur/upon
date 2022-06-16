@@ -129,29 +129,35 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-pub use crate::error::{Error, Result};
+pub use crate::error::Error;
 pub use crate::syntax::{Syntax, SyntaxBuilder};
 pub use crate::value::{to_value, Value};
 
 use crate::syntax::Searcher;
 use crate::types::program;
 
+/// A type alias for results in this crate.
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// The compilation and rendering engine.
 pub struct Engine<'engine> {
     searcher: Searcher,
-    filters: HashMap<&'engine str, Arc<dyn Fn(&mut Value) + Sync + Send + 'static>>,
+    filters: HashMap<&'engine str, FilterFn>,
     templates: HashMap<&'engine str, program::Template<'engine>>,
 }
 
+/// A filter function or closure.
+type FilterFn = Arc<dyn Fn(&mut Value) + Sync + Send + 'static>;
+
 /// A compiled template.
-#[derive(Debug)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: program::Template<'source>,
 }
 
 /// A reference to a compiled template in an [`Engine`].
-#[derive(Debug)]
+#[cfg_attr(test, derive(Debug))]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
     template: &'engine program::Template<'engine>,
@@ -160,20 +166,6 @@ pub struct TemplateRef<'engine> {
 impl<'engine> Default for Engine<'engine> {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl fmt::Debug for Engine<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let filters = f
-            .debug_map()
-            .entries(self.filters.keys().map(|k| (k, "<filter>")))
-            .finish();
-        f.debug_struct("Engine")
-            .field("searcher", &self.searcher)
-            .field("filters", &filters)
-            .field("templates", &self.templates)
-            .finish()
     }
 }
 
@@ -248,6 +240,22 @@ impl<'engine> Engine<'engine> {
     }
 }
 
+impl fmt::Debug for Engine<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("Engine");
+        d.field("searcher", &self.searcher);
+        d.field("filters", &self.filters.keys());
+        #[cfg(not(test))]
+        {
+            d.field("templates", &self.templates.keys()).finish()
+        }
+        #[cfg(test)]
+        {
+            d.field("templates", &self.templates).finish()
+        }
+    }
+}
+
 impl<'engine, 'source> Template<'engine, 'source> {
     /// Returns the original template source.
     #[inline]
@@ -265,6 +273,15 @@ impl<'engine, 'source> Template<'engine, 'source> {
     }
 }
 
+#[cfg(not(test))]
+impl fmt::Debug for Template<'_, '_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Template")
+            .field("engine", &self.engine)
+            .finish_non_exhaustive()
+    }
+}
+
 impl<'engine> TemplateRef<'engine> {
     /// Returns the original template source.
     #[inline]
@@ -279,5 +296,14 @@ impl<'engine> TemplateRef<'engine> {
         S: serde::Serialize,
     {
         render::template(self.engine, self.template, to_value(s)?)
+    }
+}
+
+#[cfg(not(test))]
+impl fmt::Debug for TemplateRef<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TemplateRef")
+            .field("engine", &self.engine)
+            .finish_non_exhaustive()
     }
 }
