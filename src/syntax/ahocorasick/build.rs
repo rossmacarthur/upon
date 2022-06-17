@@ -52,9 +52,10 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn build<I, P>(mut self, patterns: I) -> AhoCorasick
+    pub fn build<I, X, P>(mut self, patterns: I) -> AhoCorasick
     where
-        I: IntoIterator<Item = (usize, P)>,
+        I: IntoIterator<Item = (X, P)>,
+        X: Into<usize>,
         P: AsRef<[u8]>,
     {
         self.push_state(0); // the fail state
@@ -99,9 +100,10 @@ impl Builder {
 
     /// Build the initial trie where each pattern has a path from the start
     /// state until the end of the pattern.
-    fn build_initial_trie<I, P>(&mut self, patterns: I)
+    fn build_initial_trie<I, X, P>(&mut self, patterns: I)
     where
-        I: IntoIterator<Item = (usize, P)>,
+        I: IntoIterator<Item = (X, P)>,
+        X: Into<usize>,
         P: AsRef<[u8]>,
     {
         for (pattern_id, pattern) in patterns.into_iter() {
@@ -119,7 +121,7 @@ impl Builder {
                 }
             }
 
-            let p = Pattern::new(pattern_id, pattern.len());
+            let p = Pattern::new(pattern_id.into(), pattern.len());
             self.state_mut(id).push_match(p);
         }
     }

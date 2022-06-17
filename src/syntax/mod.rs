@@ -26,31 +26,36 @@ pub struct Syntax<'a> {
 pub struct SyntaxBuilder<'a> {
     expr: Option<(&'a str, &'a str)>,
     block: Option<(&'a str, &'a str)>,
+    comment: Option<(&'a str, &'a str)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Kind {
-    /// Begin expression delimiter, e.g. `{{`
     BeginExpr = 0,
-    /// End expression delimiter, e.g. `}}`
     EndExpr = 1,
-    /// Begin expression delimiter with whitespace trimming, e.g. `{{-`
     BeginExprTrim = 2,
-    /// End expression delimiter with whitespace trimming, e.g. `-}}`
     EndExprTrim = 3,
-    /// Begin block delimiter, e.g. `{%`
     BeginBlock = 4,
-    /// End block delimiter, e.g. `%}`
     EndBlock = 5,
-    /// Begin block delimiter with whitespace trimming, e.g. `{%-`
     BeginBlockTrim = 6,
-    /// End block delimiter with whitespace trimming, e.g. `-%}`
     EndBlockTrim = 7,
+    BeginComment = 8,
+    EndComment = 9,
+    BeginCommentTrim = 10,
+    EndCommentTrim = 11,
+}
+
+#[test]
+fn kind_usize() {
+    for p in 0..12 {
+        let k = Kind::from_usize(p);
+        assert_eq!(k as usize, p);
+    }
 }
 
 impl Searcher {
     pub fn new(syntax: Syntax) -> Self {
-        let imp = AhoCorasick::new(syntax.patterns.into_iter().map(|(k, v)| (k as usize, v)));
+        let imp = AhoCorasick::new(syntax.patterns);
         Self { imp }
     }
 
@@ -87,12 +92,20 @@ impl Default for Syntax<'_> {
     /// ```
     /// use upon::Syntax;
     ///
-    /// let syntax = Syntax::builder().expr("{{", "}}").block("{%", "%}").build();
+    /// let syntax = Syntax::builder()
+    ///     .expr("{{", "}}")
+    ///     .block("{%", "%}")
+    ///     .comment("{#", "#}")
+    ///     .build();
     /// assert_eq!(syntax, Syntax::default());
     /// ```
     #[inline]
     fn default() -> Self {
-        Syntax::builder().expr("{{", "}}").block("{%", "%}").build()
+        Syntax::builder()
+            .expr("{{", "}}")
+            .block("{%", "%}")
+            .comment("{#", "#}")
+            .build()
     }
 }
 
@@ -120,6 +133,7 @@ impl<'a> SyntaxBuilder<'a> {
         Self {
             expr: None,
             block: None,
+            comment: None,
         }
     }
 
@@ -134,10 +148,19 @@ impl<'a> SyntaxBuilder<'a> {
 
     /// Set the block syntax.
     ///
-    /// If not set then block syntax will not be available.
+    /// If not set then the block syntax will not be available.
     #[inline]
     pub fn block(&mut self, begin_block: &'a str, end_block: &'a str) -> &mut Self {
         self.block = Some((begin_block, end_block));
+        self
+    }
+
+    /// Set the comment syntax.
+    ///
+    /// If not set then comment syntax will not be available.
+    #[inline]
+    pub fn comment(&mut self, begin_comment: &'a str, end_comment: &'a str) -> &mut Self {
+        self.comment = Some((begin_comment, end_comment));
         self
     }
 
@@ -155,6 +178,12 @@ impl<'a> SyntaxBuilder<'a> {
             patterns.push((Kind::EndBlock, end.into()));
             patterns.push((Kind::BeginBlockTrim, format!("{}-", begin)));
             patterns.push((Kind::EndBlockTrim, format!("-{}", end)));
+        }
+        if let Some((begin, end)) = self.comment {
+            patterns.push((Kind::BeginComment, begin.into()));
+            patterns.push((Kind::EndComment, end.into()));
+            patterns.push((Kind::BeginCommentTrim, format!("{}-", begin)));
+            patterns.push((Kind::EndCommentTrim, format!("-{}", end)));
         }
         Syntax {
             patterns,
@@ -174,7 +203,17 @@ impl Kind {
             5 => Self::EndBlock,
             6 => Self::BeginBlockTrim,
             7 => Self::EndBlockTrim,
+            8 => Self::BeginComment,
+            9 => Self::EndComment,
+            10 => Self::BeginCommentTrim,
+            11 => Self::EndCommentTrim,
             _ => unreachable!(),
         }
+    }
+}
+
+impl From<Kind> for usize {
+    fn from(k: Kind) -> Self {
+        k as usize
     }
 }

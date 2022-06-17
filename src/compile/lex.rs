@@ -40,9 +40,17 @@ enum State {
     /// Within raw template.
     Template,
 
-    /// Between expression or block syntax.
-    InBlock {
-        /// The span of the begin delimiter.
+    /// Between expression or block tags.
+    Block {
+        /// The span of the begin tag.
+        begin: Span,
+        /// The end token we are expecting.
+        end: Token,
+    },
+
+    /// Between comment tags.
+    Comment {
+        /// The span of the begin tag.
         begin: Span,
         /// The end token we are expecting.
         end: Token,
@@ -54,14 +62,18 @@ enum State {
 pub enum Token {
     /// Raw template
     Raw,
-    /// Begin expression delimiter, e.g. `{{`
+    /// Begin expression tag, e.g. `{{`
     BeginExpr,
-    /// End expression delimiter, e.g. `}}`
+    /// End expression tag, e.g. `}}`
     EndExpr,
-    /// Begin block delimiter, e.g. `{%`
+    /// Begin block tag, e.g. `{%`
     BeginBlock,
-    /// End block delimiter, e.g. `%}`
+    /// End block tag, e.g. `%}`
     EndBlock,
+    /// Begin block tag, e.g. `{#`
+    BeginComment,
+    /// End block tag, e.g. `#}`
+    EndComment,
     /// `.`
     Period,
     /// `|`
@@ -113,135 +125,174 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         }
 
         match self.state {
-            State::Template => {
-                // We are within raw template, that means all we have to do is
-                // find the next begin delimiter from `i` and and any relevant
-                // cursor indexes. The following diagram helps describe
-                // the variable naming.
-                //
-                // xxxxxxx{{xxxxxxxxx
-                //    ^   ^ ^
-                //    i   j k
+            State::Template => self.lex_template(i),
+            State::Block { begin, end } => self.lex_block(begin, end, i),
+            State::Comment { begin, end } => self.lex_comment(begin, end, i),
+        }
+    }
 
-                let mut trim_raw_token = |mut i, mut j, right_trim| {
-                    if right_trim {
-                        j = self.source[..j].trim_end().len();
-                    }
-                    if self.left_trim {
-                        self.left_trim = false;
-                        let s = &self.source[i..j];
-                        i += s.len() - s.trim_start().len();
-                    }
-                    Ok(Some((Token::Raw, Span::from(i..j))))
+    fn lex_template(&mut self, i: usize) -> Result<Option<(Token, Span)>> {
+        // We are within raw template, that means all we have to do is
+        // find the next begin tag from `i` and and any relevant cursor
+        // indexes. The following diagram helps describe the variable
+        // naming.
+        //
+        // xxxxxxx{{xxxxxxxxx
+        //    ^   ^ ^
+        //    i   j k
+
+        let mut trim_raw_token = |mut i, mut j, right_trim| {
+            if right_trim {
+                j = self.source[..j].trim_end().len();
+            }
+            if self.left_trim {
+                self.left_trim = false;
+                let s = &self.source[i..j];
+                i += s.len() - s.trim_start().len();
+            }
+            Ok(Some((Token::Raw, Span::from(i..j))))
+        };
+
+        match self.engine.searcher.find_at(&self.source, i) {
+            Some((kind, j, k)) => {
+                let (tk, trim) = Token::from_kind(kind);
+
+                if !tk.is_begin_tag() {
+                    return Err(self.err_unexpected_token(tk, j..k));
+                }
+
+                // Updates the current lexer cursor and state and
+                // returns the token and span.
+                let mut lex = |m, n| {
+                    let begin = Span::from(m..n);
+                    let end = tk.pair();
+                    self.cursor = n;
+                    self.state = if tk.is_begin_comment() {
+                        State::Comment { begin, end }
+                    } else {
+                        State::Block { begin, end }
+                    };
+                    Ok(Some((tk, begin)))
                 };
 
-                match self.engine.searcher.find_at(&self.source, i) {
-                    Some((kind, j, k)) => {
+                if i == j {
+                    // The current cursor is exactly at the token.
+                    lex(j, k)
+                } else {
+                    // We must first emit the raw token, so we store the
+                    // begin tag token in the `next` buffer.
+                    self.next = lex(j, k)?;
+                    trim_raw_token(i, j, trim)
+                }
+            }
+            None => {
+                let j = self.source.len();
+                self.cursor = j;
+                trim_raw_token(i, j, false)
+            }
+        }
+    }
+
+    fn lex_block(&mut self, begin: Span, end: Token, i: usize) -> Result<Option<(Token, Span)>> {
+        // We are between two tags {{ ... }} or {% ... %} that means we
+        // must parse template syntax relevant tokens and also lookout
+        // for the corresponding end tag `end`.
+
+        // We iterate over chars because that is nicer than operating on
+        // raw bytes. The map call here fixes the index to be relative to the
+        // actual template source.
+        let mut iter = self.source[i..].char_indices().map(|(d, c)| (i + d, c));
+
+        // We can `.unwrap()` since we've already checked that there is
+        // more text remaining.
+        let (i, c) = iter.next().unwrap();
+
+        let (tk, j) = match c {
+            // Single character to token mappings.
+            '.' => (Token::Period, i + 1),
+            '|' => (Token::Pipe, i + 1),
+            ',' => (Token::Comma, i + 1),
+
+            // Multi-character tokens with a distinct start character.
+            c if is_whitespace(c) => self.lex_whitespace(iter),
+            c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
+
+            // Any other character...
+            _ => {
+                match self.engine.searcher.starts_with(&self.source, i) {
+                    Some((kind, j)) => {
                         let (tk, trim) = Token::from_kind(kind);
 
-                        if !tk.is_begin_delim() {
-                            return Err(Error::new(
-                                format!("unexpected {}", tk.human()),
-                                self.source,
-                                j..k,
-                            ));
+                        if tk.is_begin_tag() {
+                            return Err(self.err_unclosed(begin, end));
+                        }
+                        if tk != end {
+                            return Err(self.err_unexpected_token(tk, i..j));
                         }
 
-                        // Updates the current lexer cursor and state and
-                        // returns the token and span.
-                        let mut lex = |tk: Token, m, n| {
-                            let begin = Span::from(m..n);
-                            let end = tk.pair();
-                            self.cursor = n;
-                            self.state = State::InBlock { begin, end };
-                            Ok(Some((tk, begin)))
-                        };
-
-                        if i == j {
-                            // The current cursor is exactly at the token.
-                            lex(tk, j, k)
-                        } else {
-                            // We must first emit the raw token, so we store the
-                            // begin delimiter token in the `next` buffer.
-                            self.next = lex(tk, j, k)?;
-                            trim_raw_token(i, j, trim)
-                        }
+                        // A matching end tag! Update the state and
+                        // return the token.
+                        self.state = State::Template;
+                        self.left_trim = trim;
+                        (tk, j)
                     }
                     None => {
-                        let j = self.source.len();
-                        self.cursor = j;
-                        trim_raw_token(i, j, false)
+                        return Err(self.err_unexpected_character(i..(i + c.len_utf8())));
                     }
                 }
             }
+        };
 
-            State::InBlock { begin, end } => {
-                // We are between two delimiters {{ ... }} that means we must
-                // parse template syntax relevant tokens and also lookout for
-                // the corresponding end delimiter `end`.
+        // Finally, we need to update the cursor.
+        self.cursor = j;
 
-                // We iterate over chars because that is nicer than operating on
-                // raw bytes. The map function here fixes the index to be
-                // relative to the actual template source.
-                let mut iter = self.source[i..].char_indices().map(|(d, c)| (i + d, c));
+        Ok(Some((tk, Span::from(i..j))))
+    }
 
-                // We can `.unwrap()` since we've already checked that there is
-                // more text remaining.
-                let (i, c) = iter.next().unwrap();
+    fn lex_comment(&mut self, begin: Span, end: Token, i: usize) -> Result<Option<(Token, Span)>> {
+        // We are between two comment tags {# ... #}, that means all we
+        // have to do is find the corresponding end tag. The following
+        // diagram helps describe the variable naming.
+        //
+        // x{#cccccc#}xxxxxx
+        //    ^     ^ ^
+        //    i     j k
 
-                let (tk, j) = match c {
-                    // Single character to token mappings.
-                    '.' => (Token::Period, i + 1),
-                    '|' => (Token::Pipe, i + 1),
-                    ',' => (Token::Comma, i + 1),
+        match self.engine.searcher.find_at(&self.source, i) {
+            Some((kind, j, k)) => {
+                let (tk, trim) = Token::from_kind(kind);
 
-                    // Multi-character tokens with a distinct start character.
-                    c if is_whitespace(c) => self.lex_whitespace(iter),
-                    c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
+                if tk.is_begin_tag() {
+                    return Err(self.err_unclosed(begin, end));
+                }
+                if tk != end {
+                    return Err(self.err_unexpected_token(tk, j..k));
+                }
 
-                    // Any other character...
-                    _ => {
-                        match self.engine.searcher.starts_with(&self.source, i) {
-                            Some((kind, j)) => {
-                                let (tk, trim) = Token::from_kind(kind);
-                                if tk == end {
-                                    // A matching end delimiter! Update the
-                                    // state and return the token.
-                                    self.state = State::Template;
-                                    self.left_trim = trim;
-                                    (tk, j)
-                                } else if tk.is_begin_delim() {
-                                    // The previous begin delimiter was not
-                                    // closed correctly.
-                                    return Err(Error::new(
-                                        format!("unclosed {}", end.pair().human()),
-                                        self.source,
-                                        begin,
-                                    ));
-                                } else {
-                                    // We got an unexpected delimiter.
-                                    return Err(Error::new(
-                                        format!("unexpected {}", tk.human()),
-                                        self.source,
-                                        i..j,
-                                    ));
-                                }
-                            }
-                            None => {
-                                return Err(Error::new(
-                                    "unexpected character",
-                                    self.source,
-                                    i..(i + c.len_utf8()),
-                                ));
-                            }
-                        }
-                    }
+                // Updates the current lexer cursor and state and returns the
+                // token and span.
+                let mut lex = |m, n| {
+                    self.cursor = n;
+                    self.state = State::Template;
+                    self.left_trim = trim;
+                    let end = Span::from(m..n);
+                    Ok(Some((tk, end)))
                 };
 
-                // Finally, we need to update the cursor.
+                if i == j {
+                    // The current cursor is exactly at the token.
+                    lex(j, k)
+                } else {
+                    // We must first emit the raw token, so we store the end tag
+                    // token in the `next` buffer.
+                    self.next = lex(j, k)?;
+                    Ok(Some((Token::Raw, Span::from(i..j))))
+                }
+            }
+            None => {
+                let j = self.source.len();
                 self.cursor = j;
-
-                Ok(Some((tk, Span::from(i..j))))
+                Ok(Some((Token::Raw, Span::from(i..j))))
             }
         }
     }
@@ -280,6 +331,22 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             }
         }
     }
+
+    fn err_unclosed(&self, begin: Span, end: Token) -> Error {
+        Error::new(
+            format!("unclosed {}", end.pair().human()),
+            self.source,
+            begin,
+        )
+    }
+
+    fn err_unexpected_token(&self, tk: Token, span: impl Into<Span>) -> Error {
+        Error::new(format!("unexpected {}", tk.human()), self.source, span)
+    }
+
+    fn err_unexpected_character(&self, span: impl Into<Span>) -> Error {
+        Error::new("unexpected character", self.source, span)
+    }
 }
 
 impl Token {
@@ -290,6 +357,8 @@ impl Token {
             Self::EndExpr => "end expression",
             Self::BeginBlock => "begin block",
             Self::EndBlock => "end block",
+            Self::BeginComment => "begin comment",
+            Self::EndComment => "end comment",
             Self::Period => "period",
             Self::Pipe => "pipe",
             Self::Comma => "comma",
@@ -299,19 +368,28 @@ impl Token {
         }
     }
 
-    /// Returns the corresponding delimiter if this token is a delimiter.
+    /// Returns the corresponding tag if this token is a tag.
     fn pair(&self) -> Self {
         match self {
             Self::BeginExpr => Self::EndExpr,
             Self::EndExpr => Self::BeginExpr,
             Self::BeginBlock => Self::EndBlock,
             Self::EndBlock => Self::BeginBlock,
-            _ => panic!("not a delimiter"),
+            Self::BeginComment => Self::EndComment,
+            Self::EndComment => Self::BeginComment,
+            _ => panic!("not a tag"),
         }
     }
 
-    fn is_begin_delim(&self) -> bool {
-        matches!(self, Self::BeginExpr | Self::BeginBlock)
+    fn is_begin_tag(&self) -> bool {
+        matches!(
+            self,
+            Self::BeginExpr | Self::BeginBlock | Self::BeginComment
+        )
+    }
+
+    fn is_begin_comment(&self) -> bool {
+        matches!(self, Self::BeginComment)
     }
 
     fn is_whitespace(&self) -> bool {
@@ -328,6 +406,10 @@ impl Token {
             syntax::Kind::EndBlock => (Token::EndBlock, false),
             syntax::Kind::BeginBlockTrim => (Token::BeginBlock, true),
             syntax::Kind::EndBlockTrim => (Token::EndBlock, true),
+            syntax::Kind::BeginComment => (Token::BeginComment, false),
+            syntax::Kind::EndComment => (Token::EndComment, false),
+            syntax::Kind::BeginCommentTrim => (Token::BeginComment, true),
+            syntax::Kind::EndCommentTrim => (Token::EndComment, true),
         }
     }
 }
@@ -357,28 +439,6 @@ mod tests {
     }
 
     #[test]
-    fn lex_begin_block() {
-        let tokens = lex("lorem ipsum {%").unwrap();
-        assert_eq!(
-            tokens,
-            [(Token::Raw, "lorem ipsum "), (Token::BeginBlock, "{%"),]
-        );
-    }
-
-    #[test]
-    fn lex_empty_block() {
-        let tokens = lex("lorem ipsum {%%}").unwrap();
-        assert_eq!(
-            tokens,
-            [
-                (Token::Raw, "lorem ipsum "),
-                (Token::BeginBlock, "{%"),
-                (Token::EndBlock, "%}"),
-            ]
-        );
-    }
-
-    #[test]
     fn lex_begin_expr() {
         let tokens = lex("lorem ipsum {{").unwrap();
         assert_eq!(
@@ -393,6 +453,20 @@ mod tests {
         assert_eq!(
             tokens,
             [(Token::Raw, "lorem ipsum"), (Token::BeginExpr, "{{-"),]
+        );
+    }
+
+    #[test]
+    fn lex_begin_expr_eof() {
+        let tokens = lex("lorem ipsum {{ dolor").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginExpr, "{{"),
+                (Token::Whitespace, " "),
+                (Token::Ident, "dolor"),
+            ]
         );
     }
 
@@ -412,7 +486,20 @@ mod tests {
     }
 
     #[test]
-    fn lex_double_trim() {
+    fn lex_empty_expr() {
+        let tokens = lex("lorem ipsum {{}}").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginExpr, "{{"),
+                (Token::EndExpr, "}}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_expr_double_trim() {
         let tokens = lex("lorem {{ -}}  {{- }} dolor").unwrap();
         assert_eq!(
             tokens,
@@ -426,19 +513,6 @@ mod tests {
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),
                 (Token::Raw, " dolor")
-            ]
-        );
-    }
-
-    #[test]
-    fn lex_empty_expr() {
-        let tokens = lex("lorem ipsum {{}}").unwrap();
-        assert_eq!(
-            tokens,
-            [
-                (Token::Raw, "lorem ipsum "),
-                (Token::BeginExpr, "{{"),
-                (Token::EndExpr, "}}"),
             ]
         );
     }
@@ -484,6 +558,28 @@ mod tests {
     }
 
     #[test]
+    fn lex_begin_block() {
+        let tokens = lex("lorem ipsum {%").unwrap();
+        assert_eq!(
+            tokens,
+            [(Token::Raw, "lorem ipsum "), (Token::BeginBlock, "{%"),]
+        );
+    }
+
+    #[test]
+    fn lex_empty_block() {
+        let tokens = lex("lorem ipsum {%%}").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginBlock, "{%"),
+                (Token::EndBlock, "%}"),
+            ]
+        );
+    }
+
+    #[test]
     fn lex_block_and_expr() {
         let tokens =
             lex("{% if cond %} lorem ipsum {{ path.segment }} dolor sit amet {% end %}").unwrap();
@@ -511,6 +607,93 @@ mod tests {
                 (Token::Ident, "end"),
                 (Token::Whitespace, " "),
                 (Token::EndBlock, "%}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_begin_comment() {
+        let tokens = lex("lorem ipsum {#").unwrap();
+        assert_eq!(
+            tokens,
+            [(Token::Raw, "lorem ipsum "), (Token::BeginComment, "{#"),]
+        );
+    }
+
+    #[test]
+    fn lex_begin_comment_trim() {
+        let tokens = lex("lorem ipsum \t\n{#-").unwrap();
+        assert_eq!(
+            tokens,
+            [(Token::Raw, "lorem ipsum"), (Token::BeginComment, "{#-"),]
+        );
+    }
+
+    #[test]
+    fn lex_begin_comment_eof() {
+        let tokens = lex("lorem ipsum {# dolor").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginComment, "{#"),
+                (Token::Raw, " dolor")
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_end_comment_trim() {
+        let tokens = lex("lorem ipsum {# -#} \t\ndolor sit amet").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginComment, "{#"),
+                (Token::Raw, " "),
+                (Token::EndComment, "-#}"),
+                (Token::Raw, "dolor sit amet"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_empty_comment() {
+        let tokens = lex("lorem ipsum {##}").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginComment, "{#"),
+                (Token::EndComment, "#}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_comment() {
+        let tokens = lex("lorem ipsum {# anything goes e.g. - # { #}").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginComment, "{#"),
+                (Token::Raw, " anything goes e.g. - # { "),
+                (Token::EndComment, "#}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_comment_trim() {
+        let tokens = lex("lorem ipsum {# anything goes e.g. - # { #}").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginComment, "{#"),
+                (Token::Raw, " anything goes e.g. - # { "),
+                (Token::EndComment, "#}"),
             ]
         );
     }

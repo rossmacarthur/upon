@@ -1,6 +1,16 @@
 use upon::{value, Engine, Value};
 
 #[test]
+fn render_comment() {
+    let result = Engine::new()
+        .compile("lorem {#- ipsum #} dolor")
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem dolor");
+}
+
+#[test]
 fn render_inline_expr_bool() {
     let result = Engine::new()
         .compile("lorem {{ ipsum }}")

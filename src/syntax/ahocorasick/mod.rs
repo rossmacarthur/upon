@@ -33,9 +33,10 @@ pub struct Pattern {
 }
 
 impl AhoCorasick {
-    pub fn new<I, P>(patterns: I) -> Self
+    pub fn new<I, X, P>(patterns: I) -> Self
     where
-        I: IntoIterator<Item = (usize, P)>,
+        I: IntoIterator<Item = (X, P)>,
+        X: Into<usize>,
         P: AsRef<[u8]>,
     {
         Builder::default().build(patterns)

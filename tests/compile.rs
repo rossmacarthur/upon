@@ -11,6 +11,13 @@ fn compile_raw() {
 }
 
 #[test]
+fn compile_comment() {
+    Engine::new()
+        .compile("lorem {# ipsum dolor #} sit amet")
+        .unwrap();
+}
+
+#[test]
 fn compile_inline_expr() {
     Engine::new()
         .compile("lorem {{ ipsum.dolor | fn | another }} sit amet")

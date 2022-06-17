@@ -85,6 +85,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 // Simply raw template, emit a single statement for it.
                 (Token::Raw, span) => ast::Stmt::Raw(&self.source()[span]),
 
+                // The start of a comment, e.g. `{# ... #}`
+                (Token::BeginComment, _) => {
+                    self.expect(Token::Raw)?;
+                    self.expect(Token::EndComment)?;
+                    continue;
+                }
+
                 // The start of an expression, e.g. `{{ user.name }}`
                 (Token::BeginExpr, begin) => {
                     let expr = self.parse_expr()?;

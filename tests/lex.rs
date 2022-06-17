@@ -97,7 +97,7 @@ fn lex_unclosed_begin_block() {
 }
 
 #[test]
-fn lex_unexpected_end_block_after_start() {
+fn lex_unexpected_end_tag_after_begin_block() {
     let err = Engine::new()
         .compile("lorem ipsum {{ %} dolor sit amet")
         .unwrap_err();
@@ -122,6 +122,36 @@ fn lex_unexpected_character() {
    |
  1 | lorem ipsum {{ ✨ }} dolor sit amet
    |                ^^ unexpected character
+"
+    );
+}
+
+#[test]
+fn lex_unclosed_begin_comment() {
+    let err = Engine::new()
+        .compile("lorem ipsum {# {{ dolor sit amet")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem ipsum {# {{ dolor sit amet
+   |             ^^ unclosed begin comment
+"
+    );
+}
+
+#[test]
+fn lex_unexpected_end_tag_after_begin_comment() {
+    let err = Engine::new()
+        .compile("lorem ipsum {# %} dolor sit amet")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem ipsum {# %} dolor sit amet
+   |                ^^ unexpected end block
 "
     );
 }

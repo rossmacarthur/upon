@@ -11,6 +11,7 @@
         </tr>
       {%- for user in users -%}
         {% if not user.is_disabled %}
+            {# This is a comment #}
             <tr>
                 <td>{{ user.name }}</td>
                 <td>{{ user.age }}</td>
