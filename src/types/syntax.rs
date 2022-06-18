@@ -1,13 +1,4 @@
-mod ahocorasick;
-
 use std::marker::PhantomData;
-
-use crate::syntax::ahocorasick::AhoCorasick;
-
-#[cfg_attr(test, derive(Debug))]
-pub struct Searcher {
-    imp: AhoCorasick,
-}
 
 /// The template syntax configuration.
 ///
@@ -15,7 +6,7 @@ pub struct Searcher {
 /// [`Syntax::builder()`] to create a custom syntax configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Syntax<'a> {
-    patterns: Vec<(Kind, String)>,
+    pub(crate) patterns: Vec<(Kind, String)>,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -50,38 +41,6 @@ fn kind_usize() {
     for p in 0..12 {
         let k = Kind::from_usize(p);
         assert_eq!(k as usize, p);
-    }
-}
-
-impl Searcher {
-    pub fn new(syntax: Syntax) -> Self {
-        let imp = AhoCorasick::new(syntax.patterns);
-        Self { imp }
-    }
-
-    pub fn find_at<T>(&self, haystack: T, at: usize) -> Option<(Kind, usize, usize)>
-    where
-        T: AsRef<[u8]>,
-    {
-        self.imp.find_at(haystack, at).map(|m| {
-            let kind = Kind::from_usize(m.pattern_id());
-            (kind, m.start(), m.end())
-        })
-    }
-
-    pub fn starts_with<T>(&self, haystack: T, at: usize) -> Option<(Kind, usize)>
-    where
-        T: AsRef<[u8]>,
-    {
-        let (kind, i, j) = self.find_at(haystack, at)?;
-        (at == i).then(|| (kind, j))
-    }
-}
-
-#[cfg(not(test))]
-impl std::fmt::Debug for Searcher {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Searcher").finish_non_exhaustive()
     }
 }
 
@@ -193,7 +152,7 @@ impl<'a> SyntaxBuilder<'a> {
 }
 
 impl Kind {
-    fn from_usize(id: usize) -> Self {
+    pub fn from_usize(id: usize) -> Self {
         match id {
             0 => Self::BeginExpr,
             1 => Self::EndExpr,

@@ -3,13 +3,16 @@
 mod from;
 mod ser;
 
-pub(crate) use std::collections::btree_map as map;
-pub use std::collections::BTreeMap as Map;
 use std::mem;
-pub(crate) use std::vec as list;
-pub use std::vec::Vec as List;
 
 pub use crate::value::ser::to_value;
+#[doc(hidden)]
+pub use std::collections::BTreeMap as Map;
+#[doc(hidden)]
+pub use std::vec::Vec as List;
+
+pub(crate) use std::collections::btree_map as map;
+pub(crate) use std::vec as list;
 
 /// Data to be rendered represented as a recursive enum.
 #[derive(Debug, Clone)]

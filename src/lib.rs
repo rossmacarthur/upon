@@ -121,7 +121,6 @@ mod compile;
 mod error;
 mod macros;
 mod render;
-mod syntax;
 mod types;
 pub mod value;
 
@@ -130,10 +129,10 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use crate::error::Error;
-pub use crate::syntax::{Syntax, SyntaxBuilder};
+pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 pub use crate::value::{to_value, Value};
 
-use crate::syntax::Searcher;
+use crate::compile::Searcher;
 use crate::types::program;
 
 /// A type alias for results in this crate.

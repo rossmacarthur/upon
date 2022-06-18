@@ -1,6 +1,6 @@
 use crate::compile::parse::Keyword;
-use crate::syntax;
 use crate::types::span::Span;
+use crate::types::syntax;
 use crate::{Engine, Error, Result};
 
 /// A lexer that tokenizes the template source into distinct chunks so that the

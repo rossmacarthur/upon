@@ -7,6 +7,9 @@
 
 mod lex;
 mod parse;
+mod search;
+
+pub use crate::compile::search::Searcher;
 
 use crate::types::ast;
 use crate::types::program::{Instr, Template, FIXME};
