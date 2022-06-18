@@ -7,23 +7,24 @@
 //! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Customizable filter functions: `{{ user.name | lower }}`
 //! - Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
-//! - Render using any [`serde`][serde] serializable values.
+//! - Render using any [`serde`][serde] serializable values
 //! - Render using a quick context with a convenient macro:
 //!   `upon::value!{ name: "John", age: 42 }`
-//! - Minimal dependencies.
+//! - Render to any [`io::Write`][std::io::Write]
+//! - Minimal dependencies
 //!
 //! # Introduction
 //!
 //! Your entry point is the compilation and rendering [`Engine`], this stores
 //! the syntax config and filter functions. Generally, you only need to
-//! construct one engine.
+//! construct one engine during the lifetime of a program.
 //!
 //! ```
 //! let engine = upon::Engine::new();
 //! ```
 //!
-//! Compiling a template returns a reference to it bound to the lifetime of the
-//! engine and the template source.
+//! Compiling a template returns a handle bound to the lifetime of the engine
+//! and the template source.
 //!
 //! ```
 //! # let engine = upon::Engine::new();
@@ -31,7 +32,8 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! The template can then be rendered by calling [`.render()`][TemplateRef::render].
+//! The template can then be rendered by calling
+//! [`.render()`][TemplateRef::render].
 //!
 //! ```
 //! # let engine = upon::Engine::new();
@@ -42,17 +44,22 @@
 //! ```
 //!
 //! You can also use [`add_template(name, ...)`][Engine::add_template] and
-//! [`get_template(name).render(...)`][Engine::get_template] to store a template
-//! by name in the engine.
+//! to store a template in the engine.
 //!
 //! ```
-//! let mut engine = upon::Engine::new();
+//! # let mut engine = upon::Engine::new();
 //! engine.add_template("hello", "Hello {{ user.name }}!")?;
+//! # Ok::<(), upon::Error>(())
+//! ```
 //!
-//! // later...
+//! Then later fetch it by name using
+//! [`get_template(name)`][Engine::get_template].
 //!
-//! let template = engine.get_template("hello").unwrap();
-//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+//! ```
+//! # let mut engine = upon::Engine::new();
+//! # engine.add_template("hello", "Hello {{ user.name }}!")?;
+//! let result = engine.get_template("hello").unwrap()
+//!     .render(upon::value!{ user: { name: "John Smith" }})?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -116,6 +123,23 @@
 //! assert_eq!(result, "Hello John Smith");
 //! # Ok::<(), upon::Error>(())
 //! ```
+//!
+//! ### Render a template to an `impl io::Write`
+//!
+//! You can render a template directly to a buffer implementing [`io::Write`]
+//! by using [`.render_to_writer()`][TemplateRef::render_to_writer].
+//!
+//! ```
+//! use std::io;
+//!
+//! let stdout = io::BufWriter::new(io::stdout());
+//!
+//! upon::Engine::new()
+//!     .compile("Hello {{ user.name }}")?
+//!     .render_to_writer(stdout, upon::value! { user: { name: "John Smith" }})?;
+//! #
+//! # Ok::<(), upon::Error>(())
+//! ```
 
 mod compile;
 mod error;
@@ -126,6 +150,7 @@ pub mod value;
 
 use std::collections::HashMap;
 use std::fmt;
+use std::io;
 use std::sync::Arc;
 
 pub use crate::error::Error;
@@ -156,6 +181,7 @@ pub struct Template<'engine, 'source> {
 }
 
 /// A reference to a compiled template in an [`Engine`].
+#[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
@@ -171,12 +197,8 @@ impl<'engine> Default for Engine<'engine> {
 impl<'engine> Engine<'engine> {
     /// Construct a new engine.
     #[inline]
-    pub fn new() -> Engine<'engine> {
-        Self {
-            searcher: Searcher::new(Syntax::default()),
-            filters: HashMap::new(),
-            templates: HashMap::new(),
-        }
+    pub fn new() -> Self {
+        Self::with_syntax(Syntax::default())
     }
 
     /// Construct a new engine with custom syntax.
@@ -207,17 +229,9 @@ impl<'engine> Engine<'engine> {
         self.filters.insert(name, Arc::new(f));
     }
 
-    /// Compile a template.
-    #[inline]
-    pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let template = compile::template(self, source)?;
-        Ok(Template {
-            engine: self,
-            template,
-        })
-    }
-
-    /// Compile a template and store it with the given name.
+    /// Add a template to the engine.
+    ///
+    /// The template will be compiled and stored under the given name.
     ///
     /// When using this function over [`.compile(..)`][Engine::compile] the
     /// template source lifetime needs to be as least as long as the engine
@@ -233,6 +247,20 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn get_template(&self, name: &str) -> Option<TemplateRef<'_>> {
         self.templates.get(name).map(|template| TemplateRef {
+            engine: self,
+            template,
+        })
+    }
+
+    /// Compile a template.
+    ///
+    /// The template will not be stored in the engine. The advantage over
+    /// [`.add_template(..)`][Engine::add_template] here is that the lifetime of
+    /// the template source does not need to outlive the engine.
+    #[inline]
+    pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
+        let template = compile::template(self, source)?;
+        Ok(Template {
             engine: self,
             template,
         })
@@ -256,19 +284,29 @@ impl fmt::Debug for Engine<'_> {
 }
 
 impl<'engine, 'source> Template<'engine, 'source> {
+    /// Render the template to a string using the provided value.
+    #[inline]
+    pub fn render<S>(&self, ctx: S) -> Result<String>
+    where
+        S: serde::Serialize,
+    {
+        render::template(self.engine, &self.template, to_value(ctx)?)
+    }
+
+    /// Render the template to a writer using the provided value.
+    #[inline]
+    pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
+    where
+        W: io::Write,
+        S: serde::Serialize,
+    {
+        render::template_to(self.engine, &self.template, writer, to_value(ctx)?)
+    }
+
     /// Returns the original template source.
     #[inline]
     pub fn source(&self) -> &'source str {
         self.template.source
-    }
-
-    /// Render the template to a string using the provided value.
-    #[inline]
-    pub fn render<S>(&self, s: S) -> Result<String>
-    where
-        S: serde::Serialize,
-    {
-        render::template(self.engine, &self.template, to_value(s)?)
     }
 }
 
@@ -282,19 +320,29 @@ impl fmt::Debug for Template<'_, '_> {
 }
 
 impl<'engine> TemplateRef<'engine> {
+    /// Render the template to a string using the provided value.
+    #[inline]
+    pub fn render<S>(&self, ctx: S) -> Result<String>
+    where
+        S: serde::Serialize,
+    {
+        render::template(self.engine, self.template, to_value(ctx)?)
+    }
+
+    /// Render the template to a writer using the provided value.
+    #[inline]
+    pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
+    where
+        W: io::Write,
+        S: serde::Serialize,
+    {
+        render::template_to(self.engine, self.template, writer, to_value(ctx)?)
+    }
+
     /// Returns the original template source.
     #[inline]
     pub fn source(&self) -> &'engine str {
         self.template.source
-    }
-
-    /// Render the template to a string using the provided value.
-    #[inline]
-    pub fn render<S>(&self, s: S) -> Result<String>
-    where
-        S: serde::Serialize,
-    {
-        render::template(self.engine, self.template, to_value(s)?)
     }
 }
 

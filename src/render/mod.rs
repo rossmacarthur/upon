@@ -1,13 +1,15 @@
+mod fmt;
 mod iter;
 mod stack;
 mod value;
 
 use std::fmt::Write;
+use std::io;
 
+use crate::render::fmt::{Formatter, Writer};
 use crate::render::iter::LoopState;
 use crate::render::stack::{Stack, State};
 use crate::types::program::{Instr, Template};
-use crate::types::span::Span;
 use crate::{Engine, Error, Result, Value};
 
 pub fn template<'engine, 'source>(
@@ -16,6 +18,18 @@ pub fn template<'engine, 'source>(
     globals: Value,
 ) -> Result<String> {
     Renderer::new(engine, template).render(globals)
+}
+
+pub fn template_to<'engine, 'source, W>(
+    engine: &'engine Engine<'engine>,
+    template: &'source Template<'source>,
+    writer: W,
+    globals: Value,
+) -> Result<()>
+where
+    W: io::Write,
+{
+    Renderer::new(engine, template).render_to(writer, globals)
 }
 
 /// A renderer that interprets a compiled [`Template`].
@@ -31,15 +45,30 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     }
 
     pub fn render(&self, globals: Value) -> Result<String> {
-        let mut buf = String::with_capacity(self.source().len());
+        let mut s = String::with_capacity(self.source().len());
+        let mut f = Formatter::with_string(&mut s);
+        self.render_impl(&mut f, globals)?;
+        Ok(s)
+    }
 
+    pub fn render_to<W>(&self, writer: W, globals: Value) -> Result<()>
+    where
+        W: io::Write,
+    {
+        let mut w = Writer::new(writer);
+        let mut f = Formatter::with_writer(&mut w);
+        self.render_impl(&mut f, globals)
+            .map_err(|err| w.take_err().map(Error::from).unwrap_or(err))
+    }
+
+    fn render_impl(&self, f: &mut Formatter<'_>, globals: Value) -> Result<()> {
         let mut pc = 0;
         let mut stack = Stack::new(self.template.source, &globals);
 
         while let Some(instr) = self.template.instrs.get(pc) {
             match instr {
                 Instr::EmitRaw(raw) => {
-                    buf.push_str(raw);
+                    f.write_str(raw)?;
                 }
 
                 Instr::StartLoop(vars, span) => {
@@ -86,7 +115,8 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
 
                 Instr::PopEmit(span) => {
                     let value = stack.pop_expr();
-                    self.render_value(&mut buf, &value, *span)?;
+                    default_formatter(f, &value)
+                        .map_err(|err| err.with_span(self.source(), *span))?;
                 }
 
                 Instr::Call(name) => {
@@ -101,31 +131,28 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
 
         assert!(pc == self.template.instrs.len());
 
-        Ok(buf)
-    }
-
-    fn render_value(&self, buf: &mut String, value: &Value, span: Span) -> Result<()> {
-        match value {
-            Value::None => {}
-            Value::Bool(b) => write!(buf, "{}", b).unwrap(),
-            Value::Integer(n) => write!(buf, "{}", n).unwrap(),
-            Value::Float(n) => write!(buf, "{}", n).unwrap(),
-            Value::String(s) => write!(buf, "{}", s).unwrap(),
-            value => {
-                return Err(Error::new(
-                    format!(
-                        "expected renderable value, but expression evaluated to {}",
-                        value.human()
-                    ),
-                    self.source(),
-                    span,
-                ));
-            }
-        }
         Ok(())
     }
 
     fn source(&self) -> &'source str {
         self.template.source
     }
+}
+
+#[inline]
+fn default_formatter(f: &mut Formatter<'_>, value: &Value) -> Result<()> {
+    match value {
+        Value::None => {}
+        Value::Bool(b) => write!(f, "{}", b)?,
+        Value::Integer(n) => write!(f, "{}", n)?,
+        Value::Float(n) => write!(f, "{}", n)?,
+        Value::String(s) => write!(f, "{}", s)?,
+        value => {
+            Err(format!(
+                "expected renderable value, but expression evaluated to {}",
+                value.human()
+            ))?;
+        }
+    }
+    Ok(())
 }

@@ -1,3 +1,6 @@
+use std::error::Error;
+use std::io;
+
 use upon::{value, Engine, Value};
 
 #[test]
@@ -364,4 +367,90 @@ fn render_for_statement_err_loop_var_scope() {
    |                                                 ^^^^^ not found in this scope
 "
     );
+}
+
+#[test]
+fn render_to_writer() {
+    let mut w = Writer::new();
+    Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render_to_writer(&mut w, value! { ipsum : "test" })
+        .unwrap();
+    assert_eq!(w.into_string(), "lorem test");
+}
+
+#[test]
+fn render_to_writer_err_io() {
+    let mut w = Writer::with_max(1);
+    let err = Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render_to_writer(&mut w, value! { ipsum : "test" })
+        .unwrap_err();
+    assert_eq!(format!("{:#}", err), "IO error");
+    assert_eq!(format!("{:#}", err.source().unwrap()), "address in use");
+}
+
+#[test]
+fn render_to_writer_err_not_io() {
+    let mut w = Writer::with_max(1);
+    let err = Engine::new()
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render_to_writer(&mut w, value! { dolor : "test" })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum }}
+   |          ^^^^^ not found in this scope
+"
+    );
+}
+
+#[derive(Default)]
+struct Writer {
+    buf: Vec<u8>,
+    count: usize,
+    max: usize,
+}
+
+impl Writer {
+    fn new() -> Self {
+        Self {
+            buf: Vec::new(),
+            count: 0,
+            max: !0,
+        }
+    }
+
+    fn with_max(max: usize) -> Self {
+        Self {
+            buf: Vec::new(),
+            count: 0,
+            max,
+        }
+    }
+
+    #[track_caller]
+    fn into_string(self) -> String {
+        String::from_utf8(self.buf).unwrap()
+    }
+}
+
+impl io::Write for Writer {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.count += 1;
+        if self.count > self.max {
+            return Err(io::Error::from(io::ErrorKind::AddrInUse));
+        }
+        self.buf.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }

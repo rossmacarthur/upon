@@ -9,10 +9,11 @@ A simple, powerful template engine.
 - Loops: `{% for user in users %} ... {% endfor %}`
 - Customizable filter functions: `{{ user.name | lower }}`
 - Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
-- Render using any `serde` serializable values.
+- Render using any `serde` serializable values
 - Render using a quick context with a convenient macro:
   `upon::value!{ name: "John", age: 42 }`
-- Minimal dependencies.
+- Render to any `io::Write`
+- Minimal dependencies
 
 ### Still to come...
 
@@ -25,14 +26,14 @@ A simple, powerful template engine.
 
 Your entry point is the compilation and rendering `Engine`, this stores the
 syntax config and filter functions. Generally, you only need to construct one
-engine.
+engine during the lifetime of a program.
 
 ```rust
 let engine = upon::Engine::new();
 ```
 
-Compiling a template returns a reference to it bound to the lifetime of the
-engine and the template source.
+Compiling a template returns a handle bound to the lifetime of the engine and
+the template source.
 
 ```rust
 let template = engine.compile("Hello {{ user.name }}!")?;
@@ -45,17 +46,18 @@ let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
 assert_eq!(result, "Hello John Smith!");
 ```
 
-You can also use `add_template(name, ...)` and `get_template(name).render(...)`
-to store a template by name in the engine.
+You can also use `add_template(name, ...)` and to store a template in the
+engine.
 
 ```rust
-let mut engine = upon::Engine::new();
 engine.add_template("hello", "Hello {{ user.name }}!")?;
+```
 
-// later...
+Then later fetch it by name using `get_template(name)`.
 
-let template = engine.get_template("hello").unwrap();
-let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+```rust
+let result = engine.get_template("hello").unwrap()
+    .render(upon::value!{ user: { name: "John Smith" }})?;
 assert_eq!(result, "Hello John Smith!");
 ```
 
