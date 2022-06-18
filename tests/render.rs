@@ -1,7 +1,8 @@
 use std::error::Error;
+use std::fmt::Write;
 use std::io;
 
-use upon::{value, Engine, Value};
+use upon::{value, Engine, Formatter, Result, Value};
 
 #[test]
 fn render_comment() {
@@ -84,7 +85,53 @@ fn render_inline_expr_list_index() {
 }
 
 #[test]
-fn render_inline_expr_err_unknown_function() {
+fn render_inline_expr_custom_formatter() {
+    let mut engine = Engine::new();
+    engine.add_formatter("format_list", list_formmatter);
+    let result = engine
+        .compile("lorem {{ ipsum | format_list }}")
+        .unwrap()
+        .render(value! { ipsum: ["sit", "amet"] })
+        .unwrap();
+    assert_eq!(result, "lorem sit;amet");
+}
+
+#[test]
+fn render_inline_expr_custom_formatter_err() {
+    let mut engine = Engine::new();
+    engine.add_formatter("format_list", list_formmatter);
+    let err = engine
+        .compile("lorem {{ ipsum | format_list }}")
+        .unwrap()
+        .render(value! { ipsum: { sit: "amet"} })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | format_list }}
+   |          ^^^^^^^^^^^^^^^^^^^ failed to format, expected list
+"
+    );
+}
+
+fn list_formmatter(f: &mut Formatter<'_>, v: &Value) -> Result<()> {
+    match v {
+        Value::List(list) => {
+            for (i, item) in list.iter().enumerate() {
+                if i != 0 {
+                    f.write_char(';')?;
+                }
+                upon::format(f, item)?;
+            }
+            Ok(())
+        }
+        _ => Err(format!("failed to format, expected list"))?,
+    }
+}
+
+#[test]
+fn render_inline_expr_err_unknown_filter_or_formatter() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | unknown }}")
         .unwrap()
@@ -95,7 +142,43 @@ fn render_inline_expr_err_unknown_function() {
         "
    |
  1 | lorem {{ ipsum | unknown }}
-   |                  ^^^^^^^ unknown filter function
+   |                  ^^^^^^^ unknown filter or formatter
+"
+    );
+}
+
+#[test]
+fn render_inline_expr_err_unknown_filter_found_formatter() {
+    let mut engine = Engine::new();
+    engine.add_formatter("another", |_, _| Ok(()));
+    let err = engine
+        .compile("lorem {{ ipsum | another | unknown }}")
+        .unwrap()
+        .render(value! { ipsum: true })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | another | unknown }}
+   |                  ^^^^^^^ expected filter, found formatter
+"
+    );
+}
+
+#[test]
+fn render_inline_expr_err_unknown_filter() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | another | unknown }}")
+        .unwrap()
+        .render(value! { ipsum: true })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | another | unknown }}
+   |                  ^^^^^^^ unknown filter
 "
     );
 }

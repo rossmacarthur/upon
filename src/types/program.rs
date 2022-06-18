@@ -38,6 +38,9 @@ pub enum Instr<'source> {
     /// Pop and emit the value at the top of the stack
     PopEmit(Span),
 
-    /// Apply the function to the value at the top of the stack
+    /// Apply the filter or value formatter to the value at the top of the stack
+    PopEmitWith(ast::Ident<'source>, Span),
+
+    /// Apply the filter to the value at the top of the stack
     Call(ast::Ident<'source>),
 }

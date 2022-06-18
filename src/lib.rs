@@ -6,11 +6,12 @@
 //! - Conditionals: `{% if user.enabled %} ... {% endif %}`
 //! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Customizable filter functions: `{{ user.name | lower }}`
+//! - Customizable value formatters: `{{ user.name | escape_html }}`
 //! - Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
-//! - Render using any [`serde`][serde] serializable values
+//! - Render using any [`serde`] serializable values
 //! - Render using a quick context with a convenient macro:
 //!   `upon::value!{ name: "John", age: 42 }`
-//! - Render to any [`io::Write`][std::io::Write]
+//! - Render to any [`std::io::Write`] implementor
 //! - Minimal dependencies
 //!
 //! # Introduction
@@ -140,20 +141,46 @@
 //! #
 //! # Ok::<(), upon::Error>(())
 //! ```
+//!
+//! ### Add and use a custom formatter
+//!
+//! You can add your own custom formatter's or even override the default
+//! formatter using [`Engine::set_default_formatter`]. The following example
+//! shows how you could add `debug` formatter to the engine.
+//!
+//! ```
+//! use std::fmt::Write;
+//! use upon::{Formatter, Value, Result};
+//!
+//! let mut engine = upon::Engine::new();
+//! engine.add_formatter("debug", |f, value| {
+//!     write!(f, "Value::{:?}", value)?;
+//!     Ok(())
+//! });
+//!
+//!
+//! let result = engine
+//!     .compile("User age: {{ user.age | debug }}")?
+//!     .render(upon::value! { user: { age: 23 } })?;
+//!
+//! assert_eq!(result, "User age: Value::Integer(23)");
+//! # Ok::<(), upon::Error>(())
+//! ```
 
 mod compile;
 mod error;
 mod macros;
 mod render;
 mod types;
+#[doc(hidden)]
 pub mod value;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
-use std::sync::Arc;
 
 pub use crate::error::Error;
+pub use crate::render::{format, Formatter};
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 pub use crate::value::{to_value, Value};
 
@@ -166,12 +193,21 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// The compilation and rendering engine.
 pub struct Engine<'engine> {
     searcher: Searcher,
-    filters: HashMap<&'engine str, FilterFn>,
-    templates: HashMap<&'engine str, program::Template<'engine>>,
+    default_formatter: &'engine FormatFn,
+    functions: BTreeMap<&'engine str, EngineFn>,
+    templates: BTreeMap<&'engine str, program::Template<'engine>>,
+}
+
+enum EngineFn {
+    Filter(Box<FilterFn>),
+    Formatter(Box<FormatFn>),
 }
 
 /// A filter function or closure.
-type FilterFn = Arc<dyn Fn(&mut Value) + Sync + Send + 'static>;
+type FilterFn = dyn Fn(&mut Value) + Sync + Send + 'static;
+
+/// A formatter function or closure.
+type FormatFn = dyn Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static;
 
 /// A compiled template.
 #[cfg_attr(test, derive(Debug))]
@@ -189,6 +225,7 @@ pub struct TemplateRef<'engine> {
 }
 
 impl<'engine> Default for Engine<'engine> {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
@@ -215,18 +252,42 @@ impl<'engine> Engine<'engine> {
     pub fn with_syntax(syntax: Syntax<'engine>) -> Self {
         Self {
             searcher: Searcher::new(syntax),
-            filters: HashMap::new(),
-            templates: HashMap::new(),
+            default_formatter: &format,
+            functions: BTreeMap::new(),
+            templates: BTreeMap::new(),
         }
     }
 
+    /// Set the default formatter.
+    #[inline]
+    pub fn set_default_formatter<F>(&mut self, f: &'engine F)
+    where
+        F: Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static,
+    {
+        self.default_formatter = f;
+    }
+
     /// Add a new filter to the engine.
+    ///
+    /// **Note:** filters and formatters share the same namespace.
     #[inline]
     pub fn add_filter<F>(&mut self, name: &'engine str, f: F)
     where
         F: Fn(&mut Value) + Send + Sync + 'static,
     {
-        self.filters.insert(name, Arc::new(f));
+        self.functions.insert(name, EngineFn::Filter(Box::new(f)));
+    }
+
+    /// Add a new value formatter to the engine.
+    ///
+    /// **Note:** filters and formatters share the same namespace.
+    #[inline]
+    pub fn add_formatter<F>(&mut self, name: &'engine str, f: F)
+    where
+        F: Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static,
+    {
+        self.functions
+            .insert(name, EngineFn::Formatter(Box::new(f)));
     }
 
     /// Add a template to the engine.
@@ -271,7 +332,7 @@ impl fmt::Debug for Engine<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut d = f.debug_struct("Engine");
         d.field("searcher", &self.searcher);
-        d.field("filters", &self.filters.keys());
+        d.field("functions", &self.functions.keys());
         #[cfg(not(test))]
         {
             d.field("templates", &self.templates.keys()).finish()

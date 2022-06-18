@@ -13,6 +13,7 @@ pub use crate::compile::search::Searcher;
 
 use crate::types::ast;
 use crate::types::program::{Instr, Template, FIXME};
+use crate::types::span::Span;
 use crate::{Engine, Result};
 
 /// Compile a template into a program.
@@ -59,7 +60,7 @@ impl<'source> Compiler<'source> {
             ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
                 let span = expr.span();
                 self.compile_expr(expr);
-                self.push(Instr::PopEmit(span));
+                self.pop_emit_expr(span);
             }
 
             ast::Stmt::IfElse(ast::IfElse {
@@ -121,6 +122,20 @@ impl<'source> Compiler<'source> {
                 self.push(Instr::Call(name));
             }
         }
+    }
+
+    fn pop_emit_expr(&mut self, span: Span) {
+        let emit = match self.instrs.last() {
+            Some(Instr::Call(_)) => {
+                let instr = self.instrs.pop().unwrap();
+                match instr {
+                    Instr::Call(ident) => Instr::PopEmitWith(ident, span),
+                    _ => unreachable!(),
+                }
+            }
+            _ => Instr::PopEmit(span),
+        };
+        self.push(emit);
     }
 
     fn update_jump(&mut self, i: usize) {

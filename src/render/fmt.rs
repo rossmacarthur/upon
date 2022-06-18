@@ -1,6 +1,12 @@
 use std::fmt;
 use std::io;
 
+/// A [`std::fmt::Write`] façade.
+///
+/// This type is similar to [`std::fmt::Formatter`] so it should be a familiar
+/// API. A mutable reference to this struct is passed to formatter functions and
+/// writing to it will update the underlying buffer, be it a [`String`] or an
+/// arbitrary [`std::io::Write`] buffer.
 pub struct Formatter<'a> {
     buf: &'a mut (dyn fmt::Write + 'a),
 }

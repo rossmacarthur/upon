@@ -26,7 +26,11 @@ impl<'engine> Engine<'engine> for Handlebars<'engine> {
 
     #[inline]
     fn new() -> Self {
-        handlebars::Handlebars::new()
+        let mut hbs = handlebars::Handlebars::new();
+        // handlebars escapes HTML by default, so lets add a default formatter
+        // to make the benchmark a bit fairer.
+        hbs.register_escape_fn(handlebars::no_escape);
+        hbs
     }
 
     #[inline]
@@ -120,7 +124,11 @@ impl<'engine> Engine<'engine> for TinyTemplate<'engine> {
 
     #[inline]
     fn new() -> Self {
-        tinytemplate::TinyTemplate::new()
+        let mut tt = tinytemplate::TinyTemplate::new();
+        // tinytemplate escapes HTML by default, so lets add a default formatter
+        // to make the benchmark a bit fairer.
+        tt.set_default_formatter(&tinytemplate::format_unescaped);
+        tt
     }
 
     #[inline]

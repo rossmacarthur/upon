@@ -74,6 +74,7 @@ pub struct Call<'source> {
     pub span: Span,
 }
 
+#[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct Ident<'source> {
     pub raw: &'source str,

@@ -6,11 +6,13 @@ mod value;
 use std::fmt::Write;
 use std::io;
 
-use crate::render::fmt::{Formatter, Writer};
+pub use crate::render::fmt::Formatter;
+
+use crate::render::fmt::Writer;
 use crate::render::iter::LoopState;
 use crate::render::stack::{Stack, State};
 use crate::types::program::{Instr, Template};
-use crate::{Engine, Error, Result, Value};
+use crate::{Engine, EngineFn, Error, Result, Value};
 
 pub fn template<'engine, 'source>(
     engine: &'engine Engine<'engine>,
@@ -115,16 +117,59 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
 
                 Instr::PopEmit(span) => {
                     let value = stack.pop_expr();
-                    default_formatter(f, &value)
+                    // Emit the value using the default formatter.
+                    (self.engine.default_formatter)(f, &value)
                         .map_err(|err| err.with_span(self.source(), *span))?;
                 }
 
-                Instr::Call(name) => {
-                    let func = self.engine.filters.get(name.raw).ok_or_else(|| {
-                        Error::new("unknown filter function", self.source(), name.span)
-                    })?;
-                    stack.last_expr_mut().apply(&**func);
+                Instr::PopEmitWith(name, span) => {
+                    match self.engine.functions.get(name.raw) {
+                        // The referenced function is a filter, so we apply
+                        // it and then emit the value using the default
+                        // formatter.
+                        Some(EngineFn::Filter(filter)) => {
+                            let mut value = stack.pop_expr();
+                            value.apply(&**filter);
+                            (self.engine.default_formatter)(f, &value)
+                                .map_err(|err| err.with_span(self.source(), *span))?;
+                        }
+                        // The referenced function is a formatter so we simply
+                        // emit the value with it.
+                        Some(EngineFn::Formatter(formatter)) => {
+                            let value = stack.pop_expr();
+                            formatter(f, &value)
+                                .map_err(|err| err.with_span(self.source(), *span))?;
+                        }
+                        // No filter or formatter exists.
+                        None => {
+                            return Err(Error::new(
+                                "unknown filter or formatter",
+                                self.source(),
+                                name.span,
+                            ));
+                        }
+                    }
                 }
+
+                Instr::Call(name) => match self.engine.functions.get(name.raw) {
+                    // The referenced function is a filter, so we apply it.
+                    Some(EngineFn::Filter(filter)) => {
+                        stack.last_expr_mut().apply(&**filter);
+                    }
+                    // The referenced function is a formatter which is not valid
+                    // in the middle of an expression.
+                    Some(EngineFn::Formatter(_)) => {
+                        return Err(Error::new(
+                            "expected filter, found formatter",
+                            self.source(),
+                            name.span,
+                        ));
+                    }
+                    // No filter or formatter exists.
+                    None => {
+                        return Err(Error::new("unknown filter", self.source(), name.span));
+                    }
+                },
             }
             pc += 1;
         }
@@ -139,8 +184,18 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     }
 }
 
+/// The default value formatter.
+///
+/// Values are formatted as follows:
+/// - [`Value::None`]: empty string
+/// - [`Value::Bool`]: `true` or `false`
+/// - [`Value::Integer`]: the integer formatted using [`Display`][std::fmt::Display]
+/// - [`Value::Float`]: the float formatted using [`Display`][std::fmt::Display]
+/// - [`Value::String`]: the string, unescaped
+///
+/// This is public so that it can be called as part of custom formatters.
 #[inline]
-fn default_formatter(f: &mut Formatter<'_>, value: &Value) -> Result<()> {
+pub fn format(f: &mut Formatter<'_>, value: &Value) -> Result<()> {
     match value {
         Value::None => {}
         Value::Bool(b) => write!(f, "{}", b)?,

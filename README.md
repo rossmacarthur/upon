@@ -8,18 +8,18 @@ A simple, powerful template engine.
 - Conditionals: `{% if user.enabled %} ... {% endif %}`
 - Loops: `{% for user in users %} ... {% endfor %}`
 - Customizable filter functions: `{{ user.name | lower }}`
+- Customizable value formatters: `{{ user.name | escape_html }}`
 - Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
 - Render using any `serde` serializable values
 - Render using a quick context with a convenient macro:
   `upon::value!{ name: "John", age: 42 }`
-- Render to any `io::Write`
+- Render to any `std::io::Write` implementor
 - Minimal dependencies
 
 ### Still to come...
 
 - Filters with arguments
 - Fallible filters
-- Value formatters
 - "No `serde`" support
 
 ## Getting started
