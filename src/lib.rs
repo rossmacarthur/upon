@@ -172,8 +172,7 @@ mod error;
 mod macros;
 mod render;
 mod types;
-#[doc(hidden)]
-pub mod value;
+mod value;
 
 use std::collections::BTreeMap;
 use std::fmt;

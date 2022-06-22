@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
-use upon::value::{to_value, List, Map, Value};
+use upon::{to_value, Value};
 
 #[test]
 fn to_value_bool() {
@@ -113,7 +113,7 @@ fn to_value_newtype_variant() {
     }
     assert_eq!(
         to_value(Test::Variant("testing...")).unwrap(),
-        Value::Map(Map::from([(
+        Value::Map(BTreeMap::from([(
             String::from("Variant"),
             Value::String(String::from("testing..."))
         )]))
@@ -124,7 +124,7 @@ fn to_value_newtype_variant() {
 fn to_value_seq() {
     assert_eq!(
         to_value(vec!["a", "b", "c"]).unwrap(),
-        Value::List(List::from([
+        Value::List(Vec::from([
             Value::String(String::from("a")),
             Value::String(String::from("b")),
             Value::String(String::from("c")),
@@ -136,7 +136,7 @@ fn to_value_seq() {
 fn to_value_tuple() {
     assert_eq!(
         to_value(("a", "b", "c")).unwrap(),
-        Value::List(List::from([
+        Value::List(Vec::from([
             Value::String(String::from("a")),
             Value::String(String::from("b")),
             Value::String(String::from("c")),
@@ -150,7 +150,7 @@ fn to_value_tuple_struct() {
     struct Test<'a>(&'a str, &'a str, &'a str);
     assert_eq!(
         to_value(Test("a", "b", "c")).unwrap(),
-        Value::List(List::from([
+        Value::List(Vec::from([
             Value::String(String::from("a")),
             Value::String(String::from("b")),
             Value::String(String::from("c")),
@@ -166,9 +166,9 @@ fn to_value_tuple_variant() {
     }
     assert_eq!(
         to_value(Test::Variant("a", "b", "c")).unwrap(),
-        Value::Map(Map::from([(
+        Value::Map(BTreeMap::from([(
             String::from("Variant"),
-            Value::List(List::from([
+            Value::List(Vec::from([
                 Value::String(String::from("a")),
                 Value::String(String::from("b")),
                 Value::String(String::from("c")),
@@ -191,7 +191,7 @@ fn to_value_map_key_not_string() {
 fn to_value_map() {
     assert_eq!(
         to_value(BTreeMap::from([("a", "b"), ("c", "d")])).unwrap(),
-        Value::Map(Map::from([
+        Value::Map(BTreeMap::from([
             (String::from("a"), Value::String(String::from("b"))),
             (String::from("c"), Value::String(String::from("d")))
         ]))
@@ -211,7 +211,7 @@ fn to_value_struct() {
             c: "d".into()
         })
         .unwrap(),
-        Value::Map(Map::from([
+        Value::Map(BTreeMap::from([
             (String::from("a"), Value::String(String::from("b"))),
             (String::from("c"), Value::String(String::from("d")))
         ]))
@@ -230,9 +230,9 @@ fn to_value_struct_variant() {
             c: "d".into()
         })
         .unwrap(),
-        Value::Map(Map::from([(
+        Value::Map(BTreeMap::from([(
             String::from("Variant"),
-            Value::Map(Map::from([
+            Value::Map(BTreeMap::from([
                 (String::from("a"), Value::String(String::from("b"))),
                 (String::from("c"), Value::String(String::from("d")))
             ]))

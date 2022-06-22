@@ -1,19 +1,17 @@
 use serde::ser::Serialize;
 
-use crate::value::ser::to_value;
-use crate::value::{List, Value};
-use crate::{Error, Result};
+use crate::{to_value, Error, Result, Value};
 
 #[derive(Default)]
 #[cfg_attr(test, derive(Debug))]
 pub struct SerializeList {
-    list: List<Value>,
+    list: Vec<Value>,
 }
 
 impl SerializeList {
     pub fn with_capacity(len: usize) -> Self {
         Self {
-            list: List::with_capacity(len),
+            list: Vec::with_capacity(len),
         }
     }
 }

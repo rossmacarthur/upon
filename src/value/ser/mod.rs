@@ -2,13 +2,14 @@ mod list;
 mod map;
 mod variants;
 
+use std::collections::BTreeMap;
+
 use serde::ser::{Error as _, Serialize};
 
 use crate::value::ser::list::SerializeList;
 use crate::value::ser::map::SerializeMap;
 use crate::value::ser::variants::{SerializeStructVariant, SerializeTupleVariant};
-use crate::value::{List, Map, Value};
-use crate::{Error, Result};
+use crate::{Error, Result, Value};
 
 /// Convert a `T` to a `Value`.
 pub fn to_value<T>(value: T) -> Result<Value>
@@ -170,7 +171,7 @@ impl serde::Serializer for Serializer {
     where
         T: serde::Serialize,
     {
-        let mut map = Map::new();
+        let mut map = BTreeMap::new();
         map.insert(String::from(variant), to_value(&value)?);
         Ok(Value::Map(map))
     }
@@ -200,7 +201,7 @@ impl serde::Serializer for Serializer {
     ) -> Result<Self::SerializeTupleVariant> {
         Ok(SerializeTupleVariant {
             name: variant.to_owned(),
-            list: List::with_capacity(len),
+            list: Vec::with_capacity(len),
         })
     }
 
@@ -221,7 +222,7 @@ impl serde::Serializer for Serializer {
     ) -> Result<Self::SerializeStructVariant> {
         Ok(SerializeStructVariant {
             name: variant.to_owned(),
-            map: Map::new(),
+            map: BTreeMap::new(),
         })
     }
 }

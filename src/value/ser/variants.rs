@@ -1,17 +1,17 @@
+use std::collections::BTreeMap;
+
 use serde::ser::Serialize;
 
-use crate::value::ser::to_value;
-use crate::value::{List, Map, Value};
-use crate::{Error, Result};
+use crate::{to_value, Error, Result, Value};
 
 pub struct SerializeTupleVariant {
     pub name: String,
-    pub list: List<Value>,
+    pub list: Vec<Value>,
 }
 
 pub struct SerializeStructVariant {
     pub name: String,
-    pub map: Map<String, Value>,
+    pub map: BTreeMap<String, Value>,
 }
 
 impl serde::ser::SerializeTupleVariant for SerializeTupleVariant {
@@ -27,7 +27,7 @@ impl serde::ser::SerializeTupleVariant for SerializeTupleVariant {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        let mut map = Map::new();
+        let mut map = BTreeMap::new();
         map.insert(self.name, Value::List(self.list));
         Ok(Value::Map(map))
     }
@@ -46,7 +46,7 @@ impl serde::ser::SerializeStructVariant for SerializeStructVariant {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        let mut map = Map::new();
+        let mut map = BTreeMap::new();
         map.insert(self.name, Value::Map(self.map));
         Ok(Value::Map(map))
     }

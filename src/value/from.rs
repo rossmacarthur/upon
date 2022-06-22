@@ -1,6 +1,7 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 
-use super::*;
+use crate::Value;
 
 impl From<()> for Value {
     fn from(_: ()) -> Self {
@@ -58,11 +59,11 @@ impl<'a> From<Cow<'a, str>> for Value {
     }
 }
 
-impl<V> From<List<V>> for Value
+impl<V> From<Vec<V>> for Value
 where
     V: Into<Value>,
 {
-    fn from(list: List<V>) -> Self {
+    fn from(list: Vec<V>) -> Self {
         Self::List(list.into_iter().map(Into::into).collect())
     }
 }
@@ -76,12 +77,12 @@ where
     }
 }
 
-impl<K, V> From<Map<K, V>> for Value
+impl<K, V> From<BTreeMap<K, V>> for Value
 where
     K: Into<String>,
     V: Into<Value>,
 {
-    fn from(map: Map<K, V>) -> Self {
+    fn from(map: BTreeMap<K, V>) -> Self {
         Self::Map(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
     }
 }

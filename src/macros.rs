@@ -3,8 +3,8 @@
 #[macro_export]
 macro_rules! value {
     ( $($tt:tt)+ ) => {
-        $crate::value::Value::Map({
-            let mut map = $crate::value::Map::new();
+        $crate::Value::Map({
+            let mut map = ::std::collections::BTreeMap::new();
             $crate::_value!(@map map () ($($tt)+) ($($tt)+));
             map
         })
@@ -187,12 +187,12 @@ macro_rules! _value {
     };
 
     ({}) => {
-        $crate::Value::Map($crate::value::Map::new())
+        $crate::Value::Map(::std::collections::BTreeMap::new())
     };
 
     ({ $($tt:tt)+ }) => {
-        $crate::value::Value::Map({
-            let mut map = $crate::value::Map::new();
+        $crate::Value::Map({
+            let mut map = ::std::collections::BTreeMap::new();
             $crate::_value!(@map map () ($($tt)+) ($($tt)+));
             map
         })
@@ -200,7 +200,7 @@ macro_rules! _value {
 
     // Default to `From` implementation.
     ($other:expr) => {
-        $crate::value::to_value($other).unwrap()
+        $crate::to_value($other).unwrap()
     };
 }
 
@@ -229,7 +229,9 @@ macro_rules! _value_expect_expr_comma {
 
 #[cfg(test)]
 mod tests {
-    use crate::value::{List, Map, Value};
+    use std::collections::BTreeMap;
+
+    use crate::Value;
 
     #[test]
     fn value_none() {
@@ -256,8 +258,8 @@ mod tests {
                 Value::from([
                     Value::from("testing..."),
                     Value::None,
-                    Value::Map(Map::new()),
-                    Value::List(List::new()),
+                    Value::Map(BTreeMap::new()),
+                    Value::List(Vec::new()),
                 ])
             )])
         )

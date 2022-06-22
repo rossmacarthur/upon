@@ -3,13 +3,10 @@
 mod from;
 mod ser;
 
+use std::collections::BTreeMap;
 use std::mem;
 
 pub use crate::value::ser::to_value;
-#[doc(hidden)]
-pub use std::collections::BTreeMap as Map;
-#[doc(hidden)]
-pub use std::vec::Vec as List;
 
 pub(crate) use std::collections::btree_map as map;
 pub(crate) use std::vec as list;
@@ -22,8 +19,8 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     String(String),
-    List(List<Value>),
-    Map(Map<String, Value>),
+    List(Vec<Value>),
+    Map(BTreeMap<String, Value>),
 }
 
 impl PartialEq for Value {

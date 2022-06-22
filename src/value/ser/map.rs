@@ -1,21 +1,20 @@
+use std::collections::BTreeMap;
 use std::fmt::Display;
 
 use serde::ser::{Error as _, Impossible};
 
-use crate::value::ser::to_value;
-use crate::value::{Map, Value};
-use crate::{Error, Result};
+use crate::{to_value, Error, Result, Value};
 
 #[derive(Default)]
 pub struct SerializeMap {
-    map: Map<String, Value>,
+    map: BTreeMap<String, Value>,
     next_key: Option<String>,
 }
 
 impl SerializeMap {
     pub fn new() -> Self {
         Self {
-            map: Map::new(),
+            map: BTreeMap::new(),
             next_key: None,
         }
     }
