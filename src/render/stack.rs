@@ -1,6 +1,7 @@
 use crate::render::iter::LoopState;
-use crate::render::value::{index, ValueCow};
+use crate::render::value::index;
 use crate::types::ast;
+use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
 #[cfg_attr(test, derive(Debug))]

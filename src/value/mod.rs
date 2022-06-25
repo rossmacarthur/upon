@@ -1,15 +1,14 @@
 //! Defines the [`Value`] enum, representing any valid renderable data.
 
+mod cow;
 mod from;
 mod ser;
 
 use std::collections::BTreeMap;
 use std::mem;
 
+pub(crate) use crate::value::cow::ValueCow;
 pub use crate::value::ser::to_value;
-
-pub(crate) use std::collections::btree_map as map;
-pub(crate) use std::vec as list;
 
 /// Data to be rendered represented as a recursive enum.
 #[derive(Debug, Clone)]
@@ -21,6 +20,12 @@ pub enum Value {
     String(String),
     List(Vec<Value>),
     Map(BTreeMap<String, Value>),
+}
+
+impl Default for Value {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 impl PartialEq for Value {

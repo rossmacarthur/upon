@@ -1,10 +1,11 @@
+use std::collections::btree_map as map;
 use std::slice;
+use std::vec as list;
 
-use crate::render::value::{index, ValueCow};
+use crate::render::value::index;
 use crate::types::ast;
 use crate::types::span::Span;
-use crate::value::list;
-use crate::value::map;
+use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
 /// The state of a loop iteration.

@@ -1,28 +1,7 @@
-//! Defines a clone-on-write [`Value`].
-
-use std::ops::Deref;
-
 use crate::types::ast;
 use crate::types::span::Span;
+use crate::value::ValueCow;
 use crate::{Error, Result, Value};
-
-#[cfg_attr(test, derive(Debug))]
-pub enum ValueCow<'a> {
-    Borrowed(&'a Value),
-    Owned(Value),
-}
-
-impl Deref for ValueCow<'_> {
-    type Target = Value;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Borrowed(v) => v,
-            Self::Owned(v) => &*v,
-        }
-    }
-}
 
 impl ValueCow<'_> {
     pub fn as_bool(&self, source: &str, span: Span) -> Result<bool> {
