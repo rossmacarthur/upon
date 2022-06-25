@@ -198,45 +198,45 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         // must parse template syntax relevant tokens and also lookout
         // for the corresponding end tag `end`.
 
-        // We iterate over chars because that is nicer than operating on
-        // raw bytes. The map call here fixes the index to be relative to the
-        // actual template source.
-        let mut iter = self.source[i..].char_indices().map(|(d, c)| (i + d, c));
+        let (tk, j) = match self.engine.searcher.starts_with(&self.source, i) {
+            Some((kind, j)) => {
+                let (tk, trim) = Token::from_kind(kind);
 
-        // We can `.unwrap()` since we've already checked that there is
-        // more text remaining.
-        let (i, c) = iter.next().unwrap();
+                if tk.is_begin_tag() {
+                    return Err(self.err_unclosed(begin, end));
+                }
+                if tk != end {
+                    return Err(self.err_unexpected_token(tk, i..j));
+                }
 
-        let (tk, j) = match c {
-            // Single character to token mappings.
-            '.' => (Token::Period, i + 1),
-            '|' => (Token::Pipe, i + 1),
-            ',' => (Token::Comma, i + 1),
+                // A matching end tag! Update the state and
+                // return the token.
+                self.state = State::Template;
+                self.left_trim = trim;
+                (tk, j)
+            }
+            None => {
+                // We iterate over chars because that is nicer than operating on
+                // raw bytes. The map call here fixes the index to be relative
+                // to the actual template source.
+                let mut iter = self.source[i..].char_indices().map(|(d, c)| (i + d, c));
 
-            // Multi-character tokens with a distinct start character.
-            c if is_whitespace(c) => self.lex_whitespace(iter),
-            c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
+                // We can `.unwrap()` since we've already checked that there is
+                // more text remaining.
+                let (i, c) = iter.next().unwrap();
 
-            // Any other character...
-            _ => {
-                match self.engine.searcher.starts_with(&self.source, i) {
-                    Some((kind, j)) => {
-                        let (tk, trim) = Token::from_kind(kind);
+                match c {
+                    // Single character to token mappings.
+                    '.' => (Token::Period, i + 1),
+                    '|' => (Token::Pipe, i + 1),
+                    ',' => (Token::Comma, i + 1),
 
-                        if tk.is_begin_tag() {
-                            return Err(self.err_unclosed(begin, end));
-                        }
-                        if tk != end {
-                            return Err(self.err_unexpected_token(tk, i..j));
-                        }
+                    // Multi-character tokens with a distinct start character.
+                    c if is_whitespace(c) => self.lex_whitespace(iter),
+                    c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
 
-                        // A matching end tag! Update the state and
-                        // return the token.
-                        self.state = State::Template;
-                        self.left_trim = trim;
-                        (tk, j)
-                    }
-                    None => {
+                    // Any other character...
+                    _ => {
                         return Err(self.err_unexpected_character(i..(i + c.len_utf8())));
                     }
                 }

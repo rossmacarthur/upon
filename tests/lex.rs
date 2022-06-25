@@ -37,6 +37,14 @@ fn lex_syntax_whitespace_trimming() {
 }
 
 #[test]
+fn lex_syntax_precedence() {
+    let syntax = Syntax::builder().expr("{|", "|}").block("{", "}").build();
+    Engine::with_syntax(syntax)
+        .compile("lorem {| ipsum | dolor |} sit")
+        .unwrap();
+}
+
+#[test]
 fn lex_unexpected_end_expr() {
     let err = Engine::new()
         .compile("lorem ipsum }} dolor sit amet")
