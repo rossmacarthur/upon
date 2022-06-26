@@ -80,12 +80,22 @@ pub enum Token {
     Pipe,
     /// `,`
     Comma,
+    /// `:`
+    Colon,
+    /// `+`
+    Plus,
+    /// `-`
+    Minus,
     /// Sequence of tab (0x09) and/or spaces (0x20)
     Whitespace,
-    /// An attribute or variable
-    Ident,
     /// A keyword like `if` or `for`
     Keyword,
+    /// An attribute or variable
+    Ident,
+    /// An integer or float literal, e.g. `19`, `0b1011`, or `0o777`, or `0x7f`.
+    Number,
+    /// A string literal, e.g. `"Hello World!\n"`.
+    String,
 }
 
 impl<'engine, 'source> Lexer<'engine, 'source> {
@@ -230,8 +240,13 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     '.' => (Token::Period, i + 1),
                     '|' => (Token::Pipe, i + 1),
                     ',' => (Token::Comma, i + 1),
+                    ':' => (Token::Colon, i + 1),
+                    '+' => (Token::Plus, i + 1),
+                    '-' => (Token::Minus, i + 1),
 
                     // Multi-character tokens with a distinct start character.
+                    '"' => self.lex_string(iter, i)?,
+                    c if c.is_ascii_digit() => self.lex_number(iter),
                     c if is_whitespace(c) => self.lex_whitespace(iter),
                     c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
 
@@ -297,6 +312,36 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         }
     }
 
+    fn lex_string<I>(&mut self, mut iter: I, i: usize) -> Result<(Token, usize)>
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        let mut curr = '"';
+        loop {
+            match iter.next() {
+                None => {
+                    return Err(self.err_undelimited_string(i..self.source.len()));
+                }
+                Some((j, '\r' | '\n')) => {
+                    return Err(self.err_undelimited_string(i..j));
+                }
+                Some((j, '"')) if curr != '\\' => {
+                    return Ok((Token::String, j + 1));
+                }
+                Some((_, c)) => {
+                    curr = c;
+                }
+            }
+        }
+    }
+
+    fn lex_number<I>(&mut self, iter: I) -> (Token, usize)
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        (Token::Number, self.lex_while(iter, is_number))
+    }
+
     fn lex_whitespace<I>(&mut self, iter: I) -> (Token, usize)
     where
         I: Iterator<Item = (usize, char)> + Clone,
@@ -347,6 +392,10 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
     fn err_unexpected_character(&self, span: impl Into<Span>) -> Error {
         Error::new("unexpected character", self.source, span)
     }
+
+    fn err_undelimited_string(&self, span: impl Into<Span>) -> Error {
+        Error::new("undelimited string", self.source, span)
+    }
 }
 
 impl Token {
@@ -362,9 +411,14 @@ impl Token {
             Self::Period => "period",
             Self::Pipe => "pipe",
             Self::Comma => "comma",
+            Self::Colon => "colon",
+            Self::Minus => "minus",
+            Self::Plus => "plus",
             Self::Whitespace => "whitespace",
-            Self::Ident => "identifier",
             Self::Keyword => "keyword",
+            Self::Ident => "identifier",
+            Self::String => "string",
+            Self::Number => "number",
         }
     }
 
@@ -398,18 +452,18 @@ impl Token {
 
     fn from_kind(tk: syntax::Kind) -> (Self, bool) {
         match tk {
-            syntax::Kind::BeginExpr => (Token::BeginExpr, false),
-            syntax::Kind::EndExpr => (Token::EndExpr, false),
-            syntax::Kind::BeginExprTrim => (Token::BeginExpr, true),
-            syntax::Kind::EndExprTrim => (Token::EndExpr, true),
-            syntax::Kind::BeginBlock => (Token::BeginBlock, false),
-            syntax::Kind::EndBlock => (Token::EndBlock, false),
-            syntax::Kind::BeginBlockTrim => (Token::BeginBlock, true),
-            syntax::Kind::EndBlockTrim => (Token::EndBlock, true),
-            syntax::Kind::BeginComment => (Token::BeginComment, false),
-            syntax::Kind::EndComment => (Token::EndComment, false),
-            syntax::Kind::BeginCommentTrim => (Token::BeginComment, true),
-            syntax::Kind::EndCommentTrim => (Token::EndComment, true),
+            syntax::Kind::BeginExpr => (Self::BeginExpr, false),
+            syntax::Kind::EndExpr => (Self::EndExpr, false),
+            syntax::Kind::BeginExprTrim => (Self::BeginExpr, true),
+            syntax::Kind::EndExprTrim => (Self::EndExpr, true),
+            syntax::Kind::BeginBlock => (Self::BeginBlock, false),
+            syntax::Kind::EndBlock => (Self::EndBlock, false),
+            syntax::Kind::BeginBlockTrim => (Self::BeginBlock, true),
+            syntax::Kind::EndBlockTrim => (Self::EndBlock, true),
+            syntax::Kind::BeginComment => (Self::BeginComment, false),
+            syntax::Kind::EndComment => (Self::EndComment, false),
+            syntax::Kind::BeginCommentTrim => (Self::BeginComment, true),
+            syntax::Kind::EndCommentTrim => (Self::EndComment, true),
         }
     }
 }
@@ -420,6 +474,10 @@ fn is_whitespace(c: char) -> bool {
 
 fn is_ident(c: char) -> bool {
     matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_')
+}
+
+fn is_number(c: char) -> bool {
+    matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '.')
 }
 
 #[cfg(test)]
@@ -519,7 +577,8 @@ mod tests {
 
     #[test]
     fn lex_expr() {
-        let tokens = lex("lorem ipsum {{ .|\t aZ_0 }} dolor sit amet").unwrap();
+        let tokens =
+            lex("lorem ipsum {{ .|\t aZ_0 :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet").unwrap();
         assert_eq!(
             tokens,
             [
@@ -530,6 +589,13 @@ mod tests {
                 (Token::Pipe, "|"),
                 (Token::Whitespace, "\t "),
                 (Token::Ident, "aZ_0"),
+                (Token::Whitespace, " "),
+                (Token::Colon, ":"),
+                (Token::String, "\"hello\\n\""),
+                (Token::Whitespace, " "),
+                (Token::Number, "0.5"),
+                (Token::Whitespace, " "),
+                (Token::Number, "0xffee00"),
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),
                 (Token::Raw, " dolor sit amet"),

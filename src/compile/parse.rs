@@ -60,6 +60,8 @@ pub(crate) enum Keyword {
     For,
     In,
     EndFor,
+    True,
+    False,
 }
 
 impl<'engine, 'source> Parser<'engine, 'source> {
@@ -353,7 +355,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse_var(&mut self) -> Result<ast::Var<'source>> {
         let mut path = Vec::new();
         loop {
-            path.push(self.parse_ident()?);
+            path.push(self.parse_ident_or_index()?);
             if !self.is_next(Token::Period)? {
                 break;
             }
@@ -364,6 +366,23 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             n => path[0].span.combine(path[n - 1].span),
         };
         Ok(ast::Var { path, span })
+    }
+
+    /// Parses an identifier or index.
+    fn parse_ident_or_index(&mut self) -> Result<ast::Ident<'source>> {
+        let span = match self.parse()? {
+            (Token::Number, span) if is_base10_integer(&self.source()[span]) => span,
+            (Token::Ident, span) => span,
+            (exp, span) => {
+                return Err(Error::new(
+                    format!("expected {}, found {}", Token::Ident.human(), exp.human()),
+                    self.source(),
+                    span,
+                ));
+            }
+        };
+        let raw = &self.source()[span];
+        Ok(ast::Ident { raw, span })
     }
 
     /// Expects the given keyword.
@@ -393,8 +412,19 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     /// Parses an identifier.
     fn parse_ident(&mut self) -> Result<ast::Ident<'source>> {
         let span = self.expect(Token::Ident)?;
-        let value = &self.source()[span];
-        Ok(ast::Ident { raw: value, span })
+        let raw = &self.source()[span];
+        Ok(ast::Ident { raw, span })
+    }
+
+    /// Parses any token.
+    fn parse(&mut self) -> Result<(Token, Span)> {
+        match self.next()? {
+            Some((tk, sp)) => Ok((tk, sp)),
+            None => {
+                let n = self.source().len();
+                Err(Error::new("expected token, found EOF", self.source(), n..n))
+            }
+        }
     }
 
     /// Parses the specified token and returns its span.
@@ -446,7 +476,9 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
 impl Keyword {
     pub(crate) const fn all() -> &'static [&'static str] {
-        &["if", "not", "else", "endif", "for", "in", "endfor"]
+        &[
+            "if", "not", "else", "endif", "for", "in", "endfor", "true", "false",
+        ]
     }
 
     const fn human(&self) -> &'static str {
@@ -458,6 +490,8 @@ impl Keyword {
             Self::For => "for",
             Self::In => "in",
             Self::EndFor => "endfor",
+            Self::True => "bool",
+            Self::False => "bool",
         }
     }
 
@@ -470,6 +504,8 @@ impl Keyword {
             "for" => Self::For,
             "in" => Self::In,
             "endfor" => Self::EndFor,
+            "true" => Self::True,
+            "false" => Self::False,
             _ => unreachable!(),
         }
     }
@@ -477,4 +513,8 @@ impl Keyword {
     fn is_not(&self) -> bool {
         matches!(self, Self::Not)
     }
+}
+
+fn is_base10_integer(s: &str) -> bool {
+    s.chars().all(|c| c.is_ascii_digit())
 }
