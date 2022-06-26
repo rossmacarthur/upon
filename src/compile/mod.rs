@@ -117,19 +117,24 @@ impl<'source> Compiler<'source> {
                 self.push(Instr::Push(path));
             }
 
-            ast::Expr::Call(ast::Call { name, receiver, .. }) => {
+            ast::Expr::Call(ast::Call {
+                name,
+                args,
+                receiver,
+                span: _,
+            }) => {
                 self.compile_expr(*receiver);
-                self.push(Instr::Call(name));
+                self.push(Instr::Call(name, args));
             }
         }
     }
 
     fn pop_emit_expr(&mut self, span: Span) {
         let emit = match self.instrs.last() {
-            Some(Instr::Call(_)) => {
+            Some(Instr::Call(_, None)) => {
                 let instr = self.instrs.pop().unwrap();
                 match instr {
-                    Instr::Call(ident) => Instr::PopEmitWith(ident, span),
+                    Instr::Call(ident, _) => Instr::PopEmitWith(ident, span),
                     _ => unreachable!(),
                 }
             }

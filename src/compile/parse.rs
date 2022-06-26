@@ -1,7 +1,9 @@
+use std::fmt::Display;
+
 use crate::compile::lex::{Lexer, Token};
 use crate::types::ast;
 use crate::types::span::Span;
-use crate::{Engine, Error, Result};
+use crate::{Engine, Error, Result, Value};
 
 /// A parser that constructs an AST from a token stream.
 ///
@@ -62,6 +64,11 @@ pub(crate) enum Keyword {
     EndFor,
     True,
     False,
+}
+
+enum Sign {
+    Neg,
+    Pos,
 }
 
 impl<'engine, 'source> Parser<'engine, 'source> {
@@ -277,11 +284,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 Ok(Block::For(vars, iterable))
             }
             Keyword::EndFor => Ok(Block::EndFor),
-            _ => Err(Error::new(
-                format!("unexpected keyword `{}`", kw.human()),
-                self.source(),
-                span,
-            )),
+            kw => Err(self.err_unexpected_keyword(kw.human(), span)),
         }
     }
 
@@ -309,7 +312,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     /// This is a variable with zero or more function calls. For example:
     ///
-    ///   user.name | lower | reverse
+    ///   user.name | lower | prefix("Mr. ")
     ///
     fn parse_expr(&mut self) -> Result<ast::Expr<'source>> {
         let mut expr = ast::Expr::Var(self.parse_var()?);
@@ -317,8 +320,15 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             self.expect(Token::Pipe)?;
             let name = self.parse_ident()?;
             let span = name.span.combine(expr.span());
+            let args = if self.is_next(Token::Colon)? {
+                let span = self.expect(Token::Colon)?;
+                Some(self.parse_args(span)?)
+            } else {
+                None
+            };
             expr = ast::Expr::Call(ast::Call {
                 name,
+                args,
                 receiver: Box::new(expr),
                 span,
             });
@@ -344,6 +354,40 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         let value = self.parse_ident()?;
         let span = key.span.combine(value.span);
         Ok(ast::LoopVars::KeyValue(ast::KeyValue { key, value, span }))
+    }
+
+    /// Parses comma separate arguments. All of the following are valid
+    /// arguments.
+    ///
+    ///   user.name
+    ///
+    ///   "a string"
+    ///
+    ///   true
+    ///
+    ///   -13.37
+    ///
+    ///   0xff
+    ///
+    ///
+    fn parse_args(&mut self, span: Span) -> Result<ast::Args<'source>> {
+        let mut values = Vec::new();
+        loop {
+            let arg = match self.peek()? {
+                Some((Token::Ident, _)) => ast::Arg::Var(self.parse_var()?),
+                Some(_) => ast::Arg::Literal(self.parse_literal()?),
+                None => {
+                    return Err(self.err_unexpected_eof("argument"));
+                }
+            };
+            values.push(arg);
+            if !self.is_next(Token::Comma)? {
+                break;
+            }
+            self.expect(Token::Comma)?;
+        }
+        let span = span.combine(values.last().unwrap().span());
+        Ok(ast::Args { values, span })
     }
 
     /// Parses a variable.
@@ -373,16 +417,134 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         let span = match self.parse()? {
             (Token::Number, span) if is_base10_integer(&self.source()[span]) => span,
             (Token::Ident, span) => span,
-            (exp, span) => {
-                return Err(Error::new(
-                    format!("expected {}, found {}", Token::Ident.human(), exp.human()),
-                    self.source(),
-                    span,
-                ));
+            (tk, span) => {
+                return Err(self.err_unexpected_token("identifier", tk, span));
             }
         };
         let raw = &self.source()[span];
         Ok(ast::Ident { raw, span })
+    }
+
+    /// Parses a literal.
+    fn parse_literal(&mut self) -> Result<ast::Literal> {
+        match self.parse()? {
+            (Token::Keyword, span) => self.parse_bool(span),
+            (Token::Minus, sign) => {
+                let span = self.expect(Token::Number)?;
+                self.parse_number(&self.source()[span], sign.combine(span), Sign::Neg)
+            }
+            (Token::Plus, sign) => {
+                let span = self.expect(Token::Number)?;
+                self.parse_number(&self.source()[span], sign.combine(span), Sign::Pos)
+            }
+            (Token::Number, span) => self.parse_number(&self.source()[span], span, Sign::Pos),
+            (Token::String, span) => self.parse_string(span),
+            (tk, span) => Err(self.err_unexpected_token("argument", tk, span)),
+        }
+    }
+
+    /// Parses a boolean argument.
+    fn parse_bool(&mut self, span: Span) -> Result<ast::Literal> {
+        let bool = match &self.source()[span] {
+            "false" => false,
+            "true" => true,
+            kw => {
+                return Err(self.err_unexpected_keyword(kw, span));
+            }
+        };
+        let value = Value::Bool(bool);
+        Ok(ast::Literal { value, span })
+    }
+
+    /// Parses an integer or a float.
+    fn parse_number(&self, raw: &'source str, span: Span, sign: Sign) -> Result<ast::Literal> {
+        if raw.contains('.') {
+            let float: f64 = raw
+                .parse::<f64>()
+                .map_err(|_| Error::new("invalid float literal", self.source(), span))?;
+            let value = Value::Float(float);
+            Ok(ast::Literal { value, span })
+        } else {
+            self.parse_integer(raw, span, sign)
+        }
+    }
+
+    /// Parse an integer.
+    fn parse_integer(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
+        let digits = raw.as_bytes();
+        let (i, radix) = match digits {
+            [b'0', b'b', ..] => (2, 2),
+            [b'0', b'o', ..] => (2, 8),
+            [b'0', b'x', ..] => (2, 16),
+            _ => (0, 10),
+        };
+        let int = digits[i..]
+            .iter()
+            .enumerate()
+            .filter(|(_, &d)| d != b'_')
+            .try_fold(0i64, |acc, (j, &d)| {
+                let x = (d as char).to_digit(radix).ok_or_else(|| {
+                    let m = span.m + i + j;
+                    Error::new(
+                        format!("invalid digit for base {} literal", radix),
+                        self.source(),
+                        m..m + 1,
+                    )
+                })?;
+                let err = || {
+                    Error::new(
+                        format!("base {} literal out of range for 64-bit integer", radix),
+                        self.source(),
+                        span,
+                    )
+                };
+                let value = acc.checked_mul(radix.into()).ok_or_else(err)?;
+                match sign {
+                    Sign::Pos => value.checked_add(x.into()),
+                    Sign::Neg => value.checked_sub(x.into()),
+                }
+                .ok_or_else(err)
+            })?;
+        let value = Value::Integer(int);
+        Ok(ast::Literal { value, span })
+    }
+
+    /// Parses a string and handles escape characters.
+    fn parse_string(&self, span: Span) -> Result<ast::Literal> {
+        let raw = &self.source()[span];
+        let value = if raw.contains('\\') {
+            let mut iter = raw.char_indices().map(|(i, c)| (span.m + i, c));
+            let mut value = String::new();
+            while let Some((_, c)) = iter.next() {
+                match c {
+                    '"' => continue,
+                    '\\' => {
+                        let (i, esc) = iter.next().unwrap();
+                        let c = match esc {
+                            'n' => '\n',
+                            'r' => '\r',
+                            't' => '\t',
+                            '\\' => '\\',
+                            '"' => '"',
+                            _ => {
+                                let j = iter.next().unwrap().0;
+                                return Err(Error::new(
+                                    "unknown escape character",
+                                    self.source(),
+                                    i..j,
+                                ));
+                            }
+                        };
+                        value.push(c);
+                    }
+                    c => value.push(c),
+                }
+            }
+            Value::String(value)
+        } else {
+            Value::String(raw[1..raw.len() - 1].to_owned())
+        };
+        Ok(ast::Literal { value, span })
     }
 
     /// Expects the given keyword.
@@ -420,30 +582,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse(&mut self) -> Result<(Token, Span)> {
         match self.next()? {
             Some((tk, sp)) => Ok((tk, sp)),
-            None => {
-                let n = self.source().len();
-                Err(Error::new("expected token, found EOF", self.source(), n..n))
-            }
+            None => Err(self.err_unexpected_eof("token")),
         }
     }
 
     /// Parses the specified token and returns its span.
     fn expect(&mut self, exp: Token) -> Result<Span> {
         match self.next()? {
-            Some((tk, sp)) if tk == exp => Ok(sp),
-            Some((tk, sp)) => Err(Error::new(
-                format!("expected {}, found {}", exp.human(), tk.human()),
-                self.source(),
-                sp,
-            )),
-            None => {
-                let n = self.source().len();
-                Err(Error::new(
-                    format!("expected {}, found EOF", exp.human()),
-                    self.source(),
-                    n..n,
-                ))
-            }
+            Some((tk, span)) if tk == exp => Ok(span),
+            Some((tk, span)) => Err(self.err_unexpected_token(exp.human(), tk, span)),
+            None => Err(self.err_unexpected_eof(exp.human())),
         }
     }
 
@@ -472,6 +620,23 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn source(&self) -> &'source str {
         self.tokens.source
     }
+
+    fn err_unexpected_eof(&self, exp: impl Display) -> Error {
+        let n = self.source().len();
+        Error::new(format!("expected {}, found EOF", exp), self.source(), n..n)
+    }
+
+    fn err_unexpected_token(&self, exp: impl Display, got: Token, span: Span) -> Error {
+        Error::new(
+            format!("expected {}, found {}", exp, got.human()),
+            self.source(),
+            span,
+        )
+    }
+
+    fn err_unexpected_keyword(&self, kw: impl Display, span: Span) -> Error {
+        Error::new(format!("unexpected keyword `{}`", kw), self.source(), span)
+    }
 }
 
 impl Keyword {
@@ -490,8 +655,7 @@ impl Keyword {
             Self::For => "for",
             Self::In => "in",
             Self::EndFor => "endfor",
-            Self::True => "bool",
-            Self::False => "bool",
+            Self::True | Self::False => "bool",
         }
     }
 

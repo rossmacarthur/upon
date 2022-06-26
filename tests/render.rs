@@ -269,6 +269,25 @@ fn render_inline_expr_err_not_found_in_map() {
 }
 
 #[test]
+fn render_inline_expr_err_filter_args() {
+    let mut engine = Engine::new();
+    engine.add_filter("dolor", |_| todo!());
+    let err = engine
+        .compile("lorem {{ ipsum | dolor: true, 3.14 }}")
+        .unwrap()
+        .render(value! { ipsum : { } })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | dolor: true, 3.14 }}
+   |                       ^^^^^^^^^^^^ filters with arguments are not yet supported
+"
+    );
+}
+
+#[test]
 fn render_if_statement_cond_true() {
     let result = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")

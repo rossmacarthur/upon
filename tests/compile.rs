@@ -25,6 +25,39 @@ fn compile_inline_expr() {
 }
 
 #[test]
+fn compile_inline_expr_filter_arg() {
+    let tests = [
+        "nested.path",
+        r#""normal""#,
+        r#""escaped \n \r \t \\ \"""#,
+        "true",
+        "false",
+        "123",
+        "-123",
+        "+123",
+        "0x1f",
+        "0o777",
+        "0b1010",
+        "3.14",
+        "+3.14",
+        "-3.14",
+    ];
+    let engine = Engine::new();
+    for arg in tests {
+        engine
+            .compile(&format!("{{{{ lorem | ipsum: {} }}}}", arg))
+            .unwrap();
+    }
+}
+
+#[test]
+fn compile_inline_expr_filter_args() {
+    Engine::new()
+        .compile("{{ lorem | ipsum: true, 3.14, -0b1010 }}")
+        .unwrap();
+}
+
+#[test]
 fn compile_if_statement() {
     Engine::new()
         .compile("lorem {% if ipsum %} dolor {% endif %} sit")
@@ -70,6 +103,96 @@ fn compile_inline_expr_err_eof() {
    |
  1 | lorem {{ ipsum.dolor |
    |                       ^ expected identifier, found EOF
+"
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_args_eof() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor:")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | dolor:
+   |                        ^ expected argument, found EOF
+"
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_unexpected_keyword() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor: for }}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        r#"
+   |
+ 1 | lorem {{ ipsum | dolor: for }}
+   |                         ^^^ unexpected keyword `for`
+"#
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_integer_invalid_digit() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor: 0b0131 }}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | dolor: 0b0131 }}
+   |                             ^ invalid digit for base 2 literal
+"
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_integer_overflow() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor: 0xffffffffffffffff }}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | dolor: 0xffffffffffffffff }}
+   |                         ^^^^^^^^^^^^^^^^^^ base 16 literal out of range for 64-bit integer
+"
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_unknown_escape_character() {
+    let err = Engine::new()
+        .compile(r#"lorem {{ ipsum | dolor: "sit \x" }}"#)
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        r#"
+   |
+ 1 | lorem {{ ipsum | dolor: "sit \x" }}
+   |                               ^ unknown escape character
+"#
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_unexpected_comma_token() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor: ,")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | dolor: ,
+   |                         ^ expected argument, found comma
 "
     )
 }

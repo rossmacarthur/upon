@@ -1,6 +1,7 @@
 //! AST representing a template.
 
 use crate::types::span::Span;
+use crate::Value;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Template<'source> {
@@ -57,8 +58,28 @@ pub struct KeyValue<'source> {
 
 #[cfg_attr(test, derive(Debug))]
 pub enum Expr<'source> {
-    Var(Var<'source>),
     Call(Call<'source>),
+    Var(Var<'source>),
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct Call<'source> {
+    pub name: Ident<'source>,
+    pub args: Option<Args<'source>>,
+    pub receiver: Box<Expr<'source>>,
+    pub span: Span,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct Args<'source> {
+    pub values: Vec<Arg<'source>>,
+    pub span: Span,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub enum Arg<'source> {
+    Var(Var<'source>),
+    Literal(Literal),
 }
 
 #[cfg_attr(test, derive(Debug))]
@@ -68,9 +89,8 @@ pub struct Var<'source> {
 }
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Call<'source> {
-    pub name: Ident<'source>,
-    pub receiver: Box<Expr<'source>>,
+pub struct Literal {
+    pub value: Value,
     pub span: Span,
 }
 
@@ -92,6 +112,15 @@ impl Expr<'_> {
         match self {
             Self::Var(var) => var.span,
             Self::Call(call) => call.span,
+        }
+    }
+}
+
+impl Arg<'_> {
+    pub const fn span(&self) -> Span {
+        match self {
+            Arg::Var(var) => var.span,
+            Arg::Literal(lit) => lit.span,
         }
     }
 }

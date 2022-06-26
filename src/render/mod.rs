@@ -151,9 +151,16 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     }
                 }
 
-                Instr::Call(name) => match self.engine.functions.get(name.raw) {
+                Instr::Call(name, args) => match self.engine.functions.get(name.raw) {
                     // The referenced function is a filter, so we apply it.
                     Some(EngineFn::Filter(filter)) => {
+                        if let Some(args) = args {
+                            return Err(Error::new(
+                                "filters with arguments are not yet supported",
+                                self.source(),
+                                args.span,
+                            ));
+                        }
                         stack.last_expr_mut().apply(&**filter);
                     }
                     // The referenced function is a formatter which is not valid
