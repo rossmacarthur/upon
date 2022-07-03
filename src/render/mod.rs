@@ -10,8 +10,11 @@ pub use crate::render::fmt::Formatter;
 
 use crate::render::fmt::Writer;
 use crate::render::iter::LoopState;
-use crate::render::stack::{Stack, State};
+pub use crate::render::stack::{Stack, State};
+use crate::types::ast;
 use crate::types::program::{Instr, Template};
+use crate::types::span::Span;
+use crate::value::ValueCow;
 use crate::{Engine, EngineFn, Error, Result, Value};
 
 pub fn template<'engine, 'source>(
@@ -39,6 +42,15 @@ where
 struct Renderer<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: &'source Template<'source>,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct FilterState<'a> {
+    pub stack: &'a Stack<'a, 'a>,
+    pub filter: &'a ast::Ident<'a>,
+    pub value: &'a mut ValueCow<'a>,
+    pub value_span: Span,
+    pub args: &'a [ast::Arg<'a>],
 }
 
 impl<'engine, 'source> Renderer<'engine, 'source> {
@@ -129,8 +141,14 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                         // formatter.
                         Some(EngineFn::Filter(filter)) => {
                             let mut value = stack.pop_expr();
-                            value.apply(&**filter);
-                            (self.engine.default_formatter)(f, &value)
+                            let result = filter(FilterState {
+                                stack: &stack,
+                                filter: name,
+                                value: &mut value,
+                                value_span: *span,
+                                args: &[],
+                            })?;
+                            (self.engine.default_formatter)(f, &result)
                                 .map_err(|err| err.with_span(self.source(), *span))?;
                         }
                         // The referenced function is a formatter so we simply
@@ -151,17 +169,22 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     }
                 }
 
-                Instr::Call(name, args) => match self.engine.functions.get(name.raw) {
+                Instr::Call(name, span, args) => match self.engine.functions.get(name.raw) {
                     // The referenced function is a filter, so we apply it.
                     Some(EngineFn::Filter(filter)) => {
-                        if let Some(args) = args {
-                            return Err(Error::new(
-                                "filters with arguments are not yet supported",
-                                self.source(),
-                                args.span,
-                            ));
-                        }
-                        stack.last_expr_mut().apply(&**filter);
+                        let mut value = stack.pop_expr();
+                        let args = args
+                            .as_ref()
+                            .map(|args| args.values.as_slice())
+                            .unwrap_or(&[]);
+                        let result = filter(FilterState {
+                            stack: &stack,
+                            filter: name,
+                            value: &mut value,
+                            value_span: *span,
+                            args,
+                        })?;
+                        stack.push(State::Expr(ValueCow::Owned(result)));
                     }
                     // The referenced function is a formatter which is not valid
                     // in the middle of an expression.

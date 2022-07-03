@@ -1,6 +1,6 @@
-use std::error::Error;
 use std::fmt::Write;
 use std::io;
+use std::{collections::BTreeMap, error::Error};
 
 use upon::{value, Engine, Formatter, Result, Value};
 
@@ -269,25 +269,6 @@ fn render_inline_expr_err_not_found_in_map() {
 }
 
 #[test]
-fn render_inline_expr_err_filter_args() {
-    let mut engine = Engine::new();
-    engine.add_filter("dolor", |_| todo!());
-    let err = engine
-        .compile("lorem {{ ipsum | dolor: true, 3.14 }}")
-        .unwrap()
-        .render(value! { ipsum : { } })
-        .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
-        "
-   |
- 1 | lorem {{ ipsum | dolor: true, 3.14 }}
-   |                       ^^^^^^^^^^^^ filters with arguments are not yet supported
-"
-    );
-}
-
-#[test]
 fn render_if_statement_cond_true() {
     let result = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
@@ -364,10 +345,9 @@ fn render_for_statement_list() {
 #[test]
 fn render_for_statement_filtered_list() {
     let mut engine = Engine::new();
-    engine.add_filter("pop", |v| {
-        if let Value::List(list) = v {
-            list.pop();
-        }
+    engine.add_filter("pop", |mut list: Vec<Value>| {
+        list.pop();
+        list
     });
     let result = engine
         .compile("lorem {% for ipsum in dolor | pop %}{{ ipsum }}{% endfor %}")
@@ -390,13 +370,12 @@ fn render_for_statement_map() {
 #[test]
 fn render_for_statement_filtered_map() {
     let mut engine = Engine::new();
-    engine.add_filter("rm", |v| {
-        if let Value::Map(map) = v {
-            map.remove("d");
-        }
+    engine.add_filter("rm", |mut map: BTreeMap<String, Value>, key: &str| {
+        map.remove(key);
+        map
     });
     let result = engine
-        .compile("lorem {% for ipsum, dolor in sit | rm %}{{ ipsum }},{{ dolor.0 }} {% endfor %}")
+        .compile(r#"lorem {% for ipsum, dolor in sit | rm: "d" %}{{ ipsum }},{{ dolor.0 }} {% endfor %}"#)
         .unwrap()
         .render(value! { sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } })
         .unwrap();

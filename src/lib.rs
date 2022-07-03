@@ -2,19 +2,25 @@
 //!
 //! # Features
 //!
+//! ### Syntax
+//!
 //! - Expressions: `{{ user.name }}`
 //! - Conditionals: `{% if user.enabled %} ... {% endif %}`
 //! - Loops: `{% for user in users %} ... {% endfor %}`
-//! - Customizable filter functions: `{{ user.name | lower }}`
-//! - Customizable value formatters: `{{ user.name | escape_html }}`
-//! - Configurable template syntax: `<? user.name ?>`, `(( if user.enabled ))`
-//! - Render using any [`serde`] serializable values
-//! - Render using a quick context with a convenient macro:
-//!   `upon::value!{ name: "John", age: 42 }`
-//! - Render to any [`std::io::Write`] implementor
-//! - Minimal dependencies
+//! - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
+//! - Arbitrary filter functions: `{{ user.name | replace: "\t", " " }}`
 //!
-//! # Introduction
+//! ### Engine
+//!
+//! - Clear and well documented API
+//! - Customizable value formatters: `{{ user.name | escape_html }}`
+//! - Render to a [`String`] or any [`std::io::Write`] implementor
+//! - Render using any [`serde`] serializable values
+//! - Convenient macro for quick rendering:
+//!   `upon::value!{ name: "John", age: 42 }`
+//! - Minimal dependencies and decent runtime performance
+//!
+//! # Getting started
 //!
 //! Your entry point is the compilation and rendering [`Engine`], this stores
 //! the syntax config and filter functions. Generally, you only need to
@@ -94,12 +100,7 @@
 //!
 //! ```
 //! let mut engine = upon::Engine::new();
-//!
-//! engine.add_filter("lower", |v| {
-//!     if let upon::Value::String(s) = v {
-//!         *s = s.to_lowercase();
-//!     }
-//! });
+//! engine.add_filter("lower", str::to_lowercase);
 //!
 //! let result = engine
 //!     .compile("Hello {{ value | lower }}")?
@@ -108,6 +109,8 @@
 //! assert_eq!(result, "Hello world!");
 //! # Ok::<(), upon::Error>(())
 //! ```
+//!
+//! See the [`Filter`] trait documentation for more information on filters.
 //!
 //! ### Render a template using custom syntax
 //!
@@ -169,6 +172,7 @@
 
 mod compile;
 mod error;
+mod filters;
 mod macros;
 mod render;
 mod types;
@@ -179,11 +183,13 @@ use std::fmt;
 use std::io;
 
 pub use crate::error::Error;
+pub use crate::filters::Filter;
 pub use crate::render::{format, Formatter};
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 pub use crate::value::{to_value, Value};
 
 use crate::compile::Searcher;
+use crate::filters::{FilterArgs, FilterFn, FilterReturn};
 use crate::types::program;
 
 /// A type alias for results in this crate.
@@ -201,9 +207,6 @@ enum EngineFn {
     Filter(Box<FilterFn>),
     Formatter(Box<FormatFn>),
 }
-
-/// A filter function or closure.
-type FilterFn = dyn Fn(&mut Value) + Sync + Send + 'static;
 
 /// A formatter function or closure.
 type FormatFn = dyn Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static;
@@ -270,11 +273,14 @@ impl<'engine> Engine<'engine> {
     ///
     /// **Note:** filters and formatters share the same namespace.
     #[inline]
-    pub fn add_filter<F>(&mut self, name: &'engine str, f: F)
+    pub fn add_filter<F, R, A>(&mut self, name: &'engine str, f: F)
     where
-        F: Fn(&mut Value) + Send + Sync + 'static,
+        F: Filter<R, A> + Send + Sync + 'static,
+        R: FilterReturn,
+        A: for<'a> FilterArgs<'a>,
     {
-        self.functions.insert(name, EngineFn::Filter(Box::new(f)));
+        self.functions
+            .insert(name, EngineFn::Filter(filters::new(f)));
     }
 
     /// Add a new value formatter to the engine.

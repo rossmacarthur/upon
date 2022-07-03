@@ -1,5 +1,6 @@
 //! Defines a clone-on-write [`Value`].
 
+use std::mem;
 use std::ops::Deref;
 
 use crate::Value;
@@ -21,8 +22,11 @@ impl Deref for ValueCow<'_> {
     }
 }
 
-impl AsRef<Value> for ValueCow<'_> {
-    fn as_ref(&self) -> &Value {
-        &*self
+impl<'a> ValueCow<'a> {
+    pub fn take(&mut self) -> Value {
+        match self {
+            Self::Borrowed(v) => v.clone(),
+            Self::Owned(v) => mem::take(v),
+        }
     }
 }

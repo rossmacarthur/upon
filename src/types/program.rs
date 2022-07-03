@@ -42,5 +42,5 @@ pub enum Instr<'source> {
     PopEmitWith(ast::Ident<'source>, Span),
 
     /// Apply the filter to the value at the top of the stack
-    Call(ast::Ident<'source>, Option<ast::Args<'source>>),
+    Call(ast::Ident<'source>, Span, Option<ast::Args<'source>>),
 }

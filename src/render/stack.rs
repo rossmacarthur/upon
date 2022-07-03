@@ -71,13 +71,6 @@ impl<'source, 'render> Stack<'source, 'render> {
         self.stack.push(state);
     }
 
-    pub fn last_expr_mut(&mut self) -> &mut ValueCow<'render> {
-        match self.stack.last_mut().unwrap() {
-            State::Expr(value) => value,
-            _ => panic!("expected expression"),
-        }
-    }
-
     pub fn last_loop_state_mut(&mut self) -> &mut LoopState<'source, 'render> {
         match self.stack.last_mut().unwrap() {
             State::Loop(loop_state) => loop_state,
@@ -99,7 +92,7 @@ impl<'source, 'render> Stack<'source, 'render> {
         }
     }
 
-    fn source(&self) -> &'source str {
+    pub fn source(&self) -> &'source str {
         self.source
     }
 }
