@@ -1,5 +1,5 @@
 use crate::context::{Context, User};
-use crate::{Engine, Handlebars, Minijinja, Tera, TinyTemplate, Upon};
+use crate::{Engine, Handlebars, Liquid, Minijinja, Tera, TinyTemplate, Upon};
 
 macro_rules! t {
     ($E:ty, $source:literal) => {{
@@ -10,27 +10,31 @@ macro_rules! t {
 
 #[test]
 fn handlebars() {
-    t!(Handlebars, "../benchdata/handlebars.html");
+    t!(Handlebars, "../benchdata/basic/handlebars.html");
+}
+#[test]
+fn liquid() {
+    t!(Liquid, "../benchdata/basic/liquid.html");
 }
 
 #[test]
 fn minijinja() {
-    t!(Minijinja, "../benchdata/liquid.html");
+    t!(Minijinja, "../benchdata/basic/minijinja.html");
 }
 
 #[test]
 fn tera() {
-    t!(Tera, "../benchdata/liquid.html");
+    t!(Tera, "../benchdata/basic/tera.html");
 }
 
 #[test]
 fn tinytemplate() {
-    t!(TinyTemplate, "../benchdata/tinytemplate.html");
+    t!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
 }
 
 #[test]
 fn upon() {
-    t!(Upon, "../benchdata/liquid.html");
+    t!(Upon, "../benchdata/basic/upon.html");
 }
 
 fn render<'a, E: Engine<'a>>(source: &'a str) -> String {

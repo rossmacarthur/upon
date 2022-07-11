@@ -5,18 +5,19 @@ edition = "2021"
 publish = false
 
 [dependencies]
-handlebars = "4.3.0"
-minijinja = "0.15.0"
+handlebars = "4.3.1"
+liquid = "0.26.0"
+minijinja = "0.17.0"
 rand = "0.8.5"
-serde = { version = "1.0.137", features = ["derive"] }
-tera = "1.15.0"
+serde = { version = "1.0.139", features = ["derive"] }
+tera = "1.16.0"
 tinytemplate = "1.2.1"
 upon = { path = ".." }
 
 [dev-dependencies]
-criterion = { version = "0.3.5", features = ["html_reports"] }
+criterion = { version = "0.3.6", features = ["html_reports"] }
 goldie = "0.3.0"
 
 [[bench]]
-name = "engines"
+name = "basic"
 harness = false

@@ -2,7 +2,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use benches::context;
+use benches::{context, Liquid};
 use benches::{Engine, Handlebars, Minijinja, Tera, TinyTemplate, Upon};
 
 criterion_main! { benches }
@@ -21,6 +21,7 @@ fn bench_init(c: &mut Criterion) {
     }
 
     bench!(Handlebars);
+    bench!(Liquid);
     bench!(Minijinja);
     bench!(Tera);
     bench!(TinyTemplate);
@@ -41,11 +42,12 @@ fn bench_compile(c: &mut Criterion) {
         }};
     }
 
-    bench!(Handlebars, "../benchdata/handlebars.html");
-    bench!(Minijinja, "../benchdata/liquid.html");
-    bench!(Tera, "../benchdata/liquid.html");
-    bench!(TinyTemplate, "../benchdata/tinytemplate.html");
-    bench!(Upon, "../benchdata/liquid.html");
+    bench!(Handlebars, "../benchdata/basic/handlebars.html");
+    bench!(Liquid, "../benchdata/basic/liquid.html");
+    bench!(Minijinja, "../benchdata/basic/minijinja.html");
+    bench!(Tera, "../benchdata/basic/tera.html");
+    bench!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
+    bench!(Upon, "../benchdata/basic/upon.html");
 }
 
 /// Benchmarks the time taken to render a template as a string.
@@ -65,11 +67,12 @@ fn bench_render(c: &mut Criterion) {
         }};
     }
 
-    bench!(Handlebars, "../benchdata/handlebars.html");
-    bench!(Minijinja, "../benchdata/liquid.html");
-    bench!(Tera, "../benchdata/liquid.html");
-    bench!(TinyTemplate, "../benchdata/tinytemplate.html");
-    bench!(Upon, "../benchdata/liquid.html");
+    bench!(Handlebars, "../benchdata/basic/handlebars.html");
+    bench!(Liquid, "../benchdata/basic/liquid.html");
+    bench!(Minijinja, "../benchdata/basic/minijinja.html");
+    bench!(Tera, "../benchdata/basic/tera.html");
+    bench!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
+    bench!(Upon, "../benchdata/basic/upon.html");
 }
 
 fn repeat(source: &str, n: usize) -> String {

@@ -69,12 +69,13 @@ See more in the [docs](https://docs.rs/upon/latest/upon/#examples).
 The following shows a violin plot of the benchmark results for `upon` compared
 to the following template rendering engines.
 - [handlebars](https://crates.io/crates/handlebars)
+- [liquid](https://crates.io/crates/liquid)
 - [minijinja](https://crates.io/crates/minijinja)
 - [tera](https://crates.io/crates/tera)
 - [tinytemplate](https://crates.io/crates/tinytemplate)
 
 Obviously, each of these engines has a completely different feature set so this
-just compares the performance for some of the features that `upon` supports.
+just compares the performance of some of the features that they share.
 
 ![Violin plot of benchmark results](./benches/results/violin.svg)
 

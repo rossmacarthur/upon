@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+</head>
+<body>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Age</th>
+        </tr>
+      {%- for user in users -%}
+        {% unless user.is_disabled %}
+            {% comment %} This is a comment {% endcomment %}
+            <tr>
+                <td>{{ user.name }}</td>
+                <td>{{ user.age }}</td>
+            </tr>
+        {% endunless %}
+      {%- endfor -%}
+    </table>
+</body>
+</html>
