@@ -9,32 +9,52 @@ macro_rules! t {
 }
 
 #[test]
-fn handlebars() {
+fn basic_handlebars() {
     t!(Handlebars, "../benchdata/basic/handlebars.html");
 }
 #[test]
-fn liquid() {
+fn basic_liquid() {
     t!(Liquid, "../benchdata/basic/liquid.html");
 }
 
 #[test]
-fn minijinja() {
+fn basic_minijinja() {
     t!(Minijinja, "../benchdata/basic/minijinja.html");
 }
 
 #[test]
-fn tera() {
+fn basic_tera() {
     t!(Tera, "../benchdata/basic/tera.html");
 }
 
 #[test]
-fn tinytemplate() {
+fn basic_tinytemplate() {
     t!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
 }
 
 #[test]
-fn upon() {
+fn basic_upon() {
     t!(Upon, "../benchdata/basic/upon.html");
+}
+
+#[test]
+fn filters_handlebars() {
+    t!(Handlebars, "../benchdata/filters/handlebars.html");
+}
+
+#[test]
+fn filters_minijinja() {
+    t!(Minijinja, "../benchdata/filters/minijinja.html");
+}
+
+#[test]
+fn filters_tera() {
+    t!(Tera, "../benchdata/filters/tera.html");
+}
+
+#[test]
+fn filters_upon() {
+    t!(Upon, "../benchdata/filters/upon.html");
 }
 
 fn render<'a, E: Engine<'a>>(source: &'a str) -> String {
@@ -60,6 +80,7 @@ fn render<'a, E: Engine<'a>>(source: &'a str) -> String {
     };
 
     let mut engine = E::new();
+    engine.add_filters();
     engine.add_template("bench", &source);
     engine.render("bench", &ctx)
 }

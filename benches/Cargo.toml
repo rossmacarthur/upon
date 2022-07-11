@@ -10,6 +10,7 @@ liquid = "0.26.0"
 minijinja = "0.17.0"
 rand = "0.8.5"
 serde = { version = "1.0.139", features = ["derive"] }
+serde_json = "1.0.82"
 tera = "1.16.0"
 tinytemplate = "1.2.1"
 upon = { path = ".." }
@@ -19,5 +20,5 @@ criterion = { version = "0.3.6", features = ["html_reports"] }
 goldie = "0.3.0"
 
 [[bench]]
-name = "basic"
+name = "engines"
 harness = false

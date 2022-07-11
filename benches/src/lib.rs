@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub trait Engine<'a> {
     fn name() -> &'static str;
     fn new() -> Self;
+    fn add_filters(&mut self);
     fn add_template(&mut self, name: &'static str, source: &'a str);
     fn render<S>(&self, name: &'static str, ctx: &S) -> String
     where
@@ -19,6 +20,8 @@ pub trait Engine<'a> {
 ////////////////////////////////////////////////////////////////////////////////
 
 pub type Handlebars<'engine> = handlebars::Handlebars<'engine>;
+
+use handlebars::handlebars_helper;
 
 impl<'engine> Engine<'engine> for Handlebars<'engine> {
     #[inline]
@@ -33,6 +36,14 @@ impl<'engine> Engine<'engine> for Handlebars<'engine> {
         // to make the benchmark a bit fairer.
         hbs.register_escape_fn(handlebars::no_escape);
         hbs
+    }
+
+    #[inline]
+    fn add_filters(&mut self) {
+        handlebars_helper!(lower: |s: String| s.to_lowercase());
+        handlebars_helper!(reverse: |s: String| String::from_iter(s.chars().rev()));
+        self.register_helper("lower", Box::new(lower));
+        self.register_helper("reverse", Box::new(reverse));
     }
 
     #[inline]
@@ -73,6 +84,9 @@ impl<'engine> Engine<'engine> for Liquid {
     }
 
     #[inline]
+    fn add_filters(&mut self) {}
+
+    #[inline]
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
         let template = self.parser.parse(source).unwrap();
         self.store.insert(name, template);
@@ -109,6 +123,9 @@ impl<'engine> Engine<'engine> for Minijinja<'engine> {
     }
 
     #[inline]
+    fn add_filters(&mut self) {}
+
+    #[inline]
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
         self.add_template(name, source).unwrap();
     }
@@ -138,6 +155,9 @@ impl<'engine> Engine<'engine> for Tera {
     fn new() -> Self {
         tera::Tera::default()
     }
+
+    #[inline]
+    fn add_filters(&mut self) {}
 
     #[inline]
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
@@ -176,6 +196,9 @@ impl<'engine> Engine<'engine> for TinyTemplate<'engine> {
     }
 
     #[inline]
+    fn add_filters(&mut self) {}
+
+    #[inline]
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
         self.add_template(name, source).unwrap();
     }
@@ -204,6 +227,12 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
     #[inline]
     fn new() -> Self {
         upon::Engine::new()
+    }
+
+    #[inline]
+    fn add_filters(&mut self) {
+        self.add_filter("lower", str::to_lowercase);
+        self.add_filter("reverse", |s: &str| String::from_iter(s.chars().rev()))
     }
 
     #[inline]
