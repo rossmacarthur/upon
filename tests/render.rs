@@ -368,6 +368,19 @@ fn render_for_statement_map() {
 }
 
 #[test]
+fn render_for_statement_loop_index() {
+    let result = Engine::new()
+        .compile("lorem {% for ipsum in dolor %}{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ ipsum }}  {% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .unwrap();
+    assert_eq!(
+        result,
+        "lorem 0,true,false,t  1,false,false,e  2,false,false,s  3,false,true,t  "
+    );
+}
+
+#[test]
 fn render_for_statement_filtered_map() {
     let mut engine = Engine::new();
     engine.add_filter("rm", |mut map: BTreeMap<String, Value>, key: &str| {

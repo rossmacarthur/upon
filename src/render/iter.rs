@@ -1,4 +1,5 @@
 use std::collections::btree_map as map;
+use std::iter::Enumerate;
 use std::slice;
 use std::vec as list;
 
@@ -14,29 +15,29 @@ pub enum LoopState<'source, 'render> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
         item: &'source ast::Ident<'source>,
-        iter: slice::Iter<'render, Value>,
-        value: Option<&'render Value>,
+        iter: Enumerate<slice::Iter<'render, Value>>,
+        value: Option<(usize, &'render Value)>,
     },
 
     /// An iterator over an owned list and the last item yielded
     ListOwned {
         item: &'source ast::Ident<'source>,
-        iter: list::IntoIter<Value>,
-        value: Option<Value>,
+        iter: Enumerate<list::IntoIter<Value>>,
+        value: Option<(usize, Value)>,
     },
 
     /// An iterator over a borrowed map and the last key and value yielded
     MapBorrowed {
         kv: &'source ast::KeyValue<'source>,
-        iter: map::Iter<'render, String, Value>,
-        value: Option<(&'render String, &'render Value)>,
+        iter: Enumerate<map::Iter<'render, String, Value>>,
+        value: Option<(usize, (&'render String, &'render Value))>,
     },
 
     /// An iterator over an owned map and the last key and value yielded
     MapOwned {
         kv: &'source ast::KeyValue<'source>,
-        iter: map::IntoIter<String, Value>,
-        value: Option<(String, Value)>,
+        iter: Enumerate<map::IntoIter<String, Value>>,
+        value: Option<(usize, (String, Value))>,
     },
 }
 
@@ -81,7 +82,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                     let item = unpack_list_item(vars)?;
                     Ok(Self::ListBorrowed {
                         item,
-                        iter: list.iter(),
+                        iter: list.iter().enumerate(),
                         value: None,
                     })
                 }
@@ -90,7 +91,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                     let kv = unpack_map_item(vars)?;
                     Ok(Self::MapBorrowed {
                         kv,
-                        iter: map.iter(),
+                        iter: map.iter().enumerate(),
                         value: None,
                     })
                 }
@@ -102,7 +103,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                     let item = unpack_list_item(vars)?;
                     Ok(Self::ListOwned {
                         item,
-                        iter: list.into_iter(),
+                        iter: list.into_iter().enumerate(),
                         value: None,
                     })
                 }
@@ -111,7 +112,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                     let kv = unpack_map_item(vars)?;
                     Ok(Self::MapOwned {
                         kv,
-                        iter: map.into_iter(),
+                        iter: map.into_iter().enumerate(),
                         value: None,
                     })
                 }
@@ -145,6 +146,10 @@ impl<'source, 'render> LoopState<'source, 'render> {
     ) -> Result<Option<ValueCow<'render>>> {
         let name = path[0].raw;
 
+        if name == "loop" {
+            return self.resolve_loop(source, path);
+        }
+
         macro_rules! resolve {
             ($v:expr) => {{
                 let mut v = $v;
@@ -160,7 +165,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
         match self {
             Self::ListBorrowed {
                 item,
-                value: Some(value),
+                value: Some((_, value)),
                 ..
             } if item.raw == name => {
                 let v = resolve!(*value);
@@ -169,7 +174,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
 
             Self::ListOwned {
                 item,
-                value: Some(value),
+                value: Some((_, value)),
                 ..
             } if item.raw == name => {
                 let v = resolve!(value);
@@ -178,7 +183,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
 
             Self::MapBorrowed {
                 kv,
-                value: Some((string, _)),
+                value: Some((_, (string, _))),
                 ..
             } if kv.key.raw == name => {
                 if let [p, ..] = &path[1..] {
@@ -189,7 +194,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
 
             Self::MapOwned {
                 kv,
-                value: Some((string, _)),
+                value: Some((_, (string, _))),
                 ..
             } if kv.key.raw == name => {
                 if let [p, ..] = &path[1..] {
@@ -200,7 +205,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
 
             Self::MapBorrowed {
                 kv,
-                value: Some((_, value)),
+                value: Some((_, (_, value))),
                 ..
             } if kv.value.raw == name => {
                 let v = resolve!(*value);
@@ -209,7 +214,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
 
             Self::MapOwned {
                 kv,
-                value: Some((_, value)),
+                value: Some((_, (_, value))),
                 ..
             } if kv.value.raw == name => {
                 let v = resolve!(value);
@@ -217,6 +222,68 @@ impl<'source, 'render> LoopState<'source, 'render> {
             }
 
             _ => Ok(None),
+        }
+    }
+
+    pub fn resolve_loop(
+        &self,
+        source: &str,
+        path: &[ast::Ident<'source>],
+    ) -> Result<Option<ValueCow<'render>>> {
+        let (i, rem) = match self.current_index_and_rem() {
+            Some((i, rem)) => (i, rem),
+            None => return Ok(None),
+        };
+
+        if path.len() == 1 {
+            return Ok(Some(ValueCow::Owned(crate::value! {
+                index: i,
+                first: i == 0,
+                last: rem == 0,
+            })));
+        }
+
+        let v = match path[1].raw {
+            "index" => Value::Integer(i as i64),
+            "first" => Value::Bool(i == 0),
+            "last" => Value::Bool(rem == 0),
+            _ => return Err(Error::new("not found in map", source, path[1].span)),
+        };
+
+        if !path[2..].is_empty() {
+            return Err(Error::new(
+                format!("cannot index into {}", v.human()),
+                source,
+                path[2].span,
+            ));
+        }
+
+        Ok(Some(ValueCow::Owned(v)))
+    }
+
+    fn current_index_and_rem(&self) -> Option<(usize, usize)> {
+        match self {
+            LoopState::ListBorrowed {
+                iter,
+                value: Some((i, _)),
+                ..
+            } => Some((*i, iter.len())),
+            LoopState::ListOwned {
+                iter,
+                value: Some((i, _)),
+                ..
+            } => Some((*i, iter.len())),
+            LoopState::MapBorrowed {
+                iter,
+                value: Some((i, _)),
+                ..
+            } => Some((*i, iter.len())),
+            LoopState::MapOwned {
+                iter,
+                value: Some((i, _)),
+                ..
+            } => Some((*i, iter.len())),
+            _ => None,
         }
     }
 }
