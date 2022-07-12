@@ -22,36 +22,16 @@
 //!
 //! # Getting started
 //!
-//! Your entry point is the compilation and rendering [`Engine`], this stores
-//! the syntax config and filter functions. Generally, you only need to
-//! construct one engine during the lifetime of a program.
+//! Your entry point is the [`Engine`] struct. The engine stores the syntax
+//! config, filter functions, and compiled templates. Generally, you only need
+//! to construct one engine during the lifetime of a program.
 //!
 //! ```
 //! let engine = upon::Engine::new();
 //! ```
 //!
-//! Compiling a template returns a handle bound to the lifetime of the engine
-//! and the template source.
-//!
-//! ```
-//! # let engine = upon::Engine::new();
-//! let template = engine.compile("Hello {{ user.name }}!")?;
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! The template can then be rendered by calling
-//! [`.render()`][TemplateRef::render].
-//!
-//! ```
-//! # let engine = upon::Engine::new();
-//! # let template = engine.compile("Hello {{ user.name }}!")?;
-//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
-//! assert_eq!(result, "Hello John Smith!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! You can also use [`add_template(name, ...)`][Engine::add_template] and
-//! to store a template in the engine.
+//! Next, [`.add_template`][Engine::add_template] is used to compile and store a
+//! template in the engine.
 //!
 //! ```
 //! # let mut engine = upon::Engine::new();
@@ -59,14 +39,27 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! Then later fetch it by name using
-//! [`get_template(name)`][Engine::get_template].
+//! Finally, the template is rendered by fetching it using
+//! [`.get_template`][Engine::get_template] and calling
+//! [`.render`][TemplateRef::render].
 //!
 //! ```
 //! # let mut engine = upon::Engine::new();
 //! # engine.add_template("hello", "Hello {{ user.name }}!")?;
-//! let result = engine.get_template("hello").unwrap()
-//!     .render(upon::value!{ user: { name: "John Smith" }})?;
+//! let template = engine.get_template("hello").unwrap();
+//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+//! assert_eq!(result, "Hello John Smith!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! If the lifetime of the template source is shorter than the engine lifetime
+//! or you don't need to store the compiled template then you can also use the
+//! [`.compile`][Engine::compile] function to return the template directly.
+//!
+//! ```
+//! # let engine = upon::Engine::new();
+//! let template = engine.compile("Hello {{ user.name }}!")?;
+//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -175,6 +168,7 @@ mod error;
 mod filters;
 mod macros;
 mod render;
+pub mod syntax;
 mod types;
 mod value;
 
