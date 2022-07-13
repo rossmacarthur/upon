@@ -41,6 +41,16 @@ enum State<'source> {
         /// The span of the `for` block.
         span: Span,
     },
+
+    /// A partial `with` statement.
+    With {
+        /// The expression to shadow.
+        expr: ast::Expr<'source>,
+        /// The name to assign to this expression.
+        name: ast::Ident<'source>,
+        /// The span of the `with` block.
+        span: Span,
+    },
 }
 
 /// A parsed block definition.
@@ -50,6 +60,8 @@ enum Block<'source> {
     EndIf,
     For(ast::LoopVars<'source>, ast::Expr<'source>),
     EndFor,
+    With(ast::Expr<'source>, ast::Ident<'source>),
+    EndWith,
 }
 
 /// A keyword in the template syntax.
@@ -62,6 +74,9 @@ pub(crate) enum Keyword {
     For,
     In,
     EndFor,
+    With,
+    As,
+    EndWith,
     True,
     False,
 }
@@ -210,7 +225,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         //
                         //   {% endfor %}
                         //
-                        // We expect that the previous block was an `for` block.
+                        // We expect that the previous block was a `for` block.
                         Block::EndFor => {
                             let err =
                                 || Error::new("unexpected `endfor` block", self.source(), span);
@@ -228,6 +243,38 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                             };
                             ast::Stmt::ForLoop(for_loop)
                         }
+
+                        // The start of a `with` statement. For example:
+                        //
+                        //   {% with expr as ident %}
+                        //
+                        // We must push a block to the block stack and a scope
+                        // to the scope stack because a with statement starts a
+                        // new scope.
+                        Block::With(expr, name) => {
+                            blocks.push(State::With { expr, name, span });
+                            scopes.push(ast::Scope::new());
+                            continue;
+                        }
+
+                        // The end of a `with` statement. For example:
+                        //
+                        //   {% endwith %}
+                        //
+                        // We expect that the previous block was a `with` block.
+                        Block::EndWith => {
+                            let err =
+                                || Error::new("unexpected `endwith` block", self.source(), span);
+
+                            let with = match blocks.pop().ok_or_else(err)? {
+                                State::With { expr, name, .. } => {
+                                    let body = scopes.pop().unwrap();
+                                    ast::With { expr, name, body }
+                                }
+                                _ => return Err(err()),
+                            };
+                            ast::Stmt::With(with)
+                        }
                     }
                 }
                 (tk, span) => {
@@ -241,6 +288,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             let (msg, span) = match block {
                 State::If { span, .. } => ("unclosed `if` block", span),
                 State::For { span, .. } => ("unclosed `for` block", span),
+                State::With { span, .. } => ("unclosed `with` block", span),
             };
             return Err(Error::new(msg, self.source(), *span));
         }
@@ -268,6 +316,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   endfor
     ///
+    ///   with loop.index | is_even as even
+    ///
     fn parse_block(&mut self) -> Result<Block<'source>> {
         let (kw, span) = self.parse_keyword()?;
         match kw {
@@ -284,6 +334,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 Ok(Block::For(vars, iterable))
             }
             Keyword::EndFor => Ok(Block::EndFor),
+            Keyword::With => {
+                let expr = self.parse_expr()?;
+                self.expect_keyword(Keyword::As)?;
+                let name = self.parse_ident()?;
+                Ok(Block::With(expr, name))
+            }
+            Keyword::EndWith => Ok(Block::EndWith),
             kw => Err(self.err_unexpected_keyword(kw.human(), span)),
         }
     }
@@ -642,7 +699,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 impl Keyword {
     pub(crate) const fn all() -> &'static [&'static str] {
         &[
-            "if", "not", "else", "endif", "for", "in", "endfor", "true", "false",
+            "if", "not", "else", "endif", "for", "in", "endfor", "with", "as", "endwith", "true",
+            "false",
         ]
     }
 
@@ -655,7 +713,11 @@ impl Keyword {
             Self::For => "for",
             Self::In => "in",
             Self::EndFor => "endfor",
-            Self::True | Self::False => "bool",
+            Self::With => "with",
+            Self::As => "as",
+            Self::EndWith => "endwith",
+            Self::True => "true",
+            Self::False => "false",
         }
     }
 
@@ -668,6 +730,9 @@ impl Keyword {
             "for" => Self::For,
             "in" => Self::In,
             "endfor" => Self::EndFor,
+            "with" => Self::With,
+            "as" => Self::As,
+            "endwith" => Self::EndWith,
             "true" => Self::True,
             "false" => Self::False,
             _ => unreachable!(),

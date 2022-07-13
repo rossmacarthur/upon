@@ -464,6 +464,33 @@ fn render_for_statement_err_loop_var_scope() {
 }
 
 #[test]
+fn render_with_statement() {
+    let result = Engine::new()
+        .compile("lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %} sit")
+        .unwrap()
+        .render(value! { ipsum: "test", dolor: false })
+        .unwrap();
+    assert_eq!(result, "lorem test sit")
+}
+
+#[test]
+fn render_with_statement_err_var_scope() {
+    let err = Engine::new()
+        .compile("lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %}{{ dolor }}")
+        .unwrap()
+        .render(value! { ipsum: "test" })
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %}{{ dolor }}
+   |                                                           ^^^^^ not found in this scope
+"
+    );
+}
+
+#[test]
 fn render_to_writer() {
     let mut w = Writer::new();
     Engine::new()

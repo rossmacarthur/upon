@@ -109,6 +109,18 @@
 //! </ul>
 //! ```
 //!
+//! ## With blocks
+//!
+//! With blocks can be used to create a variable from an
+//! [**expression**](#expressions). The variable is only valid within the block
+//! and it shadows any outer variables with the same name.
+//!
+//! ```html
+//! {% with user.names | join: " " as fullname %}
+//!     Hello {{ fullname }}!
+//! {% endwith %}
+//! ```
+//!
 //! # Filters
 //!
 //! In all places where [**expressions**](#expressions) are valid, filters can

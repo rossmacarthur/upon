@@ -15,11 +15,14 @@ pub enum State<'source, 'render> {
     /// An entire scope of variables, always a map
     Scope(&'render Value),
 
-    /// An expression that we are building
-    Expr(ValueCow<'render>),
+    /// A single variable.
+    Var(&'source ast::Ident<'source>, ValueCow<'render>),
 
     /// The current state of a loop iteration
     Loop(LoopState<'source, 'render>),
+
+    /// An expression that we are building
+    Expr(ValueCow<'render>),
 }
 
 impl<'source, 'render> Stack<'source, 'render> {
@@ -49,7 +52,16 @@ impl<'source, 'render> Stack<'source, 'render> {
                             }
                         };
                     }
+
                     return Ok(ValueCow::Borrowed(v));
+                }
+
+                State::Var(name, value) if path[0].raw == name.raw => {
+                    let mut v: &Value = &value;
+                    for p in &path[1..] {
+                        v = index(self.source(), v, p)?;
+                    }
+                    return Ok(ValueCow::Owned(v.clone()));
                 }
 
                 State::Loop(loop_state) => {
@@ -78,10 +90,10 @@ impl<'source, 'render> Stack<'source, 'render> {
         }
     }
 
-    pub fn pop_expr(&mut self) -> ValueCow<'render> {
+    pub fn pop_var(&mut self) -> (&'source ast::Ident<'source>, ValueCow<'render>) {
         match self.stack.pop().unwrap() {
-            State::Expr(value) => value,
-            _ => panic!("expected expression"),
+            State::Var(name, value) => (name, value),
+            _ => panic!("expected variable"),
         }
     }
 
@@ -89,6 +101,13 @@ impl<'source, 'render> Stack<'source, 'render> {
         match self.stack.pop().unwrap() {
             State::Loop(state) => state,
             _ => panic!("expected loop state"),
+        }
+    }
+
+    pub fn pop_expr(&mut self) -> ValueCow<'render> {
+        match self.stack.pop().unwrap() {
+            State::Expr(value) => value,
+            _ => panic!("expected expression"),
         }
     }
 

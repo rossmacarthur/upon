@@ -85,6 +85,15 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     f.write_str(raw)?;
                 }
 
+                Instr::PushVar(name) => {
+                    let value = stack.pop_expr();
+                    stack.push(State::Var(name, value))
+                }
+
+                Instr::PopVar => {
+                    stack.pop_var();
+                }
+
                 Instr::StartLoop(vars, span) => {
                     let iterable = stack.pop_expr();
                     stack.push(State::Loop(LoopState::new(

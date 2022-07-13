@@ -17,6 +17,12 @@ pub enum Instr<'source> {
     /// Emit raw template
     EmitRaw(&'source str),
 
+    /// Pop the value at the top of the stack and add it to the current scope
+    PushVar(ast::Ident<'source>),
+
+    /// Remove a previously added variable to the scope
+    PopVar,
+
     /// Start a loop over value items
     StartLoop(ast::LoopVars<'source>, Span),
 

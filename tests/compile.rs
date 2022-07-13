@@ -95,6 +95,13 @@ fn compile_for_statement_key_value() {
 }
 
 #[test]
+fn compile_with_statement() {
+    Engine::new()
+        .compile("lorem {% with ipsum as dolor %} {{ dolor }} {% endwith %} sit")
+        .unwrap();
+}
+
+#[test]
 fn compile_inline_expr_err_eof() {
     let err = Engine::new().compile("lorem {{ ipsum.dolor |").unwrap_err();
     assert_eq!(
@@ -463,6 +470,51 @@ fn compile_for_statement_err_unclosed_for_block() {
    |
  1 | lorem {% for ipsum, dolor in sit %} amet
    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unclosed `for` block
+"
+    );
+}
+
+#[test]
+fn compile_with_statement_err_unclosed_with_block() {
+    let err = Engine::new()
+        .compile("lorem {% with ipsum as dolor %} sit")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% with ipsum as dolor %} sit
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^ unclosed `with` block
+"
+    );
+}
+
+#[test]
+fn compile_with_statement_err_unexpected_endwith_block() {
+    let err = Engine::new()
+        .compile("lorem {% with ipsum as dolor %} sit {% else %} {% endif %}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% with ipsum as dolor %} sit {% else %} {% endif %}
+   |                                     ^^^^^^^^^^ unexpected `else` block
+"
+    );
+}
+
+#[test]
+fn compile_with_statement_err_unexpected_else_block() {
+    let err = Engine::new()
+        .compile("lorem {% endwith %} ipsum")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% endwith %} ipsum
+   |       ^^^^^^^^^^^^^ unexpected `endwith` block
 "
     );
 }

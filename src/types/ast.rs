@@ -20,6 +20,7 @@ pub enum Stmt<'source> {
     InlineExpr(InlineExpr<'source>),
     IfElse(IfElse<'source>),
     ForLoop(ForLoop<'source>),
+    With(With<'source>),
 }
 
 #[cfg_attr(test, derive(Debug))]
@@ -54,6 +55,13 @@ pub struct KeyValue<'source> {
     pub key: Ident<'source>,
     pub value: Ident<'source>,
     pub span: Span,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct With<'source> {
+    pub expr: Expr<'source>,
+    pub name: Ident<'source>,
+    pub body: Scope<'source>,
 }
 
 #[cfg_attr(test, derive(Debug))]

@@ -108,6 +108,13 @@ impl<'source> Compiler<'source> {
                 self.push(Instr::Jump(j));
                 self.update_jump(j);
             }
+
+            ast::Stmt::With(ast::With { expr, name, body }) => {
+                self.compile_expr(expr);
+                self.push(Instr::PushVar(name));
+                self.compile_scope(body);
+                self.push(Instr::PopVar);
+            }
         }
     }
 
