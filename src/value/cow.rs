@@ -1,6 +1,5 @@
 //! Defines a clone-on-write [`Value`].
 
-use std::mem;
 use std::ops::Deref;
 
 use crate::Value;
@@ -23,10 +22,11 @@ impl Deref for ValueCow<'_> {
 }
 
 impl<'a> ValueCow<'a> {
+    #[cfg(feature = "filters")]
     pub fn take(&mut self) -> Value {
         match self {
             Self::Borrowed(v) => v.clone(),
-            Self::Owned(v) => mem::take(v),
+            Self::Owned(v) => std::mem::take(v),
         }
     }
 }

@@ -166,6 +166,7 @@
 
 mod compile;
 mod error;
+#[cfg(feature = "filters")]
 mod filters;
 mod macros;
 mod render;
@@ -178,12 +179,14 @@ use std::fmt;
 use std::io;
 
 pub use crate::error::Error;
+#[cfg(feature = "filters")]
 pub use crate::filters::Filter;
 pub use crate::render::{format, Formatter};
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 pub use crate::value::{to_value, Value};
 
 use crate::compile::Searcher;
+#[cfg(feature = "filters")]
 use crate::filters::{FilterArgs, FilterFn, FilterReturn};
 use crate::types::program;
 
@@ -199,6 +202,7 @@ pub struct Engine<'engine> {
 }
 
 enum EngineFn {
+    #[cfg(feature = "filters")]
     Filter(Box<FilterFn>),
     Formatter(Box<FormatFn>),
 }
@@ -267,6 +271,7 @@ impl<'engine> Engine<'engine> {
     /// Add a new filter to the engine.
     ///
     /// **Note:** filters and formatters share the same namespace.
+    #[cfg(feature = "filters")]
     #[inline]
     pub fn add_filter<F, R, A>(&mut self, name: &'engine str, f: F)
     where

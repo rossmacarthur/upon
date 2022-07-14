@@ -44,6 +44,7 @@ struct Renderer<'engine, 'source> {
     template: &'source Template<'source>,
 }
 
+#[cfg(feature = "filters")]
 #[cfg_attr(test, derive(Debug))]
 pub struct FilterState<'a> {
     pub stack: &'a Stack<'a, 'a>,
@@ -184,6 +185,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                         // The referenced function is a filter, so we apply
                         // it and then emit the value using the default
                         // formatter.
+                        #[cfg(feature = "filters")]
                         Some(EngineFn::Filter(filter)) => {
                             let mut value = stack.pop_expr();
                             let result = filter(FilterState {
@@ -216,6 +218,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
 
                 Instr::Call(name, span, args) => match self.engine.functions.get(name.raw) {
                     // The referenced function is a filter, so we apply it.
+                    #[cfg(feature = "filters")]
                     Some(EngineFn::Filter(filter)) => {
                         let mut value = stack.pop_expr();
                         let args = args

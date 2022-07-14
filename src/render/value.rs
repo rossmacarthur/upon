@@ -17,20 +17,6 @@ impl ValueCow<'_> {
             )),
         }
     }
-
-    pub fn apply<F>(&mut self, f: F)
-    where
-        F: FnOnce(&mut Value),
-    {
-        match self {
-            ValueCow::Borrowed(b) => {
-                let mut o = b.clone();
-                f(&mut o);
-                *self = ValueCow::Owned(o);
-            }
-            ValueCow::Owned(ref mut o) => f(o),
-        }
-    }
 }
 
 impl Value {

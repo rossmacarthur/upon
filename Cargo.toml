@@ -11,11 +11,20 @@ keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
 
 [features]
-default = ["unicode"]
+default = ["filters", "unicode"]
 
-# Only used for displaying errors
-# If disabled then chars().count() will be used instead
+# Enable filters
+# --------------
+#   If disabled then filters will not be available for use in templates
+#   (Note: this does not affect value formatters)
+filters = []
+
+# Enable better unicode support
+# -----------------------------
+#   This is currently only affects error formatting
+#   If disabled then chars().count() will be used instead
 unicode = ["dep:unicode-width"]
+
 
 [dependencies]
 serde = "1.0.137"
