@@ -9,6 +9,7 @@ repository = "https://github.com/rossmacarthur/upon"
 license = "MIT OR Apache-2.0"
 keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
+include = ["src/**/*", "LICENSE-*", "README.md"]
 
 [features]
 default = ["filters", "serde", "unicode"]
