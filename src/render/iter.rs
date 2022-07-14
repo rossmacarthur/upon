@@ -236,11 +236,11 @@ impl<'source, 'render> LoopState<'source, 'render> {
         };
 
         if path.len() == 1 {
-            return Ok(Some(ValueCow::Owned(crate::value! {
-                index: i,
-                first: i == 0,
-                last: rem == 0,
-            })));
+            return Ok(Some(ValueCow::Owned(Value::from([
+                ("index", Value::Integer(i as i64)),
+                ("first", Value::Bool(i == 0)),
+                ("last", Value::Bool(rem == 0)),
+            ]))));
         }
 
         let v = match path[1].raw {

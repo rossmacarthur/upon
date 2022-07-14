@@ -11,7 +11,7 @@ keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
 
 [features]
-default = ["filters", "unicode"]
+default = ["filters", "serde", "unicode"]
 
 # Enable filters
 # --------------
@@ -19,15 +19,20 @@ default = ["filters", "unicode"]
 #   (Note: this does not affect value formatters)
 filters = []
 
+# Enable serde support
+# --------------------
+#   If disabled then you will have to use .render{_to_writer}_from() to render templates
+#   Note: Disabling this also disables the `value!` macro
+serde = ["dep:serde"]
+
 # Enable better unicode support
 # -----------------------------
 #   This is currently only affects error formatting
 #   If disabled then chars().count() will be used instead
 unicode = ["dep:unicode-width"]
 
-
 [dependencies]
-serde = "1.0.137"
+serde = { version = "1.0.137", optional = true }
 unicode-width = { version = "0.1.9", optional = true }
 
 [dev-dependencies]

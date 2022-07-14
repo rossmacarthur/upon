@@ -2,11 +2,13 @@
 
 mod cow;
 mod from;
+#[cfg(feature = "serde")]
 mod ser;
 
 use std::collections::BTreeMap;
 
 pub(crate) use crate::value::cow::ValueCow;
+#[cfg(feature = "serde")]
 pub use crate::value::ser::to_value;
 
 /// Data to be rendered represented as a recursive enum.

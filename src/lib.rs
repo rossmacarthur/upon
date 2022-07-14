@@ -168,6 +168,7 @@ mod compile;
 mod error;
 #[cfg(feature = "filters")]
 mod filters;
+#[cfg(feature = "serde")]
 mod macros;
 mod render;
 pub mod syntax;
@@ -183,7 +184,9 @@ pub use crate::error::Error;
 pub use crate::filters::Filter;
 pub use crate::render::{format, Formatter};
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
-pub use crate::value::{to_value, Value};
+#[cfg(feature = "serde")]
+pub use crate::value::to_value;
+pub use crate::value::Value;
 
 use crate::compile::Searcher;
 #[cfg(feature = "filters")]
@@ -351,6 +354,7 @@ impl fmt::Debug for Engine<'_> {
 
 impl<'engine, 'source> Template<'engine, 'source> {
     /// Render the template to a string using the provided value.
+    #[cfg(feature = "serde")]
     #[inline]
     pub fn render<S>(&self, ctx: S) -> Result<String>
     where
@@ -360,6 +364,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     }
 
     /// Render the template to a writer using the provided value.
+    #[cfg(feature = "serde")]
     #[inline]
     pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
     where
@@ -367,6 +372,25 @@ impl<'engine, 'source> Template<'engine, 'source> {
         S: serde::Serialize,
     {
         render::template_to(self.engine, &self.template, writer, to_value(ctx)?)
+    }
+
+    /// Render the template to a string using the provided value.
+    #[inline]
+    pub fn render_from<V>(&self, ctx: V) -> Result<String>
+    where
+        V: Into<Value>,
+    {
+        render::template(self.engine, &self.template, ctx.into())
+    }
+
+    /// Render the template to a writer using the provided value.
+    #[inline]
+    pub fn render_to_writer_from<W, V>(&self, writer: W, ctx: V) -> Result<()>
+    where
+        W: io::Write,
+        V: Into<Value>,
+    {
+        render::template_to(self.engine, &self.template, writer, ctx.into())
     }
 
     /// Returns the original template source.
@@ -387,22 +411,43 @@ impl fmt::Debug for Template<'_, '_> {
 
 impl<'engine> TemplateRef<'engine> {
     /// Render the template to a string using the provided value.
+    #[cfg(feature = "serde")]
     #[inline]
     pub fn render<S>(&self, ctx: S) -> Result<String>
     where
         S: serde::Serialize,
     {
-        render::template(self.engine, self.template, to_value(ctx)?)
+        render::template(self.engine, &self.template, to_value(ctx)?)
     }
 
     /// Render the template to a writer using the provided value.
+    #[cfg(feature = "serde")]
     #[inline]
     pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
     where
         W: io::Write,
         S: serde::Serialize,
     {
-        render::template_to(self.engine, self.template, writer, to_value(ctx)?)
+        render::template_to(self.engine, &self.template, writer, to_value(ctx)?)
+    }
+
+    /// Render the template to a string using the provided value.
+    #[inline]
+    pub fn render_from<V>(&self, ctx: V) -> Result<String>
+    where
+        V: Into<Value>,
+    {
+        render::template(self.engine, &self.template, ctx.into())
+    }
+
+    /// Render the template to a writer using the provided value.
+    #[inline]
+    pub fn render_to_writer_from<W, V>(&self, writer: W, ctx: V) -> Result<()>
+    where
+        W: io::Write,
+        V: Into<Value>,
+    {
+        render::template_to(self.engine, &self.template, writer, ctx.into())
     }
 
     /// Returns the original template source.
