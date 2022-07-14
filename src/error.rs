@@ -2,8 +2,6 @@ use std::cmp::max;
 use std::fmt;
 use std::io;
 
-use unicode_width::UnicodeWidthStr;
-
 use crate::types::span::Span;
 
 /// An error that can occur during template compilation or rendering.
@@ -123,11 +121,11 @@ fn fmt_pretty(
 ) -> fmt::Result {
     let lines: Vec<_> = source.split_terminator('\n').collect();
     let (line, col) = to_line_col(&lines, span.m);
-    let width = max(1, source[span].width());
+    let width = max(1, display_width(&source[span]));
     let code = lines.get(line).unwrap_or_else(|| lines.last().unwrap());
 
     let num = (line + 1).to_string();
-    let pad = num.width();
+    let pad = display_width(&num);
     let pipe = "|";
     let underline = "^".repeat(width);
 
@@ -151,11 +149,24 @@ fn fmt_pretty(
 fn to_line_col(lines: &[&str], offset: usize) -> (usize, usize) {
     let mut n = 0;
     for (i, line) in lines.iter().enumerate() {
-        let len = line.width() + 1;
+        let len = display_width(line) + 1;
         if n + len > offset {
             return (i, offset - n);
         }
         n += len;
     }
-    (lines.len(), lines.last().map(|l| l.width()).unwrap_or(0))
+    (
+        lines.len(),
+        lines.last().map(|l| display_width(l)).unwrap_or(0),
+    )
+}
+
+#[cfg(feature = "unicode")]
+fn display_width(s: &str) -> usize {
+    unicode_width::UnicodeWidthStr::width(s)
+}
+
+#[cfg(not(feature = "unicode"))]
+fn display_width(s: &str) -> usize {
+    s.chars().count()
 }

@@ -10,9 +10,16 @@ license = "MIT OR Apache-2.0"
 keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
 
+[features]
+default = ["unicode"]
+
+# Only used for displaying errors
+# If disabled then chars().count() will be used instead
+unicode = ["dep:unicode-width"]
+
 [dependencies]
 serde = "1.0.137"
-unicode-width = "0.1.9"
+unicode-width = { version = "0.1.9", optional = true }
 
 [dev-dependencies]
 serde = { version = "1.0.137", features = ["derive"] }
