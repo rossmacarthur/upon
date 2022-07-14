@@ -7,6 +7,7 @@
 //! - Expressions: `{{ user.name }}`
 //! - Conditionals: `{% if user.enabled %} ... {% endif %}`
 //! - Loops: `{% for user in users %} ... {% endfor %}`
+//! - Nested templates: `{% include "nested" %}`
 //! - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
 //! - Arbitrary filter functions: `{{ user.name | replace: "\t", " " }}`
 //!

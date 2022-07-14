@@ -47,10 +47,23 @@ struct Renderer<'engine, 'source> {
 #[cfg_attr(test, derive(Debug))]
 pub struct FilterState<'a> {
     pub stack: &'a Stack<'a, 'a>,
+    pub source: &'a str,
     pub filter: &'a ast::Ident<'a>,
     pub value: &'a mut ValueCow<'a>,
     pub value_span: Span,
     pub args: &'a [ast::Arg<'a>],
+}
+
+#[cfg_attr(test, derive(Debug))]
+enum RenderState<'engine, 'render> {
+    Done,
+    Include {
+        template: &'engine Template<'engine>,
+    },
+    IncludeWith {
+        template: &'engine Template<'engine>,
+        globals: ValueCow<'render>,
+    },
 }
 
 impl<'engine, 'source> Renderer<'engine, 'source> {
@@ -59,7 +72,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     }
 
     pub fn render(&self, globals: Value) -> Result<String> {
-        let mut s = String::with_capacity(self.source().len());
+        let mut s = String::with_capacity(self.template.source.len());
         let mut f = Formatter::with_string(&mut s);
         self.render_impl(&mut f, globals)?;
         Ok(s)
@@ -76,13 +89,73 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     }
 
     fn render_impl(&self, f: &mut Formatter<'_>, globals: Value) -> Result<()> {
-        let mut pc = 0;
-        let mut stack = Stack::new(self.template.source, &globals);
+        let mut stack = Stack::new(ValueCow::Borrowed(&globals));
+        let mut templates = vec![(self.template, 0)];
 
-        while let Some(instr) = self.template.instrs.get(pc) {
+        while let Some((t, pc)) = templates.last_mut() {
+            match self.render_one(f, t, pc, &mut stack)? {
+                RenderState::Done => {
+                    templates.pop();
+                }
+                RenderState::Include { template } => {
+                    templates.push((template, 0));
+                }
+                RenderState::IncludeWith { template, globals } => {
+                    stack.push(State::Boundary);
+                    stack.push(State::Scope(globals));
+                    templates.push((template, 0));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn render_one<'render>(
+        &self,
+        f: &mut Formatter<'_>,
+        t: &'source Template<'source>,
+        pc: &mut usize,
+        stack: &mut Stack<'source, 'render>,
+    ) -> Result<RenderState<'engine, 'render>> {
+        while let Some(instr) = t.instrs.get(*pc) {
             match instr {
                 Instr::EmitRaw(raw) => {
                     f.write_str(raw)?;
+                }
+
+                Instr::Jump(j) => {
+                    *pc = *j;
+                    continue;
+                }
+
+                Instr::JumpIfTrue(j, span) => {
+                    if stack.pop_expr().as_bool(t.source, *span)? {
+                        *pc = *j;
+                        continue;
+                    }
+                }
+
+                Instr::JumpIfFalse(j, span) => {
+                    if !stack.pop_expr().as_bool(t.source, *span)? {
+                        *pc = *j;
+                        continue;
+                    }
+                }
+
+                Instr::StartLoop(vars, span) => {
+                    let iterable = stack.pop_expr();
+                    stack.push(State::Loop(LoopState::new(
+                        t.source, vars, iterable, *span,
+                    )?));
+                }
+
+                Instr::Iterate(j) => {
+                    if stack.last_loop_state_mut().iterate().is_none() {
+                        stack.pop_loop_state();
+                        *pc = *j;
+                        continue;
+                    }
                 }
 
                 Instr::PushVar(name) => {
@@ -94,45 +167,8 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     stack.pop_var();
                 }
 
-                Instr::StartLoop(vars, span) => {
-                    let iterable = stack.pop_expr();
-                    stack.push(State::Loop(LoopState::new(
-                        self.source(),
-                        vars,
-                        iterable,
-                        *span,
-                    )?));
-                }
-
-                Instr::Iterate(j) => {
-                    if stack.last_loop_state_mut().iterate().is_none() {
-                        stack.pop_loop_state();
-                        pc = *j;
-                        continue;
-                    }
-                }
-
-                Instr::Jump(j) => {
-                    pc = *j;
-                    continue;
-                }
-
-                Instr::JumpIfTrue(j, span) => {
-                    if stack.pop_expr().as_bool(self.source(), *span)? {
-                        pc = *j;
-                        continue;
-                    }
-                }
-
-                Instr::JumpIfFalse(j, span) => {
-                    if !stack.pop_expr().as_bool(self.source(), *span)? {
-                        pc = *j;
-                        continue;
-                    }
-                }
-
                 Instr::Push(path) => {
-                    let value = stack.resolve_path(path)?;
+                    let value = stack.resolve_path(t.source, path)?;
                     stack.push(State::Expr(value));
                 }
 
@@ -140,7 +176,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     let value = stack.pop_expr();
                     // Emit the value using the default formatter.
                     (self.engine.default_formatter)(f, &value)
-                        .map_err(|err| err.with_span(self.source(), *span))?;
+                        .map_err(|err| err.with_span(t.source, *span))?;
                 }
 
                 Instr::PopEmitWith(name, span) => {
@@ -151,27 +187,27 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                         Some(EngineFn::Filter(filter)) => {
                             let mut value = stack.pop_expr();
                             let result = filter(FilterState {
-                                stack: &stack,
+                                stack,
+                                source: t.source,
                                 filter: name,
                                 value: &mut value,
                                 value_span: *span,
                                 args: &[],
                             })?;
                             (self.engine.default_formatter)(f, &result)
-                                .map_err(|err| err.with_span(self.source(), *span))?;
+                                .map_err(|err| err.with_span(t.source, *span))?;
                         }
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
                         Some(EngineFn::Formatter(formatter)) => {
                             let value = stack.pop_expr();
-                            formatter(f, &value)
-                                .map_err(|err| err.with_span(self.source(), *span))?;
+                            formatter(f, &value).map_err(|err| err.with_span(t.source, *span))?;
                         }
                         // No filter or formatter exists.
                         None => {
                             return Err(Error::new(
                                 "unknown filter or formatter",
-                                self.source(),
+                                t.source,
                                 name.span,
                             ));
                         }
@@ -187,7 +223,8 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                             .map(|args| args.values.as_slice())
                             .unwrap_or(&[]);
                         let result = filter(FilterState {
-                            stack: &stack,
+                            stack,
+                            source: t.source,
                             filter: name,
                             value: &mut value,
                             value_span: *span,
@@ -200,26 +237,41 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     Some(EngineFn::Formatter(_)) => {
                         return Err(Error::new(
                             "expected filter, found formatter",
-                            self.source(),
+                            t.source,
                             name.span,
                         ));
                     }
                     // No filter or formatter exists.
                     None => {
-                        return Err(Error::new("unknown filter", self.source(), name.span));
+                        return Err(Error::new("unknown filter", t.source, name.span));
                     }
                 },
+
+                Instr::Include(name) => {
+                    *pc += 1;
+                    let template = self.get_template(t.source, name)?;
+                    return Ok(RenderState::Include { template });
+                }
+
+                Instr::IncludeWith(name) => {
+                    *pc += 1;
+                    let template = self.get_template(t.source, name)?;
+                    let globals = stack.pop_expr();
+                    return Ok(RenderState::IncludeWith { template, globals });
+                }
             }
-            pc += 1;
+            *pc += 1;
         }
 
-        assert!(pc == self.template.instrs.len());
-
-        Ok(())
+        assert!(*pc == t.instrs.len());
+        Ok(RenderState::Done)
     }
 
-    fn source(&self) -> &'source str {
-        self.template.source
+    fn get_template(&self, source: &str, name: &ast::String) -> Result<&'engine Template<'engine>> {
+        self.engine
+            .templates
+            .get(name.name.as_str())
+            .ok_or_else(|| Error::new("unknown template", source, name.span))
     }
 }
 

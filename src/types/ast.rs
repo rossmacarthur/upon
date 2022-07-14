@@ -18,6 +18,7 @@ pub struct Scope<'source> {
 pub enum Stmt<'source> {
     Raw(&'source str),
     InlineExpr(InlineExpr<'source>),
+    Include(Include<'source>),
     IfElse(IfElse<'source>),
     ForLoop(ForLoop<'source>),
     With(With<'source>),
@@ -26,6 +27,18 @@ pub enum Stmt<'source> {
 #[cfg_attr(test, derive(Debug))]
 pub struct InlineExpr<'source> {
     pub expr: Expr<'source>,
+    pub span: Span,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct Include<'source> {
+    pub name: String,
+    pub globals: Option<Expr<'source>>,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct String {
+    pub name: std::string::String,
     pub span: Span,
 }
 

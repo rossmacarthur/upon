@@ -14,13 +14,19 @@ pub struct Template<'source> {
 
 #[cfg_attr(test, derive(Debug))]
 pub enum Instr<'source> {
+    /// Render a template
+    Include(ast::String),
+
+    /// Pop the value at the top of stack and render a template with it
+    IncludeWith(ast::String),
+
     /// Emit raw template
     EmitRaw(&'source str),
 
     /// Pop the value at the top of the stack and add it to the current scope
     PushVar(ast::Ident<'source>),
 
-    /// Remove a previously added variable to the scope
+    /// Remove a previously added variable from the scope
     PopVar,
 
     /// Start a loop over value items

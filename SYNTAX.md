@@ -111,9 +111,9 @@ Additionally, there are three special values available within loops.
 </ul>
 ```
 
-### With blocks
+### With
 
-With blocks can be used to create a variable from an
+“With” blocks can be used to create a variable from an
 [**expression**](#expressions). The variable is only valid within the block
 and it shadows any outer variables with the same name.
 
@@ -121,6 +121,37 @@ and it shadows any outer variables with the same name.
 {% with user.names | join: " " as fullname %}
     Hello {{ fullname }}!
 {% endwith %}
+```
+
+### Include
+
+“Include” blocks can be used to render nested templates. The nested template
+must have been registered in the engine before rendering. For example,
+assuming a template “footer” has been registered in the engine the following
+would render the template “footer” in the place of the include block. All
+variables in the current template will be available to the nested template.
+
+```html
+<body>
+    ...
+
+    {% include "footer" %}
+
+</body>
+```
+
+You can also include the nested using a specific context. In this case the
+nested template would not have any access to the current template’s
+variables and `path.to.footer.info` would form the global context for the
+nested template.
+
+```html
+<body>
+    ...
+
+    {% include "footer" with path.to.footer.info %}
+
+</body>
 ```
 
 ## Filters

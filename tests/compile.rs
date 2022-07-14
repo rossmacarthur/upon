@@ -58,50 +58,6 @@ fn compile_inline_expr_filter_args() {
 }
 
 #[test]
-fn compile_if_statement() {
-    Engine::new()
-        .compile("lorem {% if ipsum %} dolor {% endif %} sit")
-        .unwrap();
-}
-
-#[test]
-fn compile_if_else_statement() {
-    Engine::new()
-        .compile("lorem {% if ipsum %} dolor {% else %} sit {% endif %} amet")
-        .unwrap();
-}
-
-#[test]
-fn compile_nested_if_else_statement() {
-    Engine::new()
-        .compile(
-            "lorem {% if ipsum %} dolor {% else %} {% if sit %} amet {% endif %}, consectetur {% endif %}",
-        )
-        .unwrap();
-}
-
-#[test]
-fn compile_for_statement_item() {
-    Engine::new()
-        .compile("lorem {% for ipsum in dolor %} {{ sit }} {% endfor %} amet")
-        .unwrap();
-}
-
-#[test]
-fn compile_for_statement_key_value() {
-    Engine::new()
-        .compile("lorem {% for ipsum, dolor in sit %} {{ amet }} {% endfor %}, consectetur")
-        .unwrap();
-}
-
-#[test]
-fn compile_with_statement() {
-    Engine::new()
-        .compile("lorem {% with ipsum as dolor %} {{ dolor }} {% endwith %} sit")
-        .unwrap();
-}
-
-#[test]
 fn compile_inline_expr_err_eof() {
     let err = Engine::new().compile("lorem {{ ipsum.dolor |").unwrap_err();
     assert_eq!(
@@ -280,6 +236,29 @@ fn compile_inline_expr_err_expected_end_expression() {
 }
 
 #[test]
+fn compile_if_statement() {
+    Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% endif %} sit")
+        .unwrap();
+}
+
+#[test]
+fn compile_if_else_statement() {
+    Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% else %} sit {% endif %} amet")
+        .unwrap();
+}
+
+#[test]
+fn compile_nested_if_else_statement() {
+    Engine::new()
+        .compile(
+            "lorem {% if ipsum %} dolor {% else %} {% if sit %} amet {% endif %}, consectetur {% endif %}",
+        )
+        .unwrap();
+}
+
+#[test]
 fn compile_if_statement_err_expected_keyword() {
     let err = Engine::new()
         .compile("lorem {% fi ipsum %} dolor {% endif %} sit")
@@ -367,6 +346,19 @@ fn compile_if_statement_err_unclosed_if_block() {
    |       ^^^^^^^^^^^^^^ unclosed `if` block
 "
     );
+}
+#[test]
+fn compile_for_statement_item() {
+    Engine::new()
+        .compile("lorem {% for ipsum in dolor %} {{ sit }} {% endfor %} amet")
+        .unwrap();
+}
+
+#[test]
+fn compile_for_statement_key_value() {
+    Engine::new()
+        .compile("lorem {% for ipsum, dolor in sit %} {{ amet }} {% endfor %}, consectetur")
+        .unwrap();
 }
 
 #[test]
@@ -475,6 +467,13 @@ fn compile_for_statement_err_unclosed_for_block() {
 }
 
 #[test]
+fn compile_with_statement() {
+    Engine::new()
+        .compile("lorem {% with ipsum as dolor %} {{ dolor }} {% endwith %} sit")
+        .unwrap();
+}
+
+#[test]
 fn compile_with_statement_err_unclosed_with_block() {
     let err = Engine::new()
         .compile("lorem {% with ipsum as dolor %} sit")
@@ -517,4 +516,25 @@ fn compile_with_statement_err_unexpected_else_block() {
    |       ^^^^^^^^^^^^^ unexpected `endwith` block
 "
     );
+}
+
+#[test]
+fn compile_include_statement() {
+    Engine::new()
+        .compile(r#"lorem {% include "ipsum" %} dolor"#)
+        .unwrap();
+}
+
+#[test]
+fn compile_include_with_statement() {
+    Engine::new()
+        .compile(r#"lorem {% include "ipsum" with dolor %} sit"#)
+        .unwrap();
+}
+
+#[test]
+fn compile_include_with_statement_filters() {
+    Engine::new()
+        .compile(r#"lorem {% include "ipsum" with dolor.sit | amet: 1337 %}"#)
+        .unwrap();
 }

@@ -208,7 +208,7 @@ where
 
     fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
         check_args(&state, 0)?;
-        let err = |e| err_expected_val(e, state.stack.source(), state.filter.span);
+        let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
         Ok((v,))
     }
@@ -222,9 +222,9 @@ where
 
     fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
         check_args(&state, 1)?;
-        let err = |e| err_expected_val(e, state.stack.source(), state.filter.span);
+        let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
-        let a = get_arg::<A>(state.stack, state.args, 0)?;
+        let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
         Ok((v, a))
     }
 }
@@ -239,10 +239,10 @@ where
 
     fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
         check_args(&state, 2)?;
-        let err = |e| err_expected_val(e, state.stack.source(), state.filter.span);
+        let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
-        let a = get_arg::<A>(state.stack, state.args, 0)?;
-        let b = get_arg::<B>(state.stack, state.args, 1)?;
+        let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
+        let b = get_arg::<B>(state.source, state.stack, state.args, 1)?;
         Ok((v, a, b))
     }
 }
@@ -258,11 +258,11 @@ where
 
     fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
         check_args(&state, 3)?;
-        let err = |e| err_expected_val(e, state.stack.source(), state.filter.span);
+        let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
-        let a = get_arg::<A>(state.stack, state.args, 0)?;
-        let b = get_arg::<B>(state.stack, state.args, 1)?;
-        let c = get_arg::<C>(state.stack, state.args, 2)?;
+        let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
+        let b = get_arg::<B>(state.source, state.stack, state.args, 1)?;
+        let c = get_arg::<C>(state.source, state.stack, state.args, 2)?;
         Ok((v, a, b, c))
     }
 }
@@ -279,12 +279,12 @@ where
 
     fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
         check_args(&state, 4)?;
-        let err = |e| err_expected_val(e, state.stack.source(), state.filter.span);
+        let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
-        let a = get_arg::<A>(state.stack, state.args, 0)?;
-        let b = get_arg::<B>(state.stack, state.args, 1)?;
-        let c = get_arg::<C>(state.stack, state.args, 2)?;
-        let d = get_arg::<D>(state.stack, state.args, 3)?;
+        let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
+        let b = get_arg::<B>(state.source, state.stack, state.args, 1)?;
+        let c = get_arg::<C>(state.source, state.stack, state.args, 2)?;
+        let d = get_arg::<D>(state.source, state.stack, state.args, 3)?;
         Ok((v, a, b, c, d))
     }
 }
@@ -295,27 +295,32 @@ fn check_args(state: &FilterState<'_>, exp: usize) -> Result<()> {
     } else {
         Err(Error::new(
             format!("filter expected {} arguments", exp),
-            state.stack.source(),
+            state.source,
             state.filter.span,
         ))
     }
 }
 
-fn get_arg<'a, T>(stack: &'a Stack<'a, 'a>, args: &'a [Arg<'a>], i: usize) -> Result<T::Output>
+fn get_arg<'a, T>(
+    source: &str,
+    stack: &'a Stack<'a, 'a>,
+    args: &'a [Arg<'a>],
+    i: usize,
+) -> Result<T::Output>
 where
     T: FilterArg<'a>,
 {
     match &args[i] {
-        Arg::Var(var) => match stack.resolve_path(&var.path)? {
+        Arg::Var(var) => match stack.resolve_path(source, &var.path)? {
             ValueCow::Borrowed(v) => {
-                T::from_value_ref(v).map_err(|e| err_expected_arg(e, stack.source(), var.span))
+                T::from_value_ref(v).map_err(|e| err_expected_arg(e, source, var.span))
             }
             ValueCow::Owned(v) => {
-                T::from_value(v).map_err(|e| err_expected_arg(e, stack.source(), var.span))
+                T::from_value(v).map_err(|e| err_expected_arg(e, source, var.span))
             }
         },
         Arg::Literal(lit) => {
-            T::from_value_ref(&lit.value).map_err(|e| err_expected_arg(e, stack.source(), lit.span))
+            T::from_value_ref(&lit.value).map_err(|e| err_expected_arg(e, source, lit.span))
         }
     }
 }

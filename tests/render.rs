@@ -491,6 +491,91 @@ fn render_with_statement_err_var_scope() {
 }
 
 #[test]
+fn render_include_statement() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "{{ ipsum.dolor }}").unwrap();
+    let result = engine
+        .compile(r#"lorem {% include "nested" %} sit"#)
+        .unwrap()
+        .render(value! { ipsum: { dolor: "test" }})
+        .unwrap();
+    assert_eq!(result, "lorem test sit");
+}
+
+#[test]
+fn render_include_with_statement() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "{{ dolor }}").unwrap();
+    let result = engine
+        .compile(r#"lorem {% include "nested" with ipsum %} sit"#)
+        .unwrap()
+        .render(value! { ipsum: { dolor: "test" }})
+        .unwrap();
+    assert_eq!(result, "lorem test sit");
+}
+
+#[test]
+fn render_include_with_statement_owned() {
+    let mut engine = Engine::new();
+    engine.add_filter("to_owned", Value::to_owned);
+    engine.add_template("nested", "{{ dolor }}").unwrap();
+    let result = engine
+        .compile(r#"lorem {% include "nested" with ipsum | to_owned %} sit"#)
+        .unwrap()
+        .render(value! { ipsum: { dolor: "test" }})
+        .unwrap();
+    assert_eq!(result, "lorem test sit");
+}
+
+#[test]
+fn render_include_statement_parent_template_scope() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "{{ ipsum.dolor }}").unwrap();
+    let result = engine
+        .compile(r#"lorem {% include "nested" %} sit"#)
+        .unwrap()
+        .render(value! { ipsum: { dolor: "test" }})
+        .unwrap();
+    assert_eq!(result, "lorem test sit");
+}
+
+#[test]
+fn render_include_statement_err_parent_template_scope() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "{{ ipsum.dolor }}").unwrap();
+    let err = engine
+        .compile(r#"lorem {% include "nested" with ipsum %} sit"#)
+        .unwrap()
+        .render(value! { ipsum: { dolor: "test" }})
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        r#"
+   |
+ 1 | {{ ipsum.dolor }}
+   |    ^^^^^ not found in this scope
+"#
+    );
+}
+
+#[test]
+fn render_include_statement_err_unknown_template() {
+    let err = Engine::new()
+        .compile(r#"lorem {% include "nested" %} sit"#)
+        .unwrap()
+        .render(Value::None)
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        r#"
+   |
+ 1 | lorem {% include "nested" %} sit
+   |                  ^^^^^^^^ unknown template
+"#
+    );
+}
+
+#[test]
 fn render_to_writer() {
     let mut w = Writer::new();
     Engine::new()

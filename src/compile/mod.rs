@@ -63,6 +63,16 @@ impl<'source> Compiler<'source> {
                 self.pop_emit_expr(span);
             }
 
+            ast::Stmt::Include(ast::Include { name, globals }) => match globals {
+                Some(globals) => {
+                    self.compile_expr(globals);
+                    self.push(Instr::IncludeWith(name));
+                }
+                None => {
+                    self.push(Instr::Include(name));
+                }
+            },
+
             ast::Stmt::IfElse(ast::IfElse {
                 not,
                 cond,

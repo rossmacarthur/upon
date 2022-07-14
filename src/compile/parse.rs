@@ -62,6 +62,7 @@ enum Block<'source> {
     EndFor,
     With(ast::Expr<'source>, ast::Ident<'source>),
     EndWith,
+    Include(ast::String, Option<ast::Expr<'source>>),
 }
 
 /// A keyword in the template syntax.
@@ -77,6 +78,7 @@ pub(crate) enum Keyword {
     With,
     As,
     EndWith,
+    Include,
     True,
     False,
 }
@@ -206,7 +208,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
                         // The start of a `for` statement. For example:
                         //
-                        //   {% for var in iterable %}
+                        //   {% for vars in iterable %}
                         //
                         // We must push a block to the block stack and a scope
                         // to the scope stack because a for statement starts a
@@ -246,7 +248,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
                         // The start of a `with` statement. For example:
                         //
-                        //   {% with expr as ident %}
+                        //   {% with expr as name %}
                         //
                         // We must push a block to the block stack and a scope
                         // to the scope stack because a with statement starts a
@@ -274,6 +276,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                                 _ => return Err(err()),
                             };
                             ast::Stmt::With(with)
+                        }
+
+                        // An `include` statement. For example:
+                        //
+                        //   {% include name with expr %}
+                        //
+                        Block::Include(name, globals) => {
+                            ast::Stmt::Include(ast::Include { name, globals })
                         }
                     }
                 }
@@ -341,6 +351,18 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 Ok(Block::With(expr, name))
             }
             Keyword::EndWith => Ok(Block::EndWith),
+            Keyword::Include => {
+                let span = self.expect(Token::String)?;
+                let (name, span) = self.parse_string(span)?;
+                let name = ast::String { name, span };
+                let globals = if self.is_next_keyword(Keyword::With)? {
+                    self.expect_keyword(Keyword::With)?;
+                    Some(self.parse_expr()?)
+                } else {
+                    None
+                };
+                Ok(Block::Include(name, globals))
+            }
             kw => Err(self.err_unexpected_keyword(kw.human(), span)),
         }
     }
@@ -495,7 +517,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 self.parse_number(&self.source()[span], sign.combine(span), Sign::Pos)
             }
             (Token::Number, span) => self.parse_number(&self.source()[span], span, Sign::Pos),
-            (Token::String, span) => self.parse_string(span),
+            (Token::String, span) => {
+                let (s, span) = self.parse_string(span)?;
+                Ok(ast::Literal {
+                    value: Value::String(s),
+                    span,
+                })
+            }
             (tk, span) => Err(self.err_unexpected_token("argument", tk, span)),
         }
     }
@@ -567,11 +595,11 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parses a string and handles escape characters.
-    fn parse_string(&self, span: Span) -> Result<ast::Literal> {
+    fn parse_string(&self, span: Span) -> Result<(String, Span)> {
         let raw = &self.source()[span];
-        let value = if raw.contains('\\') {
+        let string = if raw.contains('\\') {
             let mut iter = raw.char_indices().map(|(i, c)| (span.m + i, c));
-            let mut value = String::new();
+            let mut string = String::new();
             while let Some((_, c)) = iter.next() {
                 match c {
                     '"' => continue,
@@ -592,16 +620,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                                 ));
                             }
                         };
-                        value.push(c);
+                        string.push(c);
                     }
-                    c => value.push(c),
+                    c => string.push(c),
                 }
             }
-            Value::String(value)
+            string
         } else {
-            Value::String(raw[1..raw.len() - 1].to_owned())
+            raw[1..raw.len() - 1].to_owned()
         };
-        Ok(ast::Literal { value, span })
+        Ok((string, span))
     }
 
     /// Expects the given keyword.
@@ -652,6 +680,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         }
     }
 
+    /// Returns `true` if the next token is a keyword equal to the provided one.
+    fn is_next_keyword(&mut self, exp: Keyword) -> Result<bool> {
+        Ok(self
+            .peek()?
+            .map(|(tk, sp)| tk == Token::Keyword && Keyword::from_str(&self.source()[sp]) == exp)
+            .unwrap_or(false))
+    }
+
     /// Returns `true` if the next token is equal to the provided one.
     fn is_next(&mut self, token: Token) -> Result<bool> {
         Ok(self.peek()?.map(|(tk, _)| tk == token).unwrap_or(false))
@@ -699,8 +735,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 impl Keyword {
     pub(crate) const fn all() -> &'static [&'static str] {
         &[
-            "if", "not", "else", "endif", "for", "in", "endfor", "with", "as", "endwith", "true",
-            "false",
+            "if", "not", "else", "endif", "for", "in", "endfor", "with", "as", "endwith",
+            "include", "true", "false",
         ]
     }
 
@@ -716,6 +752,7 @@ impl Keyword {
             Self::With => "with",
             Self::As => "as",
             Self::EndWith => "endwith",
+            Self::Include => "include",
             Self::True => "true",
             Self::False => "false",
         }
@@ -733,6 +770,7 @@ impl Keyword {
             "with" => Self::With,
             "as" => Self::As,
             "endwith" => Self::EndWith,
+            "include" => Self::Include,
             "true" => Self::True,
             "false" => Self::False,
             _ => unreachable!(),
