@@ -130,8 +130,8 @@ impl<'source> Compiler<'source> {
 
     fn compile_expr(&mut self, expr: ast::Expr<'source>) {
         match expr {
-            ast::Expr::Var(ast::Var { path, .. }) => {
-                self.push(Instr::Push(path));
+            ast::Expr::Base(base_expr) => {
+                self.compile_base_expr(base_expr);
             }
 
             ast::Expr::Call(ast::Call {
@@ -142,6 +142,17 @@ impl<'source> Compiler<'source> {
             }) => {
                 self.compile_expr(*receiver);
                 self.push(Instr::Call(name, span, args));
+            }
+        }
+    }
+
+    fn compile_base_expr(&mut self, base_expr: ast::BaseExpr<'source>) {
+        match base_expr {
+            ast::BaseExpr::Var(ast::Var { path, .. }) => {
+                self.push(Instr::Push(path));
+            }
+            ast::BaseExpr::Literal(ast::Literal { value, .. }) => {
+                self.push(Instr::PushLit(value));
             }
         }
     }

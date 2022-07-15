@@ -52,7 +52,7 @@ pub struct FilterState<'a> {
     pub filter: &'a ast::Ident<'a>,
     pub value: &'a mut ValueCow<'a>,
     pub value_span: Span,
-    pub args: &'a [ast::Arg<'a>],
+    pub args: &'a [ast::BaseExpr<'a>],
 }
 
 #[cfg_attr(test, derive(Debug))]
@@ -171,6 +171,10 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                 Instr::Push(path) => {
                     let value = stack.resolve_path(t.source, path)?;
                     stack.push(State::Expr(value));
+                }
+
+                Instr::PushLit(value) => {
+                    stack.push(State::Expr(ValueCow::Owned(value.clone())));
                 }
 
                 Instr::PopEmit(span) => {

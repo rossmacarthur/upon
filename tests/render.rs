@@ -65,6 +65,58 @@ fn render_inline_expr_string() {
 }
 
 #[test]
+fn render_inline_expr_literal_bool() {
+    let result = Engine::new()
+        .compile("lorem {{ true }}")
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem true");
+}
+
+#[test]
+fn render_inline_expr_literal_integer() {
+    let result = Engine::new()
+        .compile("lorem {{ 123 }}")
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem 123");
+}
+
+#[test]
+fn render_inline_expr_literal_float() {
+    let result = Engine::new()
+        .compile("lorem {{ 123.4 }}")
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem 123.4");
+}
+
+#[test]
+fn render_inline_expr_literal_string() {
+    let result = Engine::new()
+        .compile(r#"lorem {{ "test" }}"#)
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem test");
+}
+
+#[test]
+fn render_inline_expr_literal_with_filter() {
+    let mut engine = Engine::new();
+    engine.add_filter("ipsum", str::to_uppercase);
+    let result = engine
+        .compile(r#"lorem {{ "test" | ipsum }}"#)
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem TEST");
+}
+
+#[test]
 fn render_inline_expr_map_index() {
     let result = Engine::new()
         .compile("lorem {{ ipsum.dolor }}")

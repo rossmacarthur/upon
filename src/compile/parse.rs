@@ -353,7 +353,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             Keyword::EndWith => Ok(Block::EndWith),
             Keyword::Include => {
                 let span = self.expect(Token::String)?;
-                let (name, span) = self.parse_string(span)?;
+                let name = self.parse_string(span)?;
                 let name = ast::String { name, span };
                 let globals = if self.is_next_keyword(Keyword::With)? {
                     self.expect_keyword(Keyword::With)?;
@@ -374,16 +374,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///   not user.is_enabled
     ///
     fn parse_if_cond(&mut self) -> Result<(bool, ast::Expr<'source>)> {
-        match self.peek()? {
-            Some((Token::Keyword, span)) if Keyword::from_str(&self.source()[span]).is_not() => {
-                self.expect_keyword(Keyword::Not)?;
-                let expr = self.parse_expr()?;
-                Ok((true, expr))
-            }
-            _ => {
-                let expr = self.parse_expr()?;
-                Ok((false, expr))
-            }
+        if self.is_next_keyword(Keyword::Not)? {
+            self.expect_keyword(Keyword::Not)?;
+            let expr = self.parse_expr()?;
+            Ok((true, expr))
+        } else {
+            let expr = self.parse_expr()?;
+            Ok((false, expr))
         }
     }
 
@@ -391,10 +388,10 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     /// This is a variable with zero or more function calls. For example:
     ///
-    ///   user.name | lower | prefix("Mr. ")
+    ///   user.name | lower | prefix: "Mr. "
     ///
     fn parse_expr(&mut self) -> Result<ast::Expr<'source>> {
-        let mut expr = ast::Expr::Var(self.parse_var()?);
+        let mut expr = ast::Expr::Base(self.parse_base_expr()?);
         while self.is_next(Token::Pipe)? {
             self.expect(Token::Pipe)?;
             let name = self.parse_ident()?;
@@ -413,6 +410,101 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             });
         }
         Ok(expr)
+    }
+
+    /// Parses a variable or literal.
+    ///
+    /// This is either a variable like
+    ///
+    ///   user.name
+    ///
+    /// Or a literal like
+    ///
+    ///   "John Smith"
+    ///
+    ///    0x150
+    ///
+    fn parse_base_expr(&mut self) -> Result<ast::BaseExpr<'source>> {
+        let expr = match self.parse()? {
+            (Token::Keyword, span) => {
+                let lit = self.parse_literal_bool(span)?;
+                ast::BaseExpr::Literal(lit)
+            }
+
+            (Token::Minus, sign) => {
+                let span = self.expect(Token::Number)?;
+                let lit =
+                    self.parse_literal_number(&self.source()[span], sign.combine(span), Sign::Neg)?;
+                ast::BaseExpr::Literal(lit)
+            }
+
+            (Token::Plus, sign) => {
+                let span = self.expect(Token::Number)?;
+                let lit =
+                    self.parse_literal_number(&self.source()[span], sign.combine(span), Sign::Pos)?;
+                ast::BaseExpr::Literal(lit)
+            }
+
+            (Token::Number, span) => {
+                let lit = self.parse_literal_number(&self.source()[span], span, Sign::Pos)?;
+                ast::BaseExpr::Literal(lit)
+            }
+
+            (Token::String, span) => {
+                let lit = self.parse_literal_string(span)?;
+                ast::BaseExpr::Literal(lit)
+            }
+
+            (Token::Ident, span) => {
+                let raw = &self.source()[span];
+                let mut path = vec![ast::Ident { raw, span }];
+                while self.is_next(Token::Period)? {
+                    self.expect(Token::Period)?;
+                    path.push(self.parse_ident_or_index()?);
+                }
+                let span = match path.len() {
+                    1 => path[0].span,
+                    n => path[0].span.combine(path[n - 1].span),
+                };
+                ast::BaseExpr::Var(ast::Var { path, span })
+            }
+            (tk, span) => {
+                return Err(self.err_unexpected_token("expression", tk, span));
+            }
+        };
+        Ok(expr)
+    }
+
+    /// Parses an identifier or index.
+    fn parse_ident_or_index(&mut self) -> Result<ast::Ident<'source>> {
+        let span = match self.parse()? {
+            (Token::Number, span) if is_base10_integer(&self.source()[span]) => span,
+            (Token::Ident, span) => span,
+            (tk, span) => {
+                return Err(self.err_unexpected_token("identifier", tk, span));
+            }
+        };
+        let raw = &self.source()[span];
+        Ok(ast::Ident { raw, span })
+    }
+
+    /// Parses filter arguments.
+    ///
+    /// This is just a comma separate list of base expressions. For example
+    ///
+    ///   user.name, "a string", true
+    ///
+    fn parse_args(&mut self, span: Span) -> Result<ast::Args<'source>> {
+        let mut values = Vec::new();
+        loop {
+            values.push(self.parse_base_expr()?);
+            if !self.is_next(Token::Comma)? {
+                break;
+            }
+            self.expect(Token::Comma)?;
+        }
+        let span = span.combine(values.last().unwrap().span());
+        Ok(ast::Args { values, span })
     }
 
     /// Parses loop variable(s).
@@ -435,101 +527,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(ast::LoopVars::KeyValue(ast::KeyValue { key, value, span }))
     }
 
-    /// Parses comma separate arguments. All of the following are valid
-    /// arguments.
-    ///
-    ///   user.name
-    ///
-    ///   "a string"
-    ///
-    ///   true
-    ///
-    ///   -13.37
-    ///
-    ///   0xff
-    ///
-    ///
-    fn parse_args(&mut self, span: Span) -> Result<ast::Args<'source>> {
-        let mut values = Vec::new();
-        loop {
-            let arg = match self.peek()? {
-                Some((Token::Ident, _)) => ast::Arg::Var(self.parse_var()?),
-                Some(_) => ast::Arg::Literal(self.parse_literal()?),
-                None => {
-                    return Err(self.err_unexpected_eof("argument"));
-                }
-            };
-            values.push(arg);
-            if !self.is_next(Token::Comma)? {
-                break;
-            }
-            self.expect(Token::Comma)?;
-        }
-        let span = span.combine(values.last().unwrap().span());
-        Ok(ast::Args { values, span })
-    }
-
-    /// Parses a variable.
-    ///
-    /// This is one or more identifiers separated by a period. For example:
-    ///
-    ///   user.name
-    ///
-    fn parse_var(&mut self) -> Result<ast::Var<'source>> {
-        let mut path = Vec::new();
-        loop {
-            path.push(self.parse_ident_or_index()?);
-            if !self.is_next(Token::Period)? {
-                break;
-            }
-            self.expect(Token::Period)?;
-        }
-        let span = match path.len() {
-            1 => path[0].span,
-            n => path[0].span.combine(path[n - 1].span),
-        };
-        Ok(ast::Var { path, span })
-    }
-
-    /// Parses an identifier or index.
-    fn parse_ident_or_index(&mut self) -> Result<ast::Ident<'source>> {
-        let span = match self.parse()? {
-            (Token::Number, span) if is_base10_integer(&self.source()[span]) => span,
-            (Token::Ident, span) => span,
-            (tk, span) => {
-                return Err(self.err_unexpected_token("identifier", tk, span));
-            }
-        };
-        let raw = &self.source()[span];
-        Ok(ast::Ident { raw, span })
-    }
-
-    /// Parses a literal.
-    fn parse_literal(&mut self) -> Result<ast::Literal> {
-        match self.parse()? {
-            (Token::Keyword, span) => self.parse_bool(span),
-            (Token::Minus, sign) => {
-                let span = self.expect(Token::Number)?;
-                self.parse_number(&self.source()[span], sign.combine(span), Sign::Neg)
-            }
-            (Token::Plus, sign) => {
-                let span = self.expect(Token::Number)?;
-                self.parse_number(&self.source()[span], sign.combine(span), Sign::Pos)
-            }
-            (Token::Number, span) => self.parse_number(&self.source()[span], span, Sign::Pos),
-            (Token::String, span) => {
-                let (s, span) = self.parse_string(span)?;
-                Ok(ast::Literal {
-                    value: Value::String(s),
-                    span,
-                })
-            }
-            (tk, span) => Err(self.err_unexpected_token("argument", tk, span)),
-        }
-    }
-
     /// Parses a boolean argument.
-    fn parse_bool(&mut self, span: Span) -> Result<ast::Literal> {
+    fn parse_literal_bool(&mut self, span: Span) -> Result<ast::Literal> {
         let bool = match &self.source()[span] {
             "false" => false,
             "true" => true,
@@ -542,7 +541,12 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parses an integer or a float.
-    fn parse_number(&self, raw: &'source str, span: Span, sign: Sign) -> Result<ast::Literal> {
+    fn parse_literal_number(
+        &self,
+        raw: &'source str,
+        span: Span,
+        sign: Sign,
+    ) -> Result<ast::Literal> {
         if raw.contains('.') {
             let float: f64 = raw
                 .parse::<f64>()
@@ -550,12 +554,12 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             let value = Value::Float(float);
             Ok(ast::Literal { value, span })
         } else {
-            self.parse_integer(raw, span, sign)
+            self.parse_literal_integer(raw, span, sign)
         }
     }
 
     /// Parse an integer.
-    fn parse_integer(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
+    fn parse_literal_integer(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
         let digits = raw.as_bytes();
         let (i, radix) = match digits {
             [b'0', b'b', ..] => (2, 2),
@@ -594,8 +598,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(ast::Literal { value, span })
     }
 
+    fn parse_literal_string(&self, span: Span) -> Result<ast::Literal> {
+        let value = Value::String(self.parse_string(span)?);
+        Ok(ast::Literal { value, span })
+    }
+
     /// Parses a string and handles escape characters.
-    fn parse_string(&self, span: Span) -> Result<(String, Span)> {
+    fn parse_string(&self, span: Span) -> Result<String> {
         let raw = &self.source()[span];
         let string = if raw.contains('\\') {
             let mut iter = raw.char_indices().map(|(i, c)| (span.m + i, c));
@@ -629,7 +638,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         } else {
             raw[1..raw.len() - 1].to_owned()
         };
-        Ok((string, span))
+        Ok(string)
     }
 
     /// Expects the given keyword.
@@ -775,10 +784,6 @@ impl Keyword {
             "false" => Self::False,
             _ => unreachable!(),
         }
-    }
-
-    fn is_not(&self) -> bool {
-        matches!(self, Self::Not)
     }
 }
 

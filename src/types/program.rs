@@ -3,6 +3,7 @@
 
 use crate::types::ast;
 use crate::types::span::Span;
+use crate::Value;
 
 pub const FIXME: usize = !0;
 
@@ -46,6 +47,9 @@ pub enum Instr<'source> {
 
     /// Lookup a variable and push it onto the stack
     Push(Vec<ast::Ident<'source>>),
+
+    /// Push the given literal onto the stack.
+    PushLit(Value),
 
     /// Pop and emit the value at the top of the stack
     PopEmit(Span),

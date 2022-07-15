@@ -24,26 +24,35 @@ fn compile_inline_expr() {
         .unwrap();
 }
 
+const BASE_EXPRS: &[&str] = &[
+    "nested.path",
+    r#""normal""#,
+    r#""escaped \n \r \t \\ \"""#,
+    "true",
+    "false",
+    "123",
+    "-123",
+    "+123",
+    "0x1f",
+    "0o777",
+    "0b1010",
+    "3.14",
+    "+3.14",
+    "-3.14",
+];
+
+#[test]
+fn compile_inline_expr_literal() {
+    let engine = Engine::new();
+    for arg in BASE_EXPRS {
+        engine.compile(&format!("{{{{ {} }}}}", arg)).unwrap();
+    }
+}
+
 #[test]
 fn compile_inline_expr_filter_arg() {
-    let tests = [
-        "nested.path",
-        r#""normal""#,
-        r#""escaped \n \r \t \\ \"""#,
-        "true",
-        "false",
-        "123",
-        "-123",
-        "+123",
-        "0x1f",
-        "0o777",
-        "0b1010",
-        "3.14",
-        "+3.14",
-        "-3.14",
-    ];
     let engine = Engine::new();
-    for arg in tests {
+    for arg in BASE_EXPRS {
         engine
             .compile(&format!("{{{{ lorem | ipsum: {} }}}}", arg))
             .unwrap();
@@ -80,7 +89,7 @@ fn compile_inline_expr_err_args_eof() {
         "
    |
  1 | lorem {{ ipsum | dolor:
-   |                        ^ expected argument, found EOF
+   |                        ^ expected token, found EOF
 "
     )
 }
@@ -155,7 +164,7 @@ fn compile_inline_expr_err_unexpected_comma_token() {
         "
    |
  1 | lorem {{ ipsum | dolor: ,
-   |                         ^ expected argument, found comma
+   |                         ^ expected expression, found comma
 "
     )
 }
@@ -170,7 +179,7 @@ fn compile_inline_expr_err_empty() {
         "
    |
  1 | lorem {{ }} ipsum dolor
-   |          ^^ expected identifier, found end expression
+   |          ^^ expected expression, found end expression
 "
     );
 }
@@ -185,7 +194,7 @@ fn compile_inline_expr_err_unexpected_pipe_token() {
         "
    |
  1 | lorem {{ | }} ipsum dolor
-   |          ^ expected identifier, found pipe
+   |          ^ expected expression, found pipe
 "
     );
 }
@@ -401,7 +410,7 @@ fn compile_for_statement_err_missing_iterable() {
         "
    |
  1 | lorem {% for ipsum in %} dolor
-   |                       ^^ expected identifier, found end block
+   |                       ^^ expected expression, found end block
 "
     );
 }

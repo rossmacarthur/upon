@@ -1,7 +1,6 @@
 //! AST representing a template.
 
 use crate::types::span::Span;
-use crate::Value;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Template<'source> {
@@ -79,8 +78,8 @@ pub struct With<'source> {
 
 #[cfg_attr(test, derive(Debug))]
 pub enum Expr<'source> {
+    Base(BaseExpr<'source>),
     Call(Call<'source>),
-    Var(Var<'source>),
 }
 
 #[cfg_attr(test, derive(Debug))]
@@ -93,12 +92,12 @@ pub struct Call<'source> {
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Args<'source> {
-    pub values: Vec<Arg<'source>>,
+    pub values: Vec<BaseExpr<'source>>,
     pub span: Span,
 }
 
 #[cfg_attr(test, derive(Debug))]
-pub enum Arg<'source> {
+pub enum BaseExpr<'source> {
     Var(Var<'source>),
     Literal(Literal),
 }
@@ -109,16 +108,16 @@ pub struct Var<'source> {
     pub span: Span,
 }
 
-#[cfg_attr(test, derive(Debug))]
-pub struct Literal {
-    pub value: Value,
-    pub span: Span,
-}
-
 #[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Debug))]
 pub struct Ident<'source> {
     pub raw: &'source str,
+    pub span: Span,
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub struct Literal {
+    pub value: crate::Value,
     pub span: Span,
 }
 
@@ -131,17 +130,17 @@ impl Scope<'_> {
 impl Expr<'_> {
     pub const fn span(&self) -> Span {
         match self {
-            Self::Var(var) => var.span,
+            Self::Base(base) => base.span(),
             Self::Call(call) => call.span,
         }
     }
 }
 
-impl Arg<'_> {
+impl BaseExpr<'_> {
     pub const fn span(&self) -> Span {
         match self {
-            Arg::Var(var) => var.span,
-            Arg::Literal(lit) => lit.span,
+            BaseExpr::Var(var) => var.span,
+            BaseExpr::Literal(lit) => lit.span,
         }
     }
 }

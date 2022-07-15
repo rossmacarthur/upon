@@ -2,7 +2,7 @@ mod args;
 mod impls;
 
 use crate::render::{FilterState, Stack};
-use crate::types::ast::Arg;
+use crate::types::ast::BaseExpr;
 use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
@@ -304,14 +304,14 @@ fn check_args(state: &FilterState<'_>, exp: usize) -> Result<()> {
 fn get_arg<'a, T>(
     source: &str,
     stack: &'a Stack<'a, 'a>,
-    args: &'a [Arg<'a>],
+    args: &'a [BaseExpr<'a>],
     i: usize,
 ) -> Result<T::Output>
 where
     T: FilterArg<'a>,
 {
     match &args[i] {
-        Arg::Var(var) => match stack.resolve_path(source, &var.path)? {
+        BaseExpr::Var(var) => match stack.resolve_path(source, &var.path)? {
             ValueCow::Borrowed(v) => {
                 T::from_value_ref(v).map_err(|e| err_expected_arg(e, source, var.span))
             }
@@ -319,7 +319,7 @@ where
                 T::from_value(v).map_err(|e| err_expected_arg(e, source, var.span))
             }
         },
-        Arg::Literal(lit) => {
+        BaseExpr::Literal(lit) => {
             T::from_value_ref(&lit.value).map_err(|e| err_expected_arg(e, source, lit.span))
         }
     }

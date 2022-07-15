@@ -12,8 +12,23 @@ to configure these tags/delimiters, this document will only refer to the
 
 ## Expressions
 
-Expressions are marked with `{{ ... }}` and are used to render single
-values. This allows you to refer to a variable in the current scope. The
+Expressions are available everywhere in templates and they can be emitted by
+wrapping them in `{{ ... }}`.
+
+### Literals
+
+The simplest form of expressions are literals. The following types are
+available in templates.
+
+- Booleans: `true`, `false`
+- Integers: `42`, `0o52`, `0x2a`
+- Floats: `0.123`
+- Strings: `"Hello World!"`, escape characters are supported: `\r`, `\n`,
+  `\t`, `\\`, `\"`
+
+### Values
+
+You can lookup up existing values in the current scope by name. The
 following would lookup the field “name” in the current scope and insert it
 into the rendered output.
 
@@ -30,7 +45,7 @@ Hello {{ user.name }}!
 
 You can also use this syntax to lookup a particular index of a list. For
 each of the expressions in the following code, first the field “users” is
-looked up and then a particular use is selected from the list by index.
+looked up, then a particular user is selected from the list by index.
 Finally, the field “name” is looked up from the selected user.
 
 ```text
@@ -39,11 +54,32 @@ And hello {{ users.1.name }}!
 And also hello {{ users.2.name }}!
 ```
 
+### Filters
+
+Filters can be applied to existing expressions using the `|` (pipe)
+operator. The simplest filters take no extra arguments and are just
+specified by name. For example, assuming a filter called `lower` is
+registered in the engine the following would produce an expression with the
+`user.name` value transformed to lowercase.
+
+```html
+{{ user.name | lower }}
+```
+
+Filters can also take arguments which must be a sequence of comma separated
+values or literals. In the following we lookup the value `page.path` and
+append a suffix to it.
+
+```html
+{{ page.path | append: ".html" }}
+```
+
+See the `Filter` trait documentation for more information
+on filters.
+
 ## Blocks
 
 Blocks are marked with an opening `{% ... %}` and a closing `{% ... %}`.
-There are two kinds of blocks: [**conditionals**](#conditionals) and
-[**loops**](#loops).
 
 ### Conditionals
 
@@ -153,30 +189,6 @@ nested template.
 
 </body>
 ```
-
-## Filters
-
-In all places where [**expressions**](#expressions) are valid, filters can
-be applied to the value using the `|` operator. The simplest filters take no
-extra arguments and are just specified by name.
-
-For example, assuming a filter called `lower` is registered in the engine
-the following would produce an expression that transforms the `user.name`
-value to lowercase.
-
-```html
-{{ user.name | lower }}
-```
-
-Filters can also take arguments which can either be values or literals. In
-the following we lookup `page.path` and append a suffix to it.
-
-```html
-{{ page.path | append: ".html" }}
-```
-
-See the `Filter` trait documentation for more information
-on filters.
 
 ## Whitespace control
 
