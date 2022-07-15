@@ -169,7 +169,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                 }
 
                 Instr::Push(path) => {
-                    let value = stack.resolve_path(t.source, path)?;
+                    let value = stack.lookup_path(t.source, path)?;
                     stack.push(State::Expr(value));
                 }
 

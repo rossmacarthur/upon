@@ -311,7 +311,7 @@ where
     T: FilterArg<'a>,
 {
     match &args[i] {
-        BaseExpr::Var(var) => match stack.resolve_path(source, &var.path)? {
+        BaseExpr::Var(var) => match stack.lookup_path(source, &var.path)? {
             ValueCow::Borrowed(v) => {
                 T::from_value_ref(v).map_err(|e| err_expected_arg(e, source, var.span))
             }

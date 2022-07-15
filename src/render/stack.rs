@@ -1,8 +1,8 @@
 use crate::render::iter::LoopState;
-use crate::render::value::index;
+use crate::render::value::{lookup_path, lookup_path_maybe};
 use crate::types::ast;
 use crate::value::ValueCow;
-use crate::{Error, Result, Value};
+use crate::{Error, Result};
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Stack<'source, 'render> {
@@ -35,78 +35,24 @@ impl<'source, 'render> Stack<'source, 'render> {
     }
 
     /// Resolves a path to a variable on the stack.
-    pub fn resolve_path(
+    pub fn lookup_path(
         &self,
         source: &str,
         path: &[ast::Ident<'source>],
     ) -> Result<ValueCow<'render>> {
-        'outer: for state in self.stack.iter().rev() {
+        for state in self.stack.iter().rev() {
             match state {
-                State::Scope(scope) => {
-                    match scope {
-                        // If the scope is borrowed we can lookup the value and
-                        // return a reference with lifetime 'render
-                        ValueCow::Borrowed(mut v) => {
-                            for (i, idx) in path.iter().enumerate() {
-                                v = match index(source, v, idx) {
-                                    Ok(d) => d,
-                                    Err(err) => {
-                                        // If it is the first segment of the path then
-                                        // we can try the next state.
-                                        if i == 0 {
-                                            continue 'outer;
-                                        }
-                                        return Err(err);
-                                    }
-                                };
-                            }
-                            return Ok(ValueCow::Borrowed(v));
-                        }
-                        // If the scope is owned then make sure to only clone
-                        // the edge value that we lookup.
-                        ValueCow::Owned(scope) => {
-                            let mut v: &Value = scope;
-                            for (i, idx) in path.iter().enumerate() {
-                                v = match index(source, v, idx) {
-                                    Ok(d) => d,
-                                    Err(err) => {
-                                        // If it is the first segment of the path then
-                                        // we can try the next state.
-                                        if i == 0 {
-                                            continue 'outer;
-                                        }
-                                        return Err(err);
-                                    }
-                                };
-                            }
-                            return Ok(ValueCow::Owned(v.clone()));
-                        }
-                    }
-                }
-
-                State::Var(name, var) if path[0].raw == name.raw => match var {
-                    // If the variable is borrowed we can lookup the value and
-                    // return a reference with lifetime 'render
-                    ValueCow::Borrowed(mut v) => {
-                        for p in &path[1..] {
-                            v = index(source, v, p)?;
-                        }
-                        return Ok(ValueCow::Borrowed(v));
-                    }
-                    // If the variable is owned then make sure to only clone
-                    // the edge value that we lookup.
-                    ValueCow::Owned(var) => {
-                        let mut v: &Value = var;
-                        for p in &path[1..] {
-                            v = index(source, v, p)?;
-                        }
-                        return Ok(ValueCow::Owned(v.clone()));
-                    }
+                State::Scope(scope) => match lookup_path_maybe(source, scope, path)? {
+                    Some(value) => return Ok(value),
+                    None => continue,
                 },
 
+                State::Var(name, var) if path[0].raw == name.raw => {
+                    return lookup_path(source, var, &path[1..]);
+                }
+
                 State::Loop(loop_state) => {
-                    // Check if we are looking up one of the loop variables
-                    if let Some(value) = loop_state.resolve_path(source, path)? {
+                    if let Some(value) = loop_state.lookup_path(source, path)? {
                         return Ok(value);
                     }
                 }

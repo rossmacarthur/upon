@@ -3,7 +3,7 @@ use std::iter::Enumerate;
 use std::slice;
 use std::vec as list;
 
-use crate::render::value::index;
+use crate::render::value::lookup;
 use crate::types::ast;
 use crate::types::span::Span;
 use crate::value::ValueCow;
@@ -139,7 +139,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
         Some(())
     }
 
-    pub fn resolve_path(
+    pub fn lookup_path(
         &self,
         source: &str,
         path: &[ast::Ident<'source>],
@@ -147,14 +147,14 @@ impl<'source, 'render> LoopState<'source, 'render> {
         let name = path[0].raw;
 
         if name == "loop" {
-            return self.resolve_loop(source, path);
+            return self.lookup_loop(source, path);
         }
 
         macro_rules! resolve {
             ($v:expr) => {{
                 let mut v = $v;
                 for p in &path[1..] {
-                    v = index(source, v, p)?;
+                    v = lookup(source, v, p)?;
                 }
                 v
             }};
@@ -225,7 +225,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
         }
     }
 
-    pub fn resolve_loop(
+    pub fn lookup_loop(
         &self,
         source: &str,
         path: &[ast::Ident<'source>],
