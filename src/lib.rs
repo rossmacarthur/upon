@@ -417,7 +417,7 @@ impl<'engine> TemplateRef<'engine> {
     where
         S: serde::Serialize,
     {
-        render::template(self.engine, &self.template, to_value(ctx)?)
+        render::template(self.engine, self.template, to_value(ctx)?)
     }
 
     /// Render the template to a writer using the provided value.
@@ -428,7 +428,7 @@ impl<'engine> TemplateRef<'engine> {
         W: io::Write,
         S: serde::Serialize,
     {
-        render::template_to(self.engine, &self.template, writer, to_value(ctx)?)
+        render::template_to(self.engine, self.template, writer, to_value(ctx)?)
     }
 
     /// Render the template to a string using the provided value.
@@ -437,7 +437,7 @@ impl<'engine> TemplateRef<'engine> {
     where
         V: Into<Value>,
     {
-        render::template(self.engine, &self.template, ctx.into())
+        render::template(self.engine, self.template, ctx.into())
     }
 
     /// Render the template to a writer using the provided value.
@@ -447,7 +447,7 @@ impl<'engine> TemplateRef<'engine> {
         W: io::Write,
         V: Into<Value>,
     {
-        render::template_to(self.engine, &self.template, writer, ctx.into())
+        render::template_to(self.engine, self.template, writer, ctx.into())
     }
 
     /// Returns the original template source.
