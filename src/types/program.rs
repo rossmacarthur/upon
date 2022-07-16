@@ -15,48 +15,48 @@ pub struct Template<'source> {
 
 #[cfg_attr(test, derive(Debug))]
 pub enum Instr<'source> {
-    /// Render a template
-    Include(ast::String),
+    /// Jump to an instruction
+    Jump(usize),
 
-    /// Pop the value at the top of stack and render a template with it
-    IncludeWith(ast::String),
+    /// Jump to the instruction if the current expression is true
+    JumpIfTrue(usize, Span),
+
+    /// Jump to the instruction if the current expression is false
+    JumpIfFalse(usize, Span),
+
+    /// Emit the current expression
+    Emit(Span),
 
     /// Emit raw template
     EmitRaw(&'source str),
 
-    /// Pop the value at the top of the stack and add it to the current scope
-    PushVar(ast::Ident<'source>),
+    /// Apply the filter or value formatter to the current expression and emit
+    EmitWith(ast::Ident<'source>, Span),
 
-    /// Remove a previously added variable from the scope
-    PopVar,
+    /// Start a loop over the current expression
+    LoopStart(ast::LoopVars<'source>, Span),
 
-    /// Start a loop over value items
-    StartLoop(ast::LoopVars<'source>, Span),
+    /// Advance and jump to the start of the loop
+    LoopNext(usize),
 
-    /// Iterate the loop on the stack
-    Iterate(usize),
+    /// Push the current expression to the stack as a variable
+    WithStart(ast::Ident<'source>),
 
-    /// Jump to an instruction
-    Jump(usize),
+    /// Remove a previously added variable from the stack
+    WithEnd,
 
-    /// Jump to the instruction if the value is true
-    JumpIfTrue(usize, Span),
+    /// Render a template
+    Include(ast::String),
 
-    /// Jump to the instruction if the value is false
-    JumpIfFalse(usize, Span),
+    /// Render a template with the current expression
+    IncludeWith(ast::String),
 
-    /// Lookup a variable and push it onto the stack
-    Push(Vec<ast::Ident<'source>>),
+    /// Lookup a variable and start building an expression
+    ExprStart(Vec<ast::Ident<'source>>),
 
-    /// Push the given literal onto the stack.
-    PushLit(Value),
-
-    /// Pop and emit the value at the top of the stack
-    PopEmit(Span),
-
-    /// Apply the filter or value formatter to the value at the top of the stack
-    PopEmitWith(ast::Ident<'source>, Span),
+    /// Start building an expression using a literal
+    ExprStartLit(Value),
 
     /// Apply the filter to the value at the top of the stack
-    Call(ast::Ident<'source>, Span, Option<ast::Args<'source>>),
+    Apply(ast::Ident<'source>, Span, Option<ast::Args<'source>>),
 }

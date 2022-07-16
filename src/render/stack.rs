@@ -20,9 +20,6 @@ pub enum State<'source, 'render> {
     /// The current state of a loop iteration
     Loop(LoopState<'source, 'render>),
 
-    /// An expression that we are building
-    Expr(ValueCow<'render>),
-
     /// Used to represent a template boundary.
     Boundary,
 }
@@ -90,13 +87,6 @@ impl<'source, 'render> Stack<'source, 'render> {
         match self.stack.pop().unwrap() {
             State::Loop(state) => state,
             _ => panic!("expected loop state"),
-        }
-    }
-
-    pub fn pop_expr(&mut self) -> ValueCow<'render> {
-        match self.stack.pop().unwrap() {
-            State::Expr(value) => value,
-            _ => panic!("expected expression"),
         }
     }
 }

@@ -112,8 +112,8 @@ impl<'source> Compiler<'source> {
             }) => {
                 let span = iterable.span();
                 self.compile_expr(iterable);
-                self.push(Instr::StartLoop(vars, span));
-                let j = self.push(Instr::Iterate(FIXME));
+                self.push(Instr::LoopStart(vars, span));
+                let j = self.push(Instr::LoopNext(FIXME));
                 self.compile_scope(body);
                 self.push(Instr::Jump(j));
                 self.update_jump(j);
@@ -121,9 +121,9 @@ impl<'source> Compiler<'source> {
 
             ast::Stmt::With(ast::With { expr, name, body }) => {
                 self.compile_expr(expr);
-                self.push(Instr::PushVar(name));
+                self.push(Instr::WithStart(name));
                 self.compile_scope(body);
-                self.push(Instr::PopVar);
+                self.push(Instr::WithEnd);
             }
         }
     }
@@ -141,7 +141,7 @@ impl<'source> Compiler<'source> {
                 span,
             }) => {
                 self.compile_expr(*receiver);
-                self.push(Instr::Call(name, span, args));
+                self.push(Instr::Apply(name, span, args));
             }
         }
     }
@@ -149,24 +149,24 @@ impl<'source> Compiler<'source> {
     fn compile_base_expr(&mut self, base_expr: ast::BaseExpr<'source>) {
         match base_expr {
             ast::BaseExpr::Var(ast::Var { path, .. }) => {
-                self.push(Instr::Push(path));
+                self.push(Instr::ExprStart(path));
             }
             ast::BaseExpr::Literal(ast::Literal { value, .. }) => {
-                self.push(Instr::PushLit(value));
+                self.push(Instr::ExprStartLit(value));
             }
         }
     }
 
     fn pop_emit_expr(&mut self, span: Span) {
         let emit = match self.instrs.last() {
-            Some(Instr::Call(_, _, None)) => {
+            Some(Instr::Apply(_, _, None)) => {
                 let instr = self.instrs.pop().unwrap();
                 match instr {
-                    Instr::Call(ident, _, _) => Instr::PopEmitWith(ident, span),
+                    Instr::Apply(ident, _, _) => Instr::EmitWith(ident, span),
                     _ => unreachable!(),
                 }
             }
-            _ => Instr::PopEmit(span),
+            _ => Instr::Emit(span),
         };
         self.push(emit);
     }
@@ -177,7 +177,7 @@ impl<'source> Compiler<'source> {
             Instr::Jump(j)
             | Instr::JumpIfTrue(j, _)
             | Instr::JumpIfFalse(j, _)
-            | Instr::Iterate(j) => j,
+            | Instr::LoopNext(j) => j,
             _ => panic!("not a jump instr"),
         };
         *j = n;

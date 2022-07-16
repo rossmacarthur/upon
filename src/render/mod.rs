@@ -119,79 +119,48 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
         pc: &mut usize,
         stack: &mut Stack<'source, 'render>,
     ) -> Result<RenderState<'engine, 'render>> {
+        // An expression that we are building
+        let mut expr: Option<ValueCow<'render>> = None;
+
         while let Some(instr) = t.instrs.get(*pc) {
             match instr {
-                Instr::EmitRaw(raw) => {
-                    f.write_str(raw)?;
-                }
-
                 Instr::Jump(j) => {
                     *pc = *j;
                     continue;
                 }
 
                 Instr::JumpIfTrue(j, span) => {
-                    if stack.pop_expr().as_bool(t.source, *span)? {
+                    if expr.take().unwrap().as_bool(t.source, *span)? {
                         *pc = *j;
                         continue;
                     }
                 }
 
                 Instr::JumpIfFalse(j, span) => {
-                    if !stack.pop_expr().as_bool(t.source, *span)? {
+                    if !expr.take().unwrap().as_bool(t.source, *span)? {
                         *pc = *j;
                         continue;
                     }
                 }
 
-                Instr::StartLoop(vars, span) => {
-                    let iterable = stack.pop_expr();
-                    stack.push(State::Loop(LoopState::new(
-                        t.source, vars, iterable, *span,
-                    )?));
-                }
-
-                Instr::Iterate(j) => {
-                    if stack.last_loop_state_mut().iterate().is_none() {
-                        stack.pop_loop_state();
-                        *pc = *j;
-                        continue;
-                    }
-                }
-
-                Instr::PushVar(name) => {
-                    let value = stack.pop_expr();
-                    stack.push(State::Var(name, value))
-                }
-
-                Instr::PopVar => {
-                    stack.pop_var();
-                }
-
-                Instr::Push(path) => {
-                    let value = stack.lookup_path(t.source, path)?;
-                    stack.push(State::Expr(value));
-                }
-
-                Instr::PushLit(value) => {
-                    stack.push(State::Expr(ValueCow::Owned(value.clone())));
-                }
-
-                Instr::PopEmit(span) => {
-                    let value = stack.pop_expr();
-                    // Emit the value using the default formatter.
+                Instr::Emit(span) => {
+                    let value = expr.take().unwrap();
                     (self.engine.default_formatter)(f, &value)
                         .map_err(|err| err.with_span(t.source, *span))?;
                 }
 
-                Instr::PopEmitWith(name, span) => {
+                Instr::EmitRaw(raw) => {
+                    f.write_str(raw)?;
+                }
+
+                Instr::EmitWith(name, span) => {
                     match self.engine.functions.get(name.raw) {
                         // The referenced function is a filter, so we apply
                         // it and then emit the value using the default
                         // formatter.
                         #[cfg(feature = "filters")]
                         Some(EngineFn::Filter(filter)) => {
-                            let mut value = stack.pop_expr();
+                            let mut value = expr.take().unwrap();
                             let result = filter(FilterState {
                                 stack,
                                 source: t.source,
@@ -206,7 +175,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
                         Some(EngineFn::Formatter(formatter)) => {
-                            let value = stack.pop_expr();
+                            let value = expr.take().unwrap();
                             formatter(f, &value).map_err(|err| err.with_span(t.source, *span))?;
                         }
                         // No filter or formatter exists.
@@ -220,11 +189,59 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     }
                 }
 
-                Instr::Call(name, span, args) => match self.engine.functions.get(name.raw) {
+                Instr::LoopStart(vars, span) => {
+                    let iterable = expr.take().unwrap();
+                    stack.push(State::Loop(LoopState::new(
+                        t.source, vars, iterable, *span,
+                    )?));
+                }
+
+                Instr::LoopNext(j) => {
+                    if stack.last_loop_state_mut().iterate().is_none() {
+                        stack.pop_loop_state();
+                        *pc = *j;
+                        continue;
+                    }
+                }
+
+                Instr::WithStart(name) => {
+                    let value = expr.take().unwrap();
+                    stack.push(State::Var(name, value))
+                }
+
+                Instr::WithEnd => {
+                    stack.pop_var();
+                }
+
+                Instr::Include(name) => {
+                    *pc += 1;
+                    let template = self.get_template(t.source, name)?;
+                    return Ok(RenderState::Include { template });
+                }
+
+                Instr::IncludeWith(name) => {
+                    *pc += 1;
+                    let template = self.get_template(t.source, name)?;
+                    let globals = expr.take().unwrap();
+                    return Ok(RenderState::IncludeWith { template, globals });
+                }
+
+                Instr::ExprStart(path) => {
+                    let value = stack.lookup_path(t.source, path)?;
+                    let prev = expr.replace(value);
+                    debug_assert!(prev.is_none());
+                }
+
+                Instr::ExprStartLit(value) => {
+                    let prev = expr.replace(ValueCow::Owned(value.clone()));
+                    debug_assert!(prev.is_none());
+                }
+
+                Instr::Apply(name, span, args) => match self.engine.functions.get(name.raw) {
                     // The referenced function is a filter, so we apply it.
                     #[cfg(feature = "filters")]
                     Some(EngineFn::Filter(filter)) => {
-                        let mut value = stack.pop_expr();
+                        let mut value = expr.take().unwrap();
                         let args = args
                             .as_ref()
                             .map(|args| args.values.as_slice())
@@ -237,7 +254,7 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                             value_span: *span,
                             args,
                         })?;
-                        stack.push(State::Expr(ValueCow::Owned(result)));
+                        expr.replace(ValueCow::Owned(result));
                     }
                     // The referenced function is a formatter which is not valid
                     // in the middle of an expression.
@@ -253,19 +270,6 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                         return Err(Error::new("unknown filter", t.source, name.span));
                     }
                 },
-
-                Instr::Include(name) => {
-                    *pc += 1;
-                    let template = self.get_template(t.source, name)?;
-                    return Ok(RenderState::Include { template });
-                }
-
-                Instr::IncludeWith(name) => {
-                    *pc += 1;
-                    let template = self.get_template(t.source, name)?;
-                    let globals = stack.pop_expr();
-                    return Ok(RenderState::IncludeWith { template, globals });
-                }
             }
             *pc += 1;
         }

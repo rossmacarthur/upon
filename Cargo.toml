@@ -11,13 +11,20 @@ keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
 include = ["src/**/*", "LICENSE-*", "README.md"]
 
+[dependencies]
+serde = { version = "1.0.137", optional = true }
+unicode-width = { version = "0.1.9", optional = true }
+
+[dev-dependencies]
+serde = { version = "1.0.137", features = ["derive"] }
+
 [features]
 default = ["filters", "serde", "unicode"]
 
 # Enable filters
 # --------------
 #   If disabled then filters will not be available for use in templates
-#   (Note: this does not affect value formatters)
+#   Note: this does not affect value formatters
 filters = []
 
 # Enable serde support
@@ -31,13 +38,6 @@ serde = ["dep:serde"]
 #   This is currently only affects error formatting
 #   If disabled then chars().count() will be used instead
 unicode = ["dep:unicode-width"]
-
-[dependencies]
-serde = { version = "1.0.137", optional = true }
-unicode-width = { version = "0.1.9", optional = true }
-
-[dev-dependencies]
-serde = { version = "1.0.137", features = ["derive"] }
 
 [workspace]
 members = ["benches", "tools/*"]

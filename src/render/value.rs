@@ -40,17 +40,12 @@ pub fn lookup_path<'a>(
     path: &[ast::Ident<'_>],
 ) -> Result<ValueCow<'a>> {
     match value {
-        &ValueCow::Borrowed(mut v) => {
-            for p in path {
-                v = lookup(source, v, p)?;
-            }
+        &ValueCow::Borrowed(v) => {
+            let v = path.iter().try_fold(v, |v, p| lookup(source, v, p))?;
             Ok(ValueCow::Borrowed(v))
         }
         ValueCow::Owned(v) => {
-            let mut v = v;
-            for p in path {
-                v = lookup(source, v, p)?;
-            }
+            let v = path.iter().try_fold(v, |v, p| lookup(source, v, p))?;
             Ok(ValueCow::Owned(v.clone()))
         }
     }
@@ -63,37 +58,24 @@ pub fn lookup_path_maybe<'a>(
     path: &[ast::Ident<'_>],
 ) -> Result<Option<ValueCow<'a>>> {
     let value = match value {
-        // If the scope is borrowed we can lookup the value and return a
-        // reference with lifetime 'render
-        &ValueCow::Borrowed(mut v) => {
-            for (i, p) in path.iter().enumerate() {
-                v = match lookup(source, v, p) {
-                    Ok(v) => v,
-                    Err(err) => {
-                        if i == 0 {
-                            return Ok(None);
-                        }
-                        return Err(err);
-                    }
-                }
-            }
+        // If the value is borrowed we can lookup the value and return a
+        // reference with lifetime 'a
+        &ValueCow::Borrowed(v) => {
+            let v = match lookup(source, v, &path[0]) {
+                Ok(v) => v,
+                Err(_) => return Ok(None),
+            };
+            let v = path[1..].iter().try_fold(v, |v, p| lookup(source, v, p))?;
             ValueCow::Borrowed(v)
         }
-        // If the scope is owned then make sure to only clone the edge value
+        // If the value is owned then make sure to only clone the edge value
         // that we lookup.
         ValueCow::Owned(v) => {
-            let mut v: &Value = v;
-            for (i, p) in path.iter().enumerate() {
-                v = match lookup(source, v, p) {
-                    Ok(v) => v,
-                    Err(err) => {
-                        if i == 0 {
-                            return Ok(None);
-                        }
-                        return Err(err);
-                    }
-                }
-            }
+            let v = match lookup(source, v, &path[0]) {
+                Ok(v) => v,
+                Err(_) => return Ok(None),
+            };
+            let v = path[1..].iter().try_fold(v, |v, p| lookup(source, v, p))?;
             ValueCow::Owned(v.clone())
         }
     };
