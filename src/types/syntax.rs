@@ -88,6 +88,7 @@ impl<'a> Syntax<'a> {
 impl<'a> SyntaxBuilder<'a> {
     /// Creates a new syntax builder.
     #[inline]
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             expr: None,

@@ -178,7 +178,7 @@ fn list_formmatter(f: &mut Formatter<'_>, v: &Value) -> Result<()> {
             }
             Ok(())
         }
-        _ => Err(format!("failed to format, expected list"))?,
+        _ => Err("failed to format, expected list".to_string())?,
     }
 }
 

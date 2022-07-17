@@ -25,10 +25,7 @@ fn to_value_integer() {
 #[test]
 fn to_value_out_of_range_integral() {
     let err = to_value(u64::MAX).unwrap_err().to_string();
-    assert_eq!(
-        err.to_string(),
-        "out of range integral type conversion attempted"
-    );
+    assert_eq!(err, "out of range integral type conversion attempted");
 }
 
 #[test]

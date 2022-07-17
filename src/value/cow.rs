@@ -16,7 +16,7 @@ impl Deref for ValueCow<'_> {
     fn deref(&self) -> &Self::Target {
         match self {
             Self::Borrowed(v) => v,
-            Self::Owned(v) => &*v,
+            Self::Owned(v) => v,
         }
     }
 }

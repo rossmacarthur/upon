@@ -81,6 +81,6 @@ fn render<'a, E: Engine<'a>>(source: &'a str) -> String {
 
     let mut engine = E::new();
     engine.add_filters();
-    engine.add_template("bench", &source);
+    engine.add_template("bench", source);
     engine.render("bench", &ctx)
 }
