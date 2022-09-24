@@ -22,7 +22,7 @@ impl serde::ser::SerializeTupleVariant for SerializeTupleVariant {
     where
         T: ?Sized + Serialize,
     {
-        self.list.push(to_value(&value)?);
+        self.list.push(to_value(value)?);
         Ok(())
     }
 

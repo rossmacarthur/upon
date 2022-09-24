@@ -37,7 +37,7 @@ impl serde::ser::SerializeMap for SerializeMap {
         T: serde::Serialize,
     {
         let key = self.next_key.take().unwrap();
-        self.map.insert(key, to_value(&value)?);
+        self.map.insert(key, to_value(value)?);
         Ok(())
     }
 

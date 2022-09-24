@@ -172,7 +172,7 @@ impl serde::Serializer for Serializer {
         T: serde::Serialize,
     {
         let mut map = BTreeMap::new();
-        map.insert(String::from(variant), to_value(&value)?);
+        map.insert(String::from(variant), to_value(value)?);
         Ok(Value::Map(map))
     }
 

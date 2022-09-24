@@ -44,7 +44,7 @@ fn to_value_str() {
 #[test]
 fn to_value_bytes() {
     assert_eq!(
-        to_value(&[1u8, 2, 3, 4]).unwrap(),
+        to_value([1u8, 2, 3, 4]).unwrap(),
         Value::List(vec![
             Value::Integer(1),
             Value::Integer(2),

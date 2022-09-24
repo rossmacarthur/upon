@@ -24,7 +24,7 @@ impl serde::ser::SerializeSeq for SerializeList {
     where
         T: ?Sized + Serialize,
     {
-        self.list.push(to_value(&value)?);
+        self.list.push(to_value(value)?);
         Ok(())
     }
 

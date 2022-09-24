@@ -221,7 +221,7 @@ fn cargo_workspace_dir() -> PathBuf {
             let cargo = env::var_os("CARGO");
             let cargo = cargo.as_deref().unwrap_or_else(|| OsStr::new("cargo"));
             let output = process::Command::new(cargo)
-                .args(&["metadata", "--format-version=1", "--no-deps"])
+                .args(["metadata", "--format-version=1", "--no-deps"])
                 .current_dir(env!("CARGO_MANIFEST_DIR"))
                 .output()
                 .unwrap();

@@ -163,7 +163,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             Ok(Some((Token::Raw, Span::from(i..j))))
         };
 
-        match self.engine.searcher.find_at(&self.source, i) {
+        match self.engine.searcher.find_at(self.source, i) {
             Some((kind, j, k)) => {
                 let (tk, trim) = Token::from_kind(kind);
 
@@ -208,7 +208,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         // must parse template syntax relevant tokens and also lookout
         // for the corresponding end tag `end`.
 
-        let (tk, j) = match self.engine.searcher.starts_with(&self.source, i) {
+        let (tk, j) = match self.engine.searcher.starts_with(self.source, i) {
             Some((kind, j)) => {
                 let (tk, trim) = Token::from_kind(kind);
 
@@ -273,7 +273,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         //    ^     ^ ^
         //    i     j k
 
-        match self.engine.searcher.find_at(&self.source, i) {
+        match self.engine.searcher.find_at(self.source, i) {
             Some((kind, j, k)) => {
                 let (tk, trim) = Token::from_kind(kind);
 
