@@ -1,5 +1,5 @@
 use crate::types::ast;
-use crate::types::span::Span;
+use crate::types::span::{index, Span};
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
@@ -37,7 +37,7 @@ impl Value {
 pub fn lookup_path<'a>(
     source: &str,
     value: &ValueCow<'a>,
-    path: &[ast::Ident<'_>],
+    path: &[ast::Ident],
 ) -> Result<ValueCow<'a>> {
     match value {
         &ValueCow::Borrowed(v) => {
@@ -55,7 +55,7 @@ pub fn lookup_path<'a>(
 pub fn lookup_path_maybe<'a>(
     source: &str,
     value: &ValueCow<'a>,
-    path: &[ast::Ident<'_>],
+    path: &[ast::Ident],
 ) -> Result<Option<ValueCow<'a>>> {
     let value = match value {
         // If the value is borrowed we can lookup the value and return a
@@ -83,14 +83,15 @@ pub fn lookup_path_maybe<'a>(
 }
 
 /// Index into the value with the given path segment.
-pub fn lookup<'a>(source: &str, value: &'a Value, p: &ast::Ident<'_>) -> Result<&'a Value> {
-    let ast::Ident { raw, span } = p;
+pub fn lookup<'a>(source: &str, value: &'a Value, p: &ast::Ident) -> Result<&'a Value> {
+    let ast::Ident { span } = p;
+    let raw = unsafe { index(source, *span) };
     match value {
         Value::List(list) => match raw.parse::<usize>() {
             Ok(i) => Ok(&list[i]),
             Err(_) => Err(Error::new("cannot index list with string", source, *span)),
         },
-        Value::Map(map) => match map.get(*raw) {
+        Value::Map(map) => match map.get(raw) {
             Some(value) => Ok(value),
             None => Err(Error::new("not found in map", source, *span)),
         },

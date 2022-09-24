@@ -35,3 +35,8 @@ impl From<Range<usize>> for Span {
         }
     }
 }
+
+pub unsafe fn index(s: &str, span: Span) -> &str {
+    let Span { m, n } = span;
+    unsafe { s.get_unchecked(m..n) }
+}

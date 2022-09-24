@@ -19,13 +19,13 @@ pub struct Parser<'engine, 'source> {
 }
 
 /// Stores the state of a statement during parsing.
-enum State<'source> {
+enum State {
     /// A partial `if` statement.
     If {
         /// Whether this is an an `if not` or a `if` statement.
         not: bool,
         /// The condition in the `if` block.
-        cond: ast::Expr<'source>,
+        cond: ast::Expr,
         /// The span of the `if` block.
         span: Span,
         /// Whether or not this `if` statement has an `else` clause.
@@ -35,9 +35,9 @@ enum State<'source> {
     /// A partial `for` statement.
     For {
         /// The loop variables.
-        vars: ast::LoopVars<'source>,
+        vars: ast::LoopVars,
         /// The value we are iterating over.
-        iterable: ast::Expr<'source>,
+        iterable: ast::Expr,
         /// The span of the `for` block.
         span: Span,
     },
@@ -45,24 +45,24 @@ enum State<'source> {
     /// A partial `with` statement.
     With {
         /// The expression to shadow.
-        expr: ast::Expr<'source>,
+        expr: ast::Expr,
         /// The name to assign to this expression.
-        name: ast::Ident<'source>,
+        name: ast::Ident,
         /// The span of the `with` block.
         span: Span,
     },
 }
 
 /// A parsed block definition.
-enum Block<'source> {
-    If(bool, ast::Expr<'source>),
+enum Block {
+    If(bool, ast::Expr),
     Else,
     EndIf,
-    For(ast::LoopVars<'source>, ast::Expr<'source>),
+    For(ast::LoopVars, ast::Expr),
     EndFor,
-    With(ast::Expr<'source>, ast::Ident<'source>),
+    With(ast::Expr, ast::Ident),
     EndWith,
-    Include(ast::String, Option<ast::Expr<'source>>),
+    Include(ast::String, Option<ast::Expr>),
 }
 
 /// A keyword in the template syntax.
@@ -102,14 +102,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     /// This function works using two stacks:
     /// - A stack of blocks e.g. `{% if cond %} ... {% else %}`.
     /// - A stack of scopes which collect each parsed statement.
-    pub fn parse_template(mut self) -> Result<ast::Template<'source>> {
+    pub fn parse_template(mut self) -> Result<ast::Template> {
         let mut blocks = vec![];
         let mut scopes = vec![ast::Scope::new()];
 
         while let Some(next) = self.next()? {
             let stmt = match next {
                 // Simply raw template, emit a single statement for it.
-                (Token::Raw, span) => ast::Stmt::Raw(&self.source()[span]),
+                (Token::Raw, span) => ast::Stmt::Raw(span),
 
                 // The start of a comment, e.g. `{# ... #}`
                 (Token::BeginComment, _) => {
@@ -309,7 +309,6 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         );
 
         Ok(ast::Template {
-            source: self.source(),
             scope: scopes.remove(0),
         })
     }
@@ -328,7 +327,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   with loop.index | is_even as even
     ///
-    fn parse_block(&mut self) -> Result<Block<'source>> {
+    fn parse_block(&mut self) -> Result<Block> {
         let (kw, span) = self.parse_keyword()?;
         match kw {
             Keyword::If => {
@@ -373,7 +372,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   not user.is_enabled
     ///
-    fn parse_if_cond(&mut self) -> Result<(bool, ast::Expr<'source>)> {
+    fn parse_if_cond(&mut self) -> Result<(bool, ast::Expr)> {
         if self.is_next_keyword(Keyword::Not)? {
             self.expect_keyword(Keyword::Not)?;
             let expr = self.parse_expr()?;
@@ -390,7 +389,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   user.name | lower | prefix: "Mr. "
     ///
-    fn parse_expr(&mut self) -> Result<ast::Expr<'source>> {
+    fn parse_expr(&mut self) -> Result<ast::Expr> {
         let mut expr = ast::Expr::Base(self.parse_base_expr()?);
         while self.is_next(Token::Pipe)? {
             self.expect(Token::Pipe)?;
@@ -424,7 +423,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///    0x150
     ///
-    fn parse_base_expr(&mut self) -> Result<ast::BaseExpr<'source>> {
+    fn parse_base_expr(&mut self) -> Result<ast::BaseExpr> {
         let expr = match self.parse()? {
             (Token::Keyword, span) => {
                 let lit = self.parse_literal_bool(span)?;
@@ -456,8 +455,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
 
             (Token::Ident, span) => {
-                let raw = &self.source()[span];
-                let mut path = vec![ast::Ident { raw, span }];
+                let mut path = vec![ast::Ident { span }];
                 while self.is_next(Token::Period)? {
                     self.expect(Token::Period)?;
                     path.push(self.parse_ident_or_index()?);
@@ -476,7 +474,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parses an identifier or index.
-    fn parse_ident_or_index(&mut self) -> Result<ast::Ident<'source>> {
+    fn parse_ident_or_index(&mut self) -> Result<ast::Ident> {
         let span = match self.parse()? {
             (Token::Number, span) if is_base10_integer(&self.source()[span]) => span,
             (Token::Ident, span) => span,
@@ -484,8 +482,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 return Err(self.err_unexpected_token("identifier", tk, span));
             }
         };
-        let raw = &self.source()[span];
-        Ok(ast::Ident { raw, span })
+        Ok(ast::Ident { span })
     }
 
     /// Parses filter arguments.
@@ -494,7 +491,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   user.name, "a string", true
     ///
-    fn parse_args(&mut self, span: Span) -> Result<ast::Args<'source>> {
+    fn parse_args(&mut self, span: Span) -> Result<ast::Args> {
         let mut values = Vec::new();
         loop {
             values.push(self.parse_base_expr()?);
@@ -516,7 +513,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   key, value
     ///
-    fn parse_loop_vars(&mut self) -> Result<ast::LoopVars<'source>> {
+    fn parse_loop_vars(&mut self) -> Result<ast::LoopVars> {
         let key = self.parse_ident()?;
         if !self.is_next(Token::Comma)? {
             return Ok(ast::LoopVars::Item(key));
@@ -666,10 +663,9 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parses an identifier.
-    fn parse_ident(&mut self) -> Result<ast::Ident<'source>> {
+    fn parse_ident(&mut self) -> Result<ast::Ident> {
         let span = self.expect(Token::Ident)?;
-        let raw = &self.source()[span];
-        Ok(ast::Ident { raw, span })
+        Ok(ast::Ident { span })
     }
 
     /// Parses any token.

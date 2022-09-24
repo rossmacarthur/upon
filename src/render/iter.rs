@@ -5,6 +5,7 @@ use std::vec as list;
 
 use crate::render::value::lookup;
 use crate::types::ast;
+use crate::types::span::index;
 use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
@@ -14,28 +15,28 @@ use crate::{Error, Result, Value};
 pub enum LoopState<'source, 'render> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
-        item: &'source ast::Ident<'source>,
+        item: &'source ast::Ident,
         iter: Enumerate<slice::Iter<'render, Value>>,
         value: Option<(usize, &'render Value)>,
     },
 
     /// An iterator over an owned list and the last item yielded
     ListOwned {
-        item: &'source ast::Ident<'source>,
+        item: &'source ast::Ident,
         iter: Enumerate<list::IntoIter<Value>>,
         value: Option<(usize, Value)>,
     },
 
     /// An iterator over a borrowed map and the last key and value yielded
     MapBorrowed {
-        kv: &'source ast::KeyValue<'source>,
+        kv: &'source ast::KeyValue,
         iter: Enumerate<map::Iter<'render, String, Value>>,
         value: Option<(usize, (&'render String, &'render Value))>,
     },
 
     /// An iterator over an owned map and the last key and value yielded
     MapOwned {
-        kv: &'source ast::KeyValue<'source>,
+        kv: &'source ast::KeyValue,
         iter: Enumerate<map::IntoIter<String, Value>>,
         value: Option<(usize, (String, Value))>,
     },
@@ -45,7 +46,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
     /// Constructs the initial loop state.
     pub fn new(
         source: &'source str,
-        vars: &'source ast::LoopVars<'source>,
+        vars: &'source ast::LoopVars,
         iterable: ValueCow<'render>,
         span: Span,
     ) -> Result<Self> {
@@ -58,7 +59,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
             )
         };
 
-        let unpack_list_item = |vars: &'source ast::LoopVars<'source>| match vars {
+        let unpack_list_item = |vars: &'source ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Ok(item),
             ast::LoopVars::KeyValue(kv) => Err(Error::new(
                 "cannot unpack list item into two variables",
@@ -67,7 +68,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
             )),
         };
 
-        let unpack_map_item = |vars: &'source ast::LoopVars<'source>| match vars {
+        let unpack_map_item = |vars: &'source ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Err(Error::new(
                 "cannot unpack map item into one variable",
                 source,
@@ -142,9 +143,9 @@ impl<'source, 'render> LoopState<'source, 'render> {
     pub fn lookup_path(
         &self,
         source: &str,
-        path: &[ast::Ident<'source>],
+        path: &[ast::Ident],
     ) -> Result<Option<ValueCow<'render>>> {
-        let name = path[0].raw;
+        let name = unsafe { index(source, path[0].span) };
 
         if name == "loop" {
             return self.lookup_loop(source, path);
@@ -167,7 +168,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                 item,
                 value: Some((_, value)),
                 ..
-            } if item.raw == name => {
+            } if unsafe { index(source, item.span) } == name => {
                 let v = resolve!(*value);
                 Ok(Some(ValueCow::Borrowed(v)))
             }
@@ -176,7 +177,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                 item,
                 value: Some((_, value)),
                 ..
-            } if item.raw == name => {
+            } if unsafe { index(source, item.span) } == name => {
                 let v = resolve!(value);
                 Ok(Some(ValueCow::Owned(v.clone())))
             }
@@ -185,7 +186,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                 kv,
                 value: Some((_, (string, _))),
                 ..
-            } if kv.key.raw == name => {
+            } if unsafe { index(source, kv.key.span) } == name => {
                 if let [p, ..] = &path[1..] {
                     return Err(err(p.span));
                 }
@@ -196,7 +197,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                 kv,
                 value: Some((_, (string, _))),
                 ..
-            } if kv.key.raw == name => {
+            } if unsafe { index(source, kv.key.span) } == name => {
                 if let [p, ..] = &path[1..] {
                     return Err(err(p.span));
                 }
@@ -207,7 +208,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                 kv,
                 value: Some((_, (_, value))),
                 ..
-            } if kv.value.raw == name => {
+            } if unsafe { index(source, kv.value.span) } == name => {
                 let v = resolve!(*value);
                 Ok(Some(ValueCow::Borrowed(v)))
             }
@@ -216,7 +217,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
                 kv,
                 value: Some((_, (_, value))),
                 ..
-            } if kv.value.raw == name => {
+            } if unsafe { index(source, kv.value.span) } == name => {
                 let v = resolve!(value);
                 Ok(Some(ValueCow::Owned(v.clone())))
             }
@@ -228,7 +229,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
     pub fn lookup_loop(
         &self,
         source: &str,
-        path: &[ast::Ident<'source>],
+        path: &[ast::Ident],
     ) -> Result<Option<ValueCow<'render>>> {
         let (i, rem) = match self.current_index_and_rem() {
             Some((i, rem)) => (i, rem),
@@ -243,7 +244,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
             ]))));
         }
 
-        let v = match path[1].raw {
+        let v = match unsafe { index(source, path[1].span) } {
             "index" => Value::Integer(i as i64),
             "first" => Value::Bool(i == 0),
             "last" => Value::Bool(rem == 0),

@@ -13,7 +13,7 @@ use crate::render::iter::LoopState;
 pub use crate::render::stack::{Stack, State};
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
-use crate::types::span::Span;
+use crate::types::span::{index, Span};
 use crate::value::ValueCow;
 use crate::{Engine, EngineFn, Error, Result, Value};
 
@@ -49,10 +49,10 @@ struct Renderer<'engine, 'source> {
 pub struct FilterState<'a> {
     pub stack: &'a Stack<'a, 'a>,
     pub source: &'a str,
-    pub filter: &'a ast::Ident<'a>,
+    pub filter: &'a ast::Ident,
     pub value: &'a mut ValueCow<'a>,
     pub value_span: Span,
-    pub args: &'a [ast::BaseExpr<'a>],
+    pub args: &'a [ast::BaseExpr],
 }
 
 #[cfg_attr(test, derive(Debug))]
@@ -149,12 +149,14 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                         .map_err(|err| err.with_span(t.source, *span))?;
                 }
 
-                Instr::EmitRaw(raw) => {
+                Instr::EmitRaw(span) => {
+                    let raw = unsafe { index(t.source, *span) };
                     f.write_str(raw)?;
                 }
 
                 Instr::EmitWith(name, span) => {
-                    match self.engine.functions.get(name.raw) {
+                    let name_raw = unsafe { index(t.source, name.span) };
+                    match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply
                         // it and then emit the value using the default
                         // formatter.
@@ -237,39 +239,42 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
                     debug_assert!(prev.is_none());
                 }
 
-                Instr::Apply(name, span, args) => match self.engine.functions.get(name.raw) {
-                    // The referenced function is a filter, so we apply it.
-                    #[cfg(feature = "filters")]
-                    Some(EngineFn::Filter(filter)) => {
-                        let mut value = expr.take().unwrap();
-                        let args = args
-                            .as_ref()
-                            .map(|args| args.values.as_slice())
-                            .unwrap_or(&[]);
-                        let result = filter(FilterState {
-                            stack,
-                            source: t.source,
-                            filter: name,
-                            value: &mut value,
-                            value_span: *span,
-                            args,
-                        })?;
-                        expr.replace(ValueCow::Owned(result));
+                Instr::Apply(name, span, args) => {
+                    let name_raw = unsafe { index(t.source, name.span) };
+                    match self.engine.functions.get(name_raw) {
+                        // The referenced function is a filter, so we apply it.
+                        #[cfg(feature = "filters")]
+                        Some(EngineFn::Filter(filter)) => {
+                            let mut value = expr.take().unwrap();
+                            let args = args
+                                .as_ref()
+                                .map(|args| args.values.as_slice())
+                                .unwrap_or(&[]);
+                            let result = filter(FilterState {
+                                stack,
+                                source: t.source,
+                                filter: name,
+                                value: &mut value,
+                                value_span: *span,
+                                args,
+                            })?;
+                            expr.replace(ValueCow::Owned(result));
+                        }
+                        // The referenced function is a formatter which is not valid
+                        // in the middle of an expression.
+                        Some(EngineFn::Formatter(_)) => {
+                            return Err(Error::new(
+                                "expected filter, found formatter",
+                                t.source,
+                                name.span,
+                            ));
+                        }
+                        // No filter or formatter exists.
+                        None => {
+                            return Err(Error::new("unknown filter", t.source, name.span));
+                        }
                     }
-                    // The referenced function is a formatter which is not valid
-                    // in the middle of an expression.
-                    Some(EngineFn::Formatter(_)) => {
-                        return Err(Error::new(
-                            "expected filter, found formatter",
-                            t.source,
-                            name.span,
-                        ));
-                    }
-                    // No filter or formatter exists.
-                    None => {
-                        return Err(Error::new("unknown filter", t.source, name.span));
-                    }
-                },
+                }
             }
             *pc += 1;
         }

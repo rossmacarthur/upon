@@ -10,11 +10,11 @@ pub const FIXME: usize = !0;
 #[cfg_attr(test, derive(Debug))]
 pub struct Template<'source> {
     pub source: &'source str,
-    pub instrs: Vec<Instr<'source>>,
+    pub instrs: Vec<Instr>,
 }
 
 #[cfg_attr(test, derive(Debug))]
-pub enum Instr<'source> {
+pub enum Instr {
     /// Jump to an instruction
     Jump(usize),
 
@@ -28,19 +28,19 @@ pub enum Instr<'source> {
     Emit(Span),
 
     /// Emit raw template
-    EmitRaw(&'source str),
+    EmitRaw(Span),
 
     /// Apply the filter or value formatter to the current expression and emit
-    EmitWith(ast::Ident<'source>, Span),
+    EmitWith(ast::Ident, Span),
 
     /// Start a loop over the current expression
-    LoopStart(ast::LoopVars<'source>, Span),
+    LoopStart(ast::LoopVars, Span),
 
     /// Advance and jump to the start of the loop
     LoopNext(usize),
 
     /// Push the current expression to the stack as a variable
-    WithStart(ast::Ident<'source>),
+    WithStart(ast::Ident),
 
     /// Remove a previously added variable from the stack
     WithEnd,
@@ -52,11 +52,11 @@ pub enum Instr<'source> {
     IncludeWith(ast::String),
 
     /// Lookup a variable and start building an expression
-    ExprStart(Vec<ast::Ident<'source>>),
+    ExprStart(Vec<ast::Ident>),
 
     /// Start building an expression using a literal
     ExprStartLit(Value),
 
     /// Apply the filter to the value at the top of the stack
-    Apply(ast::Ident<'source>, Span, Option<ast::Args<'source>>),
+    Apply(ast::Ident, Span, Option<ast::Args>),
 }

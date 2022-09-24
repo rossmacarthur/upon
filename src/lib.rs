@@ -164,6 +164,8 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 
+#![deny(unsafe_op_in_unsafe_fn)]
+
 mod compile;
 mod error;
 #[cfg(feature = "filters")]

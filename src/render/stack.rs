@@ -1,6 +1,7 @@
 use crate::render::iter::LoopState;
 use crate::render::value::{lookup_path, lookup_path_maybe};
 use crate::types::ast;
+use crate::types::span::index;
 use crate::value::ValueCow;
 use crate::{Error, Result};
 
@@ -15,7 +16,7 @@ pub enum State<'source, 'render> {
     Scope(ValueCow<'render>),
 
     /// A single variable.
-    Var(&'source ast::Ident<'source>, ValueCow<'render>),
+    Var(&'source ast::Ident, ValueCow<'render>),
 
     /// The current state of a loop iteration
     Loop(LoopState<'source, 'render>),
@@ -32,11 +33,7 @@ impl<'source, 'render> Stack<'source, 'render> {
     }
 
     /// Resolves a path to a variable on the stack.
-    pub fn lookup_path(
-        &self,
-        source: &str,
-        path: &[ast::Ident<'source>],
-    ) -> Result<ValueCow<'render>> {
+    pub fn lookup_path(&self, source: &str, path: &[ast::Ident]) -> Result<ValueCow<'render>> {
         for state in self.stack.iter().rev() {
             match state {
                 State::Scope(scope) => match lookup_path_maybe(source, scope, path)? {
@@ -44,7 +41,10 @@ impl<'source, 'render> Stack<'source, 'render> {
                     None => continue,
                 },
 
-                State::Var(name, var) if path[0].raw == name.raw => {
+                State::Var(name, var)
+                    if unsafe { index(source, path[0].span) }
+                        == unsafe { index(source, name.span) } =>
+                {
                     return lookup_path(source, var, &path[1..]);
                 }
 
@@ -76,7 +76,7 @@ impl<'source, 'render> Stack<'source, 'render> {
         }
     }
 
-    pub fn pop_var(&mut self) -> (&'source ast::Ident<'source>, ValueCow<'render>) {
+    pub fn pop_var(&mut self) -> (&'source ast::Ident, ValueCow<'render>) {
         match self.stack.pop().unwrap() {
             State::Var(name, value) => (name, value),
             _ => panic!("expected variable"),

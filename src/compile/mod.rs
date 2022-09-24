@@ -22,22 +22,22 @@ pub fn template<'engine, 'source>(
     source: &'source str,
 ) -> Result<Template<'source>> {
     let ast = parse::Parser::new(engine, source).parse_template()?;
-    Ok(Compiler::new().compile_template(ast))
+    Ok(Compiler::new().compile_template(source, ast))
 }
 
 /// A compiler that constructs a program from an AST.
 #[cfg_attr(test, derive(Debug))]
-struct Compiler<'source> {
-    instrs: Vec<Instr<'source>>,
+struct Compiler {
+    instrs: Vec<Instr>,
 }
 
-impl<'source> Compiler<'source> {
+impl Compiler {
     fn new() -> Self {
         Self { instrs: Vec::new() }
     }
 
-    fn compile_template(mut self, template: ast::Template<'source>) -> Template<'source> {
-        let ast::Template { source, scope } = template;
+    fn compile_template(mut self, source: &str, template: ast::Template) -> Template {
+        let ast::Template { scope } = template;
         self.compile_scope(scope);
         Template {
             source,
@@ -45,13 +45,13 @@ impl<'source> Compiler<'source> {
         }
     }
 
-    fn compile_scope(&mut self, scope: ast::Scope<'source>) {
+    fn compile_scope(&mut self, scope: ast::Scope) {
         for stmt in scope.stmts {
             self.compile_stmt(stmt);
         }
     }
 
-    fn compile_stmt(&mut self, stmt: ast::Stmt<'source>) {
+    fn compile_stmt(&mut self, stmt: ast::Stmt) {
         match stmt {
             ast::Stmt::Raw(raw) => {
                 self.push(Instr::EmitRaw(raw));
@@ -128,7 +128,7 @@ impl<'source> Compiler<'source> {
         }
     }
 
-    fn compile_expr(&mut self, expr: ast::Expr<'source>) {
+    fn compile_expr(&mut self, expr: ast::Expr) {
         match expr {
             ast::Expr::Base(base_expr) => {
                 self.compile_base_expr(base_expr);
@@ -146,7 +146,7 @@ impl<'source> Compiler<'source> {
         }
     }
 
-    fn compile_base_expr(&mut self, base_expr: ast::BaseExpr<'source>) {
+    fn compile_base_expr(&mut self, base_expr: ast::BaseExpr) {
         match base_expr {
             ast::BaseExpr::Var(ast::Var { path, .. }) => {
                 self.push(Instr::ExprStart(path));
@@ -183,7 +183,7 @@ impl<'source> Compiler<'source> {
         *j = n;
     }
 
-    fn push(&mut self, instr: Instr<'source>) -> usize {
+    fn push(&mut self, instr: Instr) -> usize {
         let i = self.instrs.len();
         self.instrs.push(instr);
         i
