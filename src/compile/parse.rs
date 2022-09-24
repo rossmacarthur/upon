@@ -715,7 +715,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         }
     }
 
-    fn source(&self) -> &'source str {
+    fn source(&self) -> &str {
         self.tokens.source
     }
 

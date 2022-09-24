@@ -1,6 +1,8 @@
 //! Defines a compiled [`Template`] which is a sequence of [`Instr`] that can be
 //! executed by the renderer.
 
+use std::borrow::Cow;
+
 use crate::types::ast;
 use crate::types::span::Span;
 use crate::Value;
@@ -9,7 +11,7 @@ pub const FIXME: usize = !0;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Template<'source> {
-    pub source: &'source str,
+    pub source: Cow<'source, str>,
     pub instrs: Vec<Instr>,
 }
 

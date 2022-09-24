@@ -130,14 +130,14 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                 }
 
                 Instr::JumpIfTrue(j, span) => {
-                    if expr.take().unwrap().as_bool(t.source, *span)? {
+                    if expr.take().unwrap().as_bool(&t.source, *span)? {
                         *pc = *j;
                         continue;
                     }
                 }
 
                 Instr::JumpIfFalse(j, span) => {
-                    if !expr.take().unwrap().as_bool(t.source, *span)? {
+                    if !expr.take().unwrap().as_bool(&t.source, *span)? {
                         *pc = *j;
                         continue;
                     }
@@ -146,16 +146,16 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                 Instr::Emit(span) => {
                     let value = expr.take().unwrap();
                     (self.engine.default_formatter)(f, &value)
-                        .map_err(|err| err.with_span(t.source, *span))?;
+                        .map_err(|err| err.with_span(&t.source, *span))?;
                 }
 
                 Instr::EmitRaw(span) => {
-                    let raw = unsafe { index(t.source, *span) };
+                    let raw = unsafe { index(&t.source, *span) };
                     f.write_str(raw)?;
                 }
 
                 Instr::EmitWith(name, span) => {
-                    let name_raw = unsafe { index(t.source, name.span) };
+                    let name_raw = unsafe { index(&t.source, name.span) };
                     match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply
                         // it and then emit the value using the default
@@ -165,26 +165,26 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                             let mut value = expr.take().unwrap();
                             let result = filter(FilterState {
                                 stack,
-                                source: t.source,
+                                source: &t.source,
                                 filter: name,
                                 value: &mut value,
                                 value_span: *span,
                                 args: &[],
                             })?;
                             (self.engine.default_formatter)(f, &result)
-                                .map_err(|err| err.with_span(t.source, *span))?;
+                                .map_err(|err| err.with_span(&t.source, *span))?;
                         }
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
                         Some(EngineFn::Formatter(formatter)) => {
                             let value = expr.take().unwrap();
-                            formatter(f, &value).map_err(|err| err.with_span(t.source, *span))?;
+                            formatter(f, &value).map_err(|err| err.with_span(&t.source, *span))?;
                         }
                         // No filter or formatter exists.
                         None => {
                             return Err(Error::new(
                                 "unknown filter or formatter",
-                                t.source,
+                                &t.source,
                                 name.span,
                             ));
                         }
@@ -194,7 +194,7 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                 Instr::LoopStart(vars, span) => {
                     let iterable = expr.take().unwrap();
                     stack.push(State::Loop(LoopState::new(
-                        t.source, vars, iterable, *span,
+                        &t.source, vars, iterable, *span,
                     )?));
                 }
 
@@ -217,19 +217,19 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
 
                 Instr::Include(name) => {
                     *pc += 1;
-                    let template = self.get_template(t.source, name)?;
+                    let template = self.get_template(&t.source, name)?;
                     return Ok(RenderState::Include { template });
                 }
 
                 Instr::IncludeWith(name) => {
                     *pc += 1;
-                    let template = self.get_template(t.source, name)?;
+                    let template = self.get_template(&t.source, name)?;
                     let globals = expr.take().unwrap();
                     return Ok(RenderState::IncludeWith { template, globals });
                 }
 
                 Instr::ExprStart(path) => {
-                    let value = stack.lookup_path(t.source, path)?;
+                    let value = stack.lookup_path(&t.source, path)?;
                     let prev = expr.replace(value);
                     debug_assert!(prev.is_none());
                 }
@@ -240,7 +240,7 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                 }
 
                 Instr::Apply(name, span, args) => {
-                    let name_raw = unsafe { index(t.source, name.span) };
+                    let name_raw = unsafe { index(&t.source, name.span) };
                     match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.
                         #[cfg(feature = "filters")]
@@ -252,7 +252,7 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                                 .unwrap_or(&[]);
                             let result = filter(FilterState {
                                 stack,
-                                source: t.source,
+                                source: &t.source,
                                 filter: name,
                                 value: &mut value,
                                 value_span: *span,
@@ -265,13 +265,13 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                         Some(EngineFn::Formatter(_)) => {
                             return Err(Error::new(
                                 "expected filter, found formatter",
-                                t.source,
+                                &t.source,
                                 name.span,
                             ));
                         }
                         // No filter or formatter exists.
                         None => {
-                            return Err(Error::new("unknown filter", t.source, name.span));
+                            return Err(Error::new("unknown filter", &t.source, name.span));
                         }
                     }
                 }

@@ -9,6 +9,8 @@ mod lex;
 mod parse;
 mod search;
 
+use std::borrow::Cow;
+
 pub use crate::compile::search::Searcher;
 
 use crate::types::ast;
@@ -19,9 +21,9 @@ use crate::{Engine, Result};
 /// Compile a template into a program.
 pub fn template<'engine, 'source>(
     engine: &'engine Engine<'engine>,
-    source: &'source str,
+    source: Cow<'source, str>,
 ) -> Result<Template<'source>> {
-    let ast = parse::Parser::new(engine, source).parse_template()?;
+    let ast = parse::Parser::new(engine, &source).parse_template()?;
     Ok(Compiler::new().compile_template(source, ast))
 }
 
@@ -36,7 +38,7 @@ impl Compiler {
         Self { instrs: Vec::new() }
     }
 
-    fn compile_template(mut self, source: &str, template: ast::Template) -> Template {
+    fn compile_template(mut self, source: Cow<'_, str>, template: ast::Template) -> Template<'_> {
         let ast::Template { scope } = template;
         self.compile_scope(scope);
         Template {

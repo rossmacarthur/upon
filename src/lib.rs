@@ -177,6 +177,7 @@ pub mod syntax;
 mod types;
 mod value;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
@@ -202,8 +203,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct Engine<'engine> {
     searcher: Searcher,
     default_formatter: &'engine FormatFn,
-    functions: BTreeMap<&'engine str, EngineFn>,
-    templates: BTreeMap<&'engine str, program::Template<'engine>>,
+    functions: BTreeMap<Cow<'engine, str>, EngineFn>,
+    templates: BTreeMap<Cow<'engine, str>, program::Template<'engine>>,
 }
 
 enum EngineFn {
@@ -278,39 +279,46 @@ impl<'engine> Engine<'engine> {
     /// **Note:** filters and formatters share the same namespace.
     #[cfg(feature = "filters")]
     #[inline]
-    pub fn add_filter<F, R, A>(&mut self, name: &'engine str, f: F)
+    pub fn add_filter<N, F, R, A>(&mut self, name: N, f: F)
     where
+        N: Into<Cow<'engine, str>>,
         F: Filter<R, A> + Send + Sync + 'static,
         R: FilterReturn,
         A: for<'a> FilterArgs<'a>,
     {
         self.functions
-            .insert(name, EngineFn::Filter(filters::new(f)));
+            .insert(name.into(), EngineFn::Filter(filters::new(f)));
     }
 
     /// Add a new value formatter to the engine.
     ///
     /// **Note:** filters and formatters share the same namespace.
     #[inline]
-    pub fn add_formatter<F>(&mut self, name: &'engine str, f: F)
+    pub fn add_formatter<N, F>(&mut self, name: N, f: F)
     where
+        N: Into<Cow<'engine, str>>,
         F: Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static,
     {
         self.functions
-            .insert(name, EngineFn::Formatter(Box::new(f)));
+            .insert(name.into(), EngineFn::Formatter(Box::new(f)));
     }
 
     /// Add a template to the engine.
     ///
     /// The template will be compiled and stored under the given name.
     ///
-    /// When using this function over [`.compile(..)`][Engine::compile] the
-    /// template source lifetime needs to be as least as long as the engine
-    /// lifetime.
+    /// You can either pass a borrowed ([`&str`]) or owned ([`String`]) template
+    /// to this function. When passing a borrowed template, the lifetime needs
+    /// to be at least as long as the engine lifetime. For shorter template
+    /// lifetimes use [`.compile(..)`][Engine::compile].
     #[inline]
-    pub fn add_template(&mut self, name: &'engine str, source: &'engine str) -> Result<()> {
-        let template = compile::template(self, source)?;
-        self.templates.insert(name, template);
+    pub fn add_template<N, S>(&mut self, name: N, source: S) -> Result<()>
+    where
+        N: Into<Cow<'engine, str>>,
+        S: Into<Cow<'engine, str>>,
+    {
+        let template = compile::template(self, source.into())?;
+        self.templates.insert(name.into(), template);
         Ok(())
     }
 
@@ -325,12 +333,12 @@ impl<'engine> Engine<'engine> {
 
     /// Compile a template.
     ///
-    /// The template will not be stored in the engine. The advantage over
-    /// [`.add_template(..)`][Engine::add_template] here is that the lifetime of
-    /// the template source does not need to outlive the engine.
+    /// The template will not be stored in the engine. The advantage over using
+    /// [`.add_template(..)`][Engine::add_template] here is that the template
+    /// source does not need to outlive the engine.
     #[inline]
     pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let template = compile::template(self, source)?;
+        let template = compile::template(self, Cow::Borrowed(source))?;
         Ok(Template {
             engine: self,
             template,
@@ -397,8 +405,8 @@ impl<'engine, 'source> Template<'engine, 'source> {
 
     /// Returns the original template source.
     #[inline]
-    pub fn source(&self) -> &'source str {
-        self.template.source
+    pub fn source(&self) -> &str {
+        &self.template.source
     }
 }
 
@@ -455,7 +463,7 @@ impl<'engine> TemplateRef<'engine> {
     /// Returns the original template source.
     #[inline]
     pub fn source(&self) -> &'engine str {
-        self.template.source
+        &self.template.source
     }
 }
 

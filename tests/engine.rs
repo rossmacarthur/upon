@@ -21,7 +21,7 @@ fn engine_send_and_sync() {
 }
 
 #[test]
-fn engine_compile_non_static_source() -> upon::Result<()> {
+fn engine_compile_borrowed_source_non_static() -> upon::Result<()> {
     let engine = Engine::new();
     let source = String::from("{{ lorem }}");
     let result = engine.compile(&source)?.render(value! { lorem: "ipsum" })?;
@@ -30,10 +30,23 @@ fn engine_compile_non_static_source() -> upon::Result<()> {
 }
 
 #[test]
-fn engine_add_template_non_static_source() -> upon::Result<()> {
+fn engine_add_template_borrowed_source_non_static() -> upon::Result<()> {
     let mut engine = Engine::new();
     let source = String::from("{{ lorem }}");
     engine.add_template("test", &source)?;
+    let result = engine
+        .get_template("test")
+        .unwrap()
+        .render(value! { lorem: "ipsum" })?;
+    assert_eq!(result, "ipsum");
+    Ok(())
+}
+
+#[test]
+fn engine_add_template_owned_source() -> upon::Result<()> {
+    let mut engine = Engine::new();
+    let source = String::from("{{ lorem }}");
+    engine.add_template("test", source)?;
     let result = engine
         .get_template("test")
         .unwrap()
