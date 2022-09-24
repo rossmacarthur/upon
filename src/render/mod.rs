@@ -17,17 +17,17 @@ use crate::types::span::{index, Span};
 use crate::value::ValueCow;
 use crate::{Engine, EngineFn, Error, Result, Value};
 
-pub fn template<'engine, 'source>(
+pub fn template<'engine, 'template>(
     engine: &'engine Engine<'engine>,
-    template: &'source Template<'source>,
+    template: &'template Template<'template>,
     globals: Value,
 ) -> Result<String> {
     Renderer::new(engine, template).render(globals)
 }
 
-pub fn template_to<'engine, 'source, W>(
+pub fn template_to<'engine, 'template, W>(
     engine: &'engine Engine<'engine>,
-    template: &'source Template<'source>,
+    template: &'template Template<'template>,
     writer: W,
     globals: Value,
 ) -> Result<()>
@@ -39,9 +39,9 @@ where
 
 /// A renderer that interprets a compiled [`Template`].
 #[cfg_attr(test, derive(Debug))]
-struct Renderer<'engine, 'source> {
+struct Renderer<'engine, 'template> {
     engine: &'engine Engine<'engine>,
-    template: &'source Template<'source>,
+    template: &'template Template<'template>,
 }
 
 #[cfg(feature = "filters")]
@@ -67,8 +67,8 @@ enum RenderState<'engine, 'render> {
     },
 }
 
-impl<'engine, 'source> Renderer<'engine, 'source> {
-    pub fn new(engine: &'engine Engine<'engine>, template: &'source Template<'source>) -> Self {
+impl<'engine, 'template> Renderer<'engine, 'template> {
+    pub fn new(engine: &'engine Engine<'engine>, template: &'template Template<'template>) -> Self {
         Self { engine, template }
     }
 
@@ -115,9 +115,9 @@ impl<'engine, 'source> Renderer<'engine, 'source> {
     fn render_one<'render>(
         &self,
         f: &mut Formatter<'_>,
-        t: &'source Template<'source>,
+        t: &'template Template<'template>,
         pc: &mut usize,
-        stack: &mut Stack<'source, 'render>,
+        stack: &mut Stack<'template, 'render>,
     ) -> Result<RenderState<'engine, 'render>> {
         // An expression that we are building
         let mut expr: Option<ValueCow<'render>> = None;

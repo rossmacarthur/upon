@@ -12,41 +12,41 @@ use crate::{Error, Result, Value};
 
 /// The state of a loop iteration.
 #[cfg_attr(test, derive(Debug))]
-pub enum LoopState<'source, 'render> {
+pub enum LoopState<'template, 'render> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
-        item: &'source ast::Ident,
+        item: &'template ast::Ident,
         iter: Enumerate<slice::Iter<'render, Value>>,
         value: Option<(usize, &'render Value)>,
     },
 
     /// An iterator over an owned list and the last item yielded
     ListOwned {
-        item: &'source ast::Ident,
+        item: &'template ast::Ident,
         iter: Enumerate<list::IntoIter<Value>>,
         value: Option<(usize, Value)>,
     },
 
     /// An iterator over a borrowed map and the last key and value yielded
     MapBorrowed {
-        kv: &'source ast::KeyValue,
+        kv: &'template ast::KeyValue,
         iter: Enumerate<map::Iter<'render, String, Value>>,
         value: Option<(usize, (&'render String, &'render Value))>,
     },
 
     /// An iterator over an owned map and the last key and value yielded
     MapOwned {
-        kv: &'source ast::KeyValue,
+        kv: &'template ast::KeyValue,
         iter: Enumerate<map::IntoIter<String, Value>>,
         value: Option<(usize, (String, Value))>,
     },
 }
 
-impl<'source, 'render> LoopState<'source, 'render> {
+impl<'template, 'render> LoopState<'template, 'render> {
     /// Constructs the initial loop state.
     pub fn new(
-        source: &'source str,
-        vars: &'source ast::LoopVars,
+        source: &str,
+        vars: &'template ast::LoopVars,
         iterable: ValueCow<'render>,
         span: Span,
     ) -> Result<Self> {
@@ -59,7 +59,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
             )
         };
 
-        let unpack_list_item = |vars: &'source ast::LoopVars| match vars {
+        let unpack_list_item = |vars: &'template ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Ok(item),
             ast::LoopVars::KeyValue(kv) => Err(Error::new(
                 "cannot unpack list item into two variables",
@@ -68,7 +68,7 @@ impl<'source, 'render> LoopState<'source, 'render> {
             )),
         };
 
-        let unpack_map_item = |vars: &'source ast::LoopVars| match vars {
+        let unpack_map_item = |vars: &'template ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Err(Error::new(
                 "cannot unpack map item into one variable",
                 source,
