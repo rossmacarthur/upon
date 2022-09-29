@@ -100,8 +100,13 @@ impl<'a> SyntaxBuilder<'a> {
     /// Set the block syntax.
     ///
     /// If not set then the expression syntax will not be available.
+    ///
+    /// # Panics
+    ///
+    /// If either of the strings are empty.
     #[inline]
     pub fn expr(&mut self, begin_expr: &'a str, end_expr: &'a str) -> &mut Self {
+        assert!(!begin_expr.is_empty() && !end_expr.is_empty());
         self.expr = Some((begin_expr, end_expr));
         self
     }
@@ -109,8 +114,13 @@ impl<'a> SyntaxBuilder<'a> {
     /// Set the block syntax.
     ///
     /// If not set then the block syntax will not be available.
+    ///
+    /// # Panics
+    ///
+    /// If either of the strings are empty.
     #[inline]
     pub fn block(&mut self, begin_block: &'a str, end_block: &'a str) -> &mut Self {
+        assert!(!begin_block.is_empty() && !end_block.is_empty());
         self.block = Some((begin_block, end_block));
         self
     }
@@ -118,8 +128,13 @@ impl<'a> SyntaxBuilder<'a> {
     /// Set the comment syntax.
     ///
     /// If not set then comment syntax will not be available.
+    ///
+    /// # Panics
+    ///
+    /// If either of the strings are empty.
     #[inline]
     pub fn comment(&mut self, begin_comment: &'a str, end_comment: &'a str) -> &mut Self {
+        assert!(!begin_comment.is_empty() && !end_comment.is_empty());
         self.comment = Some((begin_comment, end_comment));
         self
     }
