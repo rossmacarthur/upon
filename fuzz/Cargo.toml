@@ -8,11 +8,19 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
+arbitrary = { version = "1.1.6", features = ["derive"] }
 libfuzzer-sys = "0.4"
+serde = { version = "1.0.145", features = ["derive"] }
 upon = { path = ".." }
 
 [[bin]]
 name = "compile"
 path = "src/compile.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "render"
+path = "src/render.rs"
 test = false
 doc = false
