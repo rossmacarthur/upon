@@ -628,6 +628,20 @@ fn render_include_statement_err_unknown_template() {
 }
 
 #[test]
+fn render_include_statement_err_maximum_depth() {
+    let mut engine = Engine::new();
+    engine
+        .add_template("cycle", r#"{% include "cycle" %}"#)
+        .unwrap();
+    let err = engine
+        .get_template("cycle")
+        .unwrap()
+        .render(Value::None)
+        .unwrap_err();
+    assert_eq!(err.to_string(), "reached maximum include depth (64)");
+}
+
+#[test]
 fn render_to_writer() {
     let mut w = Writer::new();
     Engine::new()

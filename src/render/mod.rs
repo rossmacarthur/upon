@@ -107,6 +107,12 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
                     templates.push((template, 0));
                 }
             }
+            if templates.len() > self.engine.max_include_depth {
+                return Err(Error::from(format!(
+                    "reached maximum include depth ({})",
+                    self.engine.max_include_depth
+                )));
+            }
         }
 
         Ok(())

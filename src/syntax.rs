@@ -188,6 +188,10 @@
 //! </body>
 //! ```
 //!
+//! Self-referential templates and include cycles are allowed but the maximum
+//! include depth is restricted by the engine setting
+//! [`set_max_include_depth`][crate::Engine::set_max_include_depth].
+//!
 //! # Whitespace control
 //!
 //! If an expression or block includes a hyphen `-` character, like `{{-`,

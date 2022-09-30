@@ -205,6 +205,7 @@ pub struct Engine<'engine> {
     default_formatter: &'engine FormatFn,
     functions: BTreeMap<Cow<'engine, str>, EngineFn>,
     templates: BTreeMap<Cow<'engine, str>, program::Template<'engine>>,
+    max_include_depth: usize,
 }
 
 enum EngineFn {
@@ -262,6 +263,7 @@ impl<'engine> Engine<'engine> {
             default_formatter: &format,
             functions: BTreeMap::new(),
             templates: BTreeMap::new(),
+            max_include_depth: 64,
         }
     }
 
@@ -272,6 +274,17 @@ impl<'engine> Engine<'engine> {
         F: Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static,
     {
         self.default_formatter = f;
+    }
+
+    /// Set the maximum length of the template render stack.
+    ///
+    /// This is the maximum number of nested `{% include ... %}` statements that
+    /// are allowed during rendering, as counted from the root template.
+    ///
+    /// Defaults to `64`.
+    #[inline]
+    pub fn set_max_include_depth(&mut self, depth: usize) {
+        self.max_include_depth = depth;
     }
 
     /// Add a new filter to the engine.
