@@ -30,7 +30,7 @@ jobs:
       run: cargo clippy --workspace --all-targets
 
     - name: Test
-      run: cargo test --workspace --all-targets
+      run: cargo test --workspace
 
   check-version:
     needs: build

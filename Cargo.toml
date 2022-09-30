@@ -40,4 +40,4 @@ serde = ["dep:serde"]
 unicode = ["dep:unicode-width"]
 
 [workspace]
-members = ["benches", "tools/*"]
+members = ["benches", "fuzz", "tools/*"]
