@@ -3,7 +3,7 @@ mod ahocorasick;
 use crate::compile::search::ahocorasick::AhoCorasick;
 use crate::types::syntax::{Kind, Syntax};
 
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Searcher {
     imp: AhoCorasick,
 }
@@ -33,7 +33,7 @@ impl Searcher {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(internal_debug))]
 impl std::fmt::Debug for Searcher {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Searcher").finish_non_exhaustive()

@@ -218,7 +218,7 @@ enum EngineFn {
 type FormatFn = dyn Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static;
 
 /// A compiled template.
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: program::Template<'source>,
@@ -226,7 +226,7 @@ pub struct Template<'engine, 'source> {
 
 /// A reference to a compiled template in an [`Engine`].
 #[derive(Clone, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
     template: &'engine program::Template<'engine>,
@@ -364,11 +364,11 @@ impl fmt::Debug for Engine<'_> {
         let mut d = f.debug_struct("Engine");
         d.field("searcher", &self.searcher);
         d.field("functions", &self.functions.keys());
-        #[cfg(not(test))]
+        #[cfg(not(internal_debug))]
         {
             d.field("templates", &self.templates.keys()).finish()
         }
-        #[cfg(test)]
+        #[cfg(internal_debug)]
         {
             d.field("templates", &self.templates).finish()
         }
@@ -423,7 +423,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(internal_debug))]
 impl fmt::Debug for Template<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Template")
@@ -480,7 +480,7 @@ impl<'engine> TemplateRef<'engine> {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(internal_debug))]
 impl fmt::Debug for TemplateRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TemplateRef")

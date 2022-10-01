@@ -9,7 +9,7 @@ use crate::{Engine, Error, Result};
 /// The lexer is implemented as a fallible iterator. The parser should
 /// repeatedly call the [`.next()?`][Lexer::next] method to return the next
 /// non-whitespace token until [`None`] is returned.
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Lexer<'engine, 'source> {
     /// A reference to the engine containing the syntax searcher.
     engine: &'engine Engine<'engine>,
@@ -35,7 +35,7 @@ pub struct Lexer<'engine, 'source> {
 /// The lexer requires state because the tokenization is different when
 /// tokenizing text between expression and block syntax, e.g. `{{ expr }}`,
 /// `{% if cond %}`.
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 enum State {
     /// Within raw template.
     Template,

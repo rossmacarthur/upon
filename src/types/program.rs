@@ -9,13 +9,13 @@ use crate::Value;
 
 pub const FIXME: usize = !0;
 
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Template<'source> {
     pub source: Cow<'source, str>,
     pub instrs: Vec<Instr>,
 }
 
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub enum Instr {
     /// Jump to an instruction
     Jump(usize),

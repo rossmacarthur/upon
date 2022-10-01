@@ -5,12 +5,12 @@ use crate::types::span::index;
 use crate::value::ValueCow;
 use crate::{Error, Result};
 
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Stack<'a> {
     stack: Vec<State<'a>>,
 }
 
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub enum State<'a> {
     /// An entire scope of variables, always a map
     Scope(ValueCow<'a>),

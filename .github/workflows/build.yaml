@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: --deny warnings
 
 jobs:
   build:
@@ -13,6 +12,9 @@ jobs:
     strategy:
       matrix:
         toolchain: [stable, beta, nightly]
+
+    env:
+      RUSTFLAGS: --deny warnings
 
     steps:
     - uses: actions/checkout@v2
@@ -31,6 +33,14 @@ jobs:
 
     - name: Test
       run: cargo test --workspace
+
+    - name: Check (no default features)
+      run: cargo check --workspace --all-targets --no-default-features
+
+    - name: Check (internal debug)
+      run: cargo check --workspace --all-targets
+      env:
+        RUSTFLAGS: --deny warnings --cfg internal_debug
 
   check-version:
     needs: build

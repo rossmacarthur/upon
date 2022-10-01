@@ -3,7 +3,7 @@ use serde::ser::Serialize;
 use crate::{to_value, Error, Result, Value};
 
 #[derive(Default)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct SerializeList {
     list: Vec<Value>,
 }

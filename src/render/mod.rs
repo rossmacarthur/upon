@@ -38,14 +38,14 @@ where
 }
 
 /// A renderer that interprets a compiled [`Template`].
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 struct Renderer<'a> {
     engine: &'a Engine<'a>,
     template: &'a Template<'a>,
 }
 
 #[cfg(feature = "filters")]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct FilterState<'a> {
     pub stack: &'a Stack<'a>,
     pub source: &'a str,
@@ -55,7 +55,7 @@ pub struct FilterState<'a> {
     pub args: &'a [ast::BaseExpr],
 }
 
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 enum RenderState<'a> {
     Done,
     Include {

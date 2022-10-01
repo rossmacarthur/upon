@@ -11,7 +11,7 @@ use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
 /// The state of a loop iteration.
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub enum LoopState<'a> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
