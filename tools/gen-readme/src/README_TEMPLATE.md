@@ -10,23 +10,31 @@
 
 ## Benchmarks
 
-The following shows a violin plot of the benchmark results for `upon` compared
-to the following template rendering engines.
+`upon` was benchmarked against several popular template rendering engines in the
+Rust ecosystem. Obviously, each of these engines has a completely different
+feature set so the benchmark just compares the performance of some of the
+features that they share. Handlebars is so slow that it is excluded from the
+compile violin plot.
+
 - [handlebars](https://crates.io/crates/handlebars)
 - [liquid](https://crates.io/crates/liquid)
 - [minijinja](https://crates.io/crates/minijinja)
 - [tera](https://crates.io/crates/tera)
 - [tinytemplate](https://crates.io/crates/tinytemplate)
 
-Obviously, each of these engines has a completely different feature set so this
-just compares the performance of some of the features that they share.
+![Violin plot of compile results](./benches/results/compile.svg)
+![Violin plot of render results](./benches/results/render.svg)
 
-![Violin plot of benchmark results](./benches/results/violin.svg)
+Benchmarking was done using [criterion](https://crates.io/crates/criterion) on
+a quiet cloud machine.
 
 **Host**
-- MacBook Pro (14-inch, 2021)
-- Chipset: Apple M1 Pro
-- Memory: 16 GB
+
+- Vultr.com
+- 4 CPU
+- 8192 MB RAM
+- Ubuntu 20.04
+- Rust 1.64.0
 
 ## License
 
