@@ -59,7 +59,7 @@ pub fn lookup_path_maybe<'a>(
 ) -> Result<Option<ValueCow<'a>>> {
     let value = match value {
         // If the value is borrowed we can lookup the value and return a
-        // reference with lifetime 'a
+        // reference with lifetime a
         &ValueCow::Borrowed(v) => {
             let v = match lookup(source, v, &path[0]) {
                 Ok(v) => v,

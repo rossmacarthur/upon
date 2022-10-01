@@ -6,34 +6,34 @@ use crate::value::ValueCow;
 use crate::{Error, Result};
 
 #[cfg_attr(test, derive(Debug))]
-pub struct Stack<'template, 'render> {
-    stack: Vec<State<'template, 'render>>,
+pub struct Stack<'a> {
+    stack: Vec<State<'a>>,
 }
 
 #[cfg_attr(test, derive(Debug))]
-pub enum State<'template, 'render> {
+pub enum State<'a> {
     /// An entire scope of variables, always a map
-    Scope(ValueCow<'render>),
+    Scope(ValueCow<'a>),
 
     /// A single variable.
-    Var(&'template ast::Ident, ValueCow<'render>),
+    Var(&'a ast::Ident, ValueCow<'a>),
 
     /// The current state of a loop iteration
-    Loop(LoopState<'template, 'render>),
+    Loop(LoopState<'a>),
 
     /// Used to represent a template boundary.
     Boundary,
 }
 
-impl<'template, 'render> Stack<'template, 'render> {
-    pub fn new(globals: ValueCow<'render>) -> Self {
+impl<'a> Stack<'a> {
+    pub fn new(globals: ValueCow<'a>) -> Self {
         Self {
             stack: vec![State::Scope(globals)],
         }
     }
 
     /// Resolves a path to a variable on the stack.
-    pub fn lookup_path(&self, source: &str, path: &[ast::Ident]) -> Result<ValueCow<'render>> {
+    pub fn lookup_path(&self, source: &str, path: &[ast::Ident]) -> Result<ValueCow<'a>> {
         for state in self.stack.iter().rev() {
             match state {
                 State::Scope(scope) => match lookup_path_maybe(source, scope, path)? {
@@ -65,32 +65,32 @@ impl<'template, 'render> Stack<'template, 'render> {
         Err(Error::new("not found in this scope", source, path[0].span))
     }
 
-    pub fn push(&mut self, state: State<'template, 'render>) {
+    pub fn push(&mut self, state: State<'a>) {
         self.stack.push(state);
     }
 
-    pub fn last_loop_state_mut(&mut self) -> &mut LoopState<'template, 'render> {
+    pub fn last_loop_state_mut(&mut self) -> &mut LoopState<'a> {
         match self.stack.last_mut().unwrap() {
             State::Loop(loop_state) => loop_state,
             _ => panic!("expected loop state"),
         }
     }
 
-    pub fn pop_scope(&mut self) -> ValueCow<'render> {
+    pub fn pop_scope(&mut self) -> ValueCow<'a> {
         match self.stack.pop().unwrap() {
             State::Scope(globals) => globals,
             _ => panic!("expected scope"),
         }
     }
 
-    pub fn pop_var(&mut self) -> (&'template ast::Ident, ValueCow<'render>) {
+    pub fn pop_var(&mut self) -> (&'a ast::Ident, ValueCow<'a>) {
         match self.stack.pop().unwrap() {
             State::Var(name, value) => (name, value),
             _ => panic!("expected variable"),
         }
     }
 
-    pub fn pop_loop_state(&mut self) -> LoopState<'template, 'render> {
+    pub fn pop_loop_state(&mut self) -> LoopState<'a> {
         match self.stack.pop().unwrap() {
             State::Loop(state) => state,
             _ => panic!("expected loop state"),

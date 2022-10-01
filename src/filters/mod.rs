@@ -303,7 +303,7 @@ fn check_args(state: &FilterState<'_>, exp: usize) -> Result<()> {
 
 fn get_arg<'a, T>(
     source: &str,
-    stack: &'a Stack<'a, 'a>,
+    stack: &'a Stack<'a>,
     args: &'a [BaseExpr],
     i: usize,
 ) -> Result<T::Output>

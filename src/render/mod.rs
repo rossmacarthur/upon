@@ -17,17 +17,17 @@ use crate::types::span::{index, Span};
 use crate::value::ValueCow;
 use crate::{Engine, EngineFn, Error, Result, Value};
 
-pub fn template<'engine, 'template>(
-    engine: &'engine Engine<'engine>,
-    template: &'template Template<'template>,
+pub fn template<'a>(
+    engine: &'a Engine<'a>,
+    template: &'a Template<'a>,
     globals: Value,
 ) -> Result<String> {
     Renderer::new(engine, template).render(globals)
 }
 
-pub fn template_to<'engine, 'template, W>(
-    engine: &'engine Engine<'engine>,
-    template: &'template Template<'template>,
+pub fn template_to<'a, W>(
+    engine: &'a Engine<'a>,
+    template: &'a Template<'a>,
     writer: W,
     globals: Value,
 ) -> Result<()>
@@ -39,15 +39,15 @@ where
 
 /// A renderer that interprets a compiled [`Template`].
 #[cfg_attr(test, derive(Debug))]
-struct Renderer<'engine, 'template> {
-    engine: &'engine Engine<'engine>,
-    template: &'template Template<'template>,
+struct Renderer<'a> {
+    engine: &'a Engine<'a>,
+    template: &'a Template<'a>,
 }
 
 #[cfg(feature = "filters")]
 #[cfg_attr(test, derive(Debug))]
 pub struct FilterState<'a> {
-    pub stack: &'a Stack<'a, 'a>,
+    pub stack: &'a Stack<'a>,
     pub source: &'a str,
     pub filter: &'a ast::Ident,
     pub value: &'a mut ValueCow<'a>,
@@ -56,19 +56,19 @@ pub struct FilterState<'a> {
 }
 
 #[cfg_attr(test, derive(Debug))]
-enum RenderState<'engine, 'render> {
+enum RenderState<'a> {
     Done,
     Include {
-        template: &'engine Template<'engine>,
+        template: &'a Template<'a>,
     },
     IncludeWith {
-        template: &'engine Template<'engine>,
-        globals: ValueCow<'render>,
+        template: &'a Template<'a>,
+        globals: ValueCow<'a>,
     },
 }
 
-impl<'engine, 'template> Renderer<'engine, 'template> {
-    pub fn new(engine: &'engine Engine<'engine>, template: &'template Template<'template>) -> Self {
+impl<'a> Renderer<'a> {
+    pub fn new(engine: &'a Engine<'a>, template: &'a Template<'a>) -> Self {
         Self { engine, template }
     }
 
@@ -122,15 +122,15 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
         Ok(())
     }
 
-    fn render_one<'render>(
+    fn render_one(
         &self,
         f: &mut Formatter<'_>,
-        t: &'template Template<'template>,
+        t: &'a Template<'a>,
         pc: &mut usize,
-        stack: &mut Stack<'template, 'render>,
-    ) -> Result<RenderState<'engine, 'render>> {
+        stack: &mut Stack<'a>,
+    ) -> Result<RenderState<'a>> {
         // An expression that we are building
-        let mut expr: Option<ValueCow<'render>> = None;
+        let mut expr: Option<ValueCow<'a>> = None;
 
         while let Some(instr) = t.instrs.get(*pc) {
             match instr {
@@ -293,7 +293,7 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
         Ok(RenderState::Done)
     }
 
-    fn get_template(&self, source: &str, name: &ast::String) -> Result<&'engine Template<'engine>> {
+    fn get_template(&self, source: &str, name: &ast::String) -> Result<&'a Template<'a>> {
         self.engine
             .templates
             .get(name.name.as_str())

@@ -12,42 +12,42 @@ use crate::{Error, Result, Value};
 
 /// The state of a loop iteration.
 #[cfg_attr(test, derive(Debug))]
-pub enum LoopState<'template, 'render> {
+pub enum LoopState<'a> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
-        item: &'template ast::Ident,
-        iter: Enumerate<slice::Iter<'render, Value>>,
-        value: Option<(usize, &'render Value)>,
+        item: &'a ast::Ident,
+        iter: Enumerate<slice::Iter<'a, Value>>,
+        value: Option<(usize, &'a Value)>,
     },
 
     /// An iterator over an owned list and the last item yielded
     ListOwned {
-        item: &'template ast::Ident,
+        item: &'a ast::Ident,
         iter: Enumerate<list::IntoIter<Value>>,
         value: Option<(usize, Value)>,
     },
 
     /// An iterator over a borrowed map and the last key and value yielded
     MapBorrowed {
-        kv: &'template ast::KeyValue,
-        iter: Enumerate<map::Iter<'render, String, Value>>,
-        value: Option<(usize, (&'render String, &'render Value))>,
+        kv: &'a ast::KeyValue,
+        iter: Enumerate<map::Iter<'a, String, Value>>,
+        value: Option<(usize, (&'a String, &'a Value))>,
     },
 
     /// An iterator over an owned map and the last key and value yielded
     MapOwned {
-        kv: &'template ast::KeyValue,
+        kv: &'a ast::KeyValue,
         iter: Enumerate<map::IntoIter<String, Value>>,
         value: Option<(usize, (String, Value))>,
     },
 }
 
-impl<'template, 'render> LoopState<'template, 'render> {
+impl<'a> LoopState<'a> {
     /// Constructs the initial loop state.
     pub fn new(
         source: &str,
-        vars: &'template ast::LoopVars,
-        iterable: ValueCow<'render>,
+        vars: &'a ast::LoopVars,
+        iterable: ValueCow<'a>,
         span: Span,
     ) -> Result<Self> {
         let human = iterable.human();
@@ -59,7 +59,7 @@ impl<'template, 'render> LoopState<'template, 'render> {
             )
         };
 
-        let unpack_list_item = |vars: &'template ast::LoopVars| match vars {
+        let unpack_list_item = |vars: &'a ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Ok(item),
             ast::LoopVars::KeyValue(kv) => Err(Error::new(
                 "cannot unpack list item into two variables",
@@ -68,7 +68,7 @@ impl<'template, 'render> LoopState<'template, 'render> {
             )),
         };
 
-        let unpack_map_item = |vars: &'template ast::LoopVars| match vars {
+        let unpack_map_item = |vars: &'a ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Err(Error::new(
                 "cannot unpack map item into one variable",
                 source,
@@ -140,11 +140,7 @@ impl<'template, 'render> LoopState<'template, 'render> {
         Some(())
     }
 
-    pub fn lookup_path(
-        &self,
-        source: &str,
-        path: &[ast::Ident],
-    ) -> Result<Option<ValueCow<'render>>> {
+    pub fn lookup_path(&self, source: &str, path: &[ast::Ident]) -> Result<Option<ValueCow<'a>>> {
         let name = unsafe { index(source, path[0].span) };
 
         if name == "loop" {
@@ -226,11 +222,7 @@ impl<'template, 'render> LoopState<'template, 'render> {
         }
     }
 
-    pub fn lookup_loop(
-        &self,
-        source: &str,
-        path: &[ast::Ident],
-    ) -> Result<Option<ValueCow<'render>>> {
+    pub fn lookup_loop(&self, source: &str, path: &[ast::Ident]) -> Result<Option<ValueCow<'a>>> {
         let (i, rem) = match self.current_index_and_rem() {
             Some((i, rem)) => (i, rem),
             None => return Ok(None),
