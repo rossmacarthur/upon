@@ -76,6 +76,13 @@ impl<'template, 'render> Stack<'template, 'render> {
         }
     }
 
+    pub fn pop_scope(&mut self) -> ValueCow<'render> {
+        match self.stack.pop().unwrap() {
+            State::Scope(globals) => globals,
+            _ => panic!("expected scope"),
+        }
+    }
+
     pub fn pop_var(&mut self) -> (&'template ast::Ident, ValueCow<'render>) {
         match self.stack.pop().unwrap() {
             State::Var(name, value) => (name, value),
@@ -87,6 +94,13 @@ impl<'template, 'render> Stack<'template, 'render> {
         match self.stack.pop().unwrap() {
             State::Loop(state) => state,
             _ => panic!("expected loop state"),
+        }
+    }
+
+    pub fn pop_boundary(&mut self) {
+        match self.stack.pop().unwrap() {
+            State::Boundary => {}
+            _ => panic!("expected boundary"),
         }
     }
 }

@@ -629,6 +629,17 @@ fn render_include_statement_err_maximum_depth() {
 }
 
 #[test]
+fn render_include_with_statement_inside_with_statement() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "").unwrap();
+    engine
+        .compile(r#"{% with false as x %} {% include "nested" with false %} {% endwith %}"#)
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+}
+
+#[test]
 fn render_to_writer() {
     let mut w = Writer::new();
     Engine::new()

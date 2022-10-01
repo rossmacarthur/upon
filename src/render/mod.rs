@@ -91,20 +91,24 @@ impl<'engine, 'template> Renderer<'engine, 'template> {
 
     fn render_impl(&self, f: &mut Formatter<'_>, globals: Value) -> Result<()> {
         let mut stack = Stack::new(ValueCow::Borrowed(&globals));
-        let mut templates = vec![(self.template, 0)];
+        let mut templates = vec![(self.template, 0, false)];
 
-        while let Some((t, pc)) = templates.last_mut() {
+        while let Some((t, pc, has_scope)) = templates.last_mut() {
             match self.render_one(f, t, pc, &mut stack)? {
                 RenderState::Done => {
+                    if *has_scope {
+                        stack.pop_scope();
+                        stack.pop_boundary();
+                    }
                     templates.pop();
                 }
                 RenderState::Include { template } => {
-                    templates.push((template, 0));
+                    templates.push((template, 0, false));
                 }
                 RenderState::IncludeWith { template, globals } => {
                     stack.push(State::Boundary);
                     stack.push(State::Scope(globals));
-                    templates.push((template, 0));
+                    templates.push((template, 0, true));
                 }
             }
             if templates.len() > self.engine.max_include_depth {
