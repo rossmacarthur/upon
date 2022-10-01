@@ -22,6 +22,8 @@ pub struct Parser<'engine, 'source> {
 enum State {
     /// A partial `if` statement.
     If {
+        /// Whether or not this `if` statement is an `else if` clause.
+        is_else_if: bool,
         /// Whether this is an an `if not` or a `if` statement.
         not: bool,
         /// The condition in the `if` block.
@@ -57,6 +59,7 @@ enum State {
 enum Block {
     If(bool, ast::Expr),
     Else,
+    ElseIf(bool, ast::Expr),
     EndIf,
     For(ast::LoopVars, ast::Expr),
     EndFor,
@@ -143,11 +146,44 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // new scope.
                         Block::If(not, cond) => {
                             blocks.push(State::If {
+                                is_else_if: false,
                                 not,
                                 cond,
                                 span,
                                 has_else: false,
                             });
+                            scopes.push(ast::Scope::new());
+                            continue;
+                        }
+
+                        // An `else if` clause. For example:
+                        //
+                        //   {% else if cond %}
+                        //
+                        // We expect that the previous block was an `if` block
+                        // and update it accordingly. We must also push two
+                        // scopes to the scope stack, one for the `else` and one
+                        // for the `if`.
+                        Block::ElseIf(not, cond) => {
+                            let err =
+                                || Error::new("unexpected `else if` block", self.source(), span);
+                            match blocks.last_mut().ok_or_else(err)? {
+                                State::If {
+                                    has_else: has_else @ false,
+                                    ..
+                                } => {
+                                    *has_else = true;
+                                }
+                                _ => return Err(err()),
+                            }
+                            blocks.push(State::If {
+                                is_else_if: true,
+                                not,
+                                cond,
+                                span,
+                                has_else: false,
+                            });
+                            scopes.push(ast::Scope::new());
                             scopes.push(ast::Scope::new());
                             continue;
                         }
@@ -179,32 +215,38 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         //
                         //   {% endif %}
                         //
-                        // We expect that the previous block was an `if` block.
-                        // Making sure to pop an extra scope if it has an `else`
-                        // clause.
+                        // We have to make sure to pop back the scopes until we
+                        // get to the original `if`. Any `else if` blocks along
+                        // the way are desugared into an `if` statement.
                         Block::EndIf => {
                             let err =
                                 || Error::new("unexpected `endif` block", self.source(), span);
 
-                            let if_else = match blocks.pop().ok_or_else(err)? {
-                                State::If {
-                                    not,
-                                    cond,
-                                    has_else,
-                                    ..
-                                } => {
-                                    let else_branch = has_else.then(|| scopes.pop().unwrap());
-                                    let then_branch = scopes.pop().unwrap();
-                                    ast::IfElse {
+                            loop {
+                                match blocks.pop().ok_or_else(err)? {
+                                    State::If {
+                                        is_else_if,
                                         not,
                                         cond,
-                                        then_branch,
-                                        else_branch,
+                                        has_else,
+                                        ..
+                                    } => {
+                                        let else_branch = has_else.then(|| scopes.pop().unwrap());
+                                        let then_branch = scopes.pop().unwrap();
+                                        let stmt = ast::Stmt::IfElse(ast::IfElse {
+                                            not,
+                                            cond,
+                                            then_branch,
+                                            else_branch,
+                                        });
+                                        if !is_else_if {
+                                            break stmt;
+                                        }
+                                        scopes.last_mut().unwrap().stmts.push(stmt);
                                     }
-                                }
-                                _ => return Err(err()),
-                            };
-                            ast::Stmt::IfElse(if_else)
+                                    _ => return Err(err()),
+                                };
+                            }
                         }
 
                         // The start of a `for` statement. For example:
@@ -335,7 +377,15 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 let (not, expr) = self.parse_if_cond()?;
                 Ok(Block::If(not, expr))
             }
-            Keyword::Else => Ok(Block::Else),
+            Keyword::Else => {
+                if self.is_next_keyword(Keyword::If)? {
+                    self.expect_keyword(Keyword::If)?;
+                    let (not, expr) = self.parse_if_cond()?;
+                    Ok(Block::ElseIf(not, expr))
+                } else {
+                    Ok(Block::Else)
+                }
+            }
             Keyword::EndIf => Ok(Block::EndIf),
             Keyword::For => {
                 let vars = self.parse_loop_vars()?;

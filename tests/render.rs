@@ -338,6 +338,70 @@ fn render_if_statement_cond_not() {
 }
 
 #[test]
+fn render_if_statement_else_if_cond_false() {
+    let result = Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
+        .unwrap()
+        .render(value! { ipsum: false, sit: false })
+        .unwrap();
+    assert_eq!(result, "lorem , consectetur");
+}
+
+#[test]
+fn render_if_statement_else_if_cond_true() {
+    let result = Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
+        .unwrap()
+        .render(value! { ipsum: false, sit: true })
+        .unwrap();
+    assert_eq!(result, "lorem  amet , consectetur");
+}
+
+#[test]
+fn render_if_statement_else_if_cond_not() {
+    let result = Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% else if not sit %} amet {% endif %}, consectetur")
+        .unwrap()
+        .render(value! { ipsum: false, sit: false })
+        .unwrap();
+    assert_eq!(result, "lorem  amet , consectetur");
+}
+
+#[test]
+fn render_if_statement_multi() {
+    let engine = Engine::new();
+    let template = engine
+        .compile(
+            r#"
+{%- if a -%} a
+{%- else if b -%} b
+{%- else if c -%} c
+{%- else if d -%} d
+{%- else if e -%} e
+{%- else -%} f
+{%- endif -%}
+"#,
+        )
+        .unwrap();
+
+    let mut map = BTreeMap::from([
+        ("a", false),
+        ("b", false),
+        ("c", false),
+        ("d", false),
+        ("e", false),
+    ]);
+    let result = template.render(&map).unwrap();
+    assert_eq!(result, "f");
+    for var in ["a", "b", "c", "d", "e"] {
+        map.insert(var, true);
+        let result = template.render(&map).unwrap();
+        assert_eq!(result, var);
+        map.insert(var, false);
+    }
+}
+
+#[test]
 fn render_if_statement_err_cond_not_bool() {
     let err = Engine::new()
         .compile("lorem {% if ipsum.dolor %}{{ sit }}{% endif %}")

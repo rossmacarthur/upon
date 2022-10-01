@@ -1,11 +1,11 @@
 //! Documents the template syntax.
 //!
-//! An `upon` template is simply a piece of text. Whether it is read from a file
-//! or included directly in the binary is irrelevant. A template contains
-//! [**expressions**](#expressions) for rendering values and
+//! An `upon` template is simply a piece of UTF-8 text. It can be embedded in
+//! the binary or provided at runtime (e.g. read from a file). A template
+//! contains [**expressions**](#expressions) for rendering values and
 //! [**blocks**](#blocks) for controlling logic. These require you to use
-//! specific syntax tags/delimiters in the template. Because `upon` allows you
-//! to configure these tags/delimiters, this document will only refer to the
+//! specific syntax delimiters in the template. Because `upon` allows you to
+//! configure these delimiters, this document will only refer to the
 //! [**default**][crate::Syntax::default] configuration.
 //!
 //! # Expressions
@@ -19,8 +19,8 @@
 //! available in templates.
 //!
 //! - Booleans: `true`, `false`
-//! - Integers: `42`, `0o52`, `0x2a`
-//! - Floats: `0.123`
+//! - Integers: `42`, `0o52`, `-0x2a`
+//! - Floats: `0.123`, `-3.14`, `5.23e10`
 //! - Strings: `"Hello World!"`, escape characters are supported: `\r`, `\n`,
 //!   `\t`, `\\`, `\"`
 //!
@@ -82,23 +82,27 @@
 //! ## Conditionals
 //!
 //! Conditionals are marked using an opening `if` block and a closing `endif`
-//! block. It can also have an optional `else` clause. A conditional renders the
-//! contents of the block based on the specified condition which can be any
-//! [**expression**](#expressions) but it must resolve to a boolean value.
+//! block. It can also have zero or more optional `else if` clauses and an
+//! optional `else` clause. A conditional renders the contents of the block
+//! based on the specified condition which can be any
+//! [**expression**](#expressions) but it must resolve to a boolean value.  A
+//! boolean expression can be negated by applying the prefix `not`.
 //!
-//! Consider the following template. This would only render the HTML table if
-//! the nested field `user.is_enabled` returns `true` and only render the
-//! paragraph if it returns `false`.
+//! Consider the following template. If the nested field `user.is_enabled` is
+//! returns `false` then the first paragraph would be rendered. Otherwise if
+//! `user.has_permission` returns true then the second paragraph would be
+//! rendered. If neither condition is satisfied then the HTML table would be
+//! rendered.
 //!
 //! ```html
-//! {% if user.is_enabled %}
-//!     <table>...</table>
-//! {% else %}
+//! {% if not user.is_enabled %}
 //!     <p>User is disabled</p>
+//! {% else if user.has_permission %}
+//!     <p>User has insufficient permissions</p>
+//! {% else %}
+//!     <table>...</table>
 //! {% endif %}
 //! ```
-//!
-//! A boolean expression can be negated by using `if not`.
 //!
 //! ## Loops
 //!

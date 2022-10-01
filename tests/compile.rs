@@ -279,6 +279,22 @@ fn compile_if_statement() {
 }
 
 #[test]
+fn compile_if_else_if_statement() {
+    Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
+        .unwrap();
+}
+
+#[test]
+fn compile_if_else_if_else_statement() {
+    Engine::new()
+        .compile(
+            "lorem {% if ipsum %} dolor {% else if sit %} amet {% else %}, consectetur {% endif %}",
+        )
+        .unwrap();
+}
+
+#[test]
 fn compile_if_else_statement() {
     Engine::new()
         .compile("lorem {% if ipsum %} dolor {% else %} sit {% endif %} amet")
@@ -286,7 +302,7 @@ fn compile_if_else_statement() {
 }
 
 #[test]
-fn compile_nested_if_else_statement() {
+fn compile_if_statement_nested() {
     Engine::new()
         .compile(
             "lorem {% if ipsum %} dolor {% else %} {% if sit %} amet {% endif %}, consectetur {% endif %}",
@@ -340,6 +356,21 @@ fn compile_if_statement_err_unexpected_endif_block() {
 }
 
 #[test]
+fn compile_if_statement_err_unexpected_else_if_block() {
+    let err = Engine::new()
+        .compile("lorem {% else if cond %} {% endif %} ipsum")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% else if cond %} {% endif %} ipsum
+   |       ^^^^^^^^^^^^^^^^^^ unexpected `else if` block
+"
+    );
+}
+
+#[test]
 fn compile_if_statement_err_unexpected_else_block() {
     let err = Engine::new()
         .compile("lorem {% else %} {% endif %} ipsum")
@@ -370,6 +401,21 @@ fn compile_if_statement_err_unexpected_endfor_block() {
 }
 
 #[test]
+fn compile_if_else_statement_err_unclosed_if_block() {
+    let err = Engine::new()
+        .compile("lorem {% if ipsum %} dolor {% else if sit %}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% if ipsum %} dolor {% else if sit %}
+   |       ^^^^^^^^^^^^^^ unclosed `if` block
+"
+    );
+}
+
+#[test]
 fn compile_if_statement_err_unclosed_if_block() {
     let err = Engine::new()
         .compile("lorem {% if ipsum %} dolor")
@@ -383,6 +429,7 @@ fn compile_if_statement_err_unclosed_if_block() {
 "
     );
 }
+
 #[test]
 fn compile_for_statement_item() {
     Engine::new()
@@ -468,6 +515,21 @@ fn compile_for_statement_err_unexpected_else_block() {
    |
  1 | lorem {% for _, ipsum in dolor %} {% else %} {% endif %}
    |                                   ^^^^^^^^^^ unexpected `else` block
+"
+    );
+}
+
+#[test]
+fn compile_for_statement_err_unexpected_else_if_block() {
+    let err = Engine::new()
+        .compile("lorem {% for _, ipsum in dolor %} {% else if cond %}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {% for _, ipsum in dolor %} {% else if cond %}
+   |                                   ^^^^^^^^^^^^^^^^^^ unexpected `else if` block
 "
     );
 }
