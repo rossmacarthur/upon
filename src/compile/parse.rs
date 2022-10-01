@@ -83,6 +83,7 @@ pub(crate) enum Keyword {
     False,
 }
 
+#[derive(Clone, Copy)]
 enum Sign {
     Neg,
     Pos,
@@ -544,14 +545,18 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         span: Span,
         sign: Sign,
     ) -> Result<ast::Literal> {
-        if raw.contains('.') {
-            let float: f64 = raw
-                .parse::<f64>()
-                .map_err(|_| Error::new("invalid float literal", self.source(), span))?;
-            let value = Value::Float(float);
-            Ok(ast::Literal { value, span })
-        } else {
-            self.parse_literal_integer(raw, span, sign)
+        match self.parse_literal_integer(raw, span, sign) {
+            Ok(lit) => Ok(lit),
+            Err(err) => match self.parse_literal_float(raw, span, sign) {
+                Ok(lit) => Ok(lit),
+                Err(err2) => {
+                    if raw.contains(['.', '-', '+']) {
+                        Err(err2)
+                    } else {
+                        Err(err)
+                    }
+                }
+            },
         }
     }
 
@@ -595,6 +600,19 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(ast::Literal { value, span })
     }
 
+    /// Parses a float.
+    fn parse_literal_float(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
+        let float: f64 = raw
+            .parse()
+            .map_err(|_| Error::new("invalid float literal", self.source(), span))?;
+        let value = match sign {
+            Sign::Neg => Value::Float(-float),
+            Sign::Pos => Value::Float(float),
+        };
+        Ok(ast::Literal { value, span })
+    }
+
+    /// Parses a string.
     fn parse_literal_string(&self, span: Span) -> Result<ast::Literal> {
         let value = Value::String(self.parse_string(span)?);
         Ok(ast::Literal { value, span })

@@ -15,83 +15,60 @@ fn render_comment() {
 }
 
 #[test]
-fn render_inline_expr_bool() {
-    let result = Engine::new()
-        .compile("lorem {{ ipsum }}")
-        .unwrap()
-        .render(value! { ipsum: true })
-        .unwrap();
-    assert_eq!(result, "lorem true");
+fn render_inline_expr_primitive() {
+    let tests = &[
+        (value! { ipsum: false  }, "lorem false"),
+        (value! { ipsum: true  }, "lorem true"),
+        (value! { ipsum: 123_i32  }, "lorem 123"),
+        (value! { ipsum: 123_i64  }, "lorem 123"),
+        (value! { ipsum: 123.4_f64  }, "lorem 123.4"),
+        (value! { ipsum: "dolor" }, "lorem dolor"),
+    ];
+
+    let engine = Engine::new();
+    let template = engine.compile("lorem {{ ipsum }}").unwrap();
+    for (value, exp) in tests {
+        let result = template.render(value).unwrap();
+        assert_eq!(result, *exp);
+    }
 }
 
 #[test]
-fn render_inline_expr_i32() {
-    let result = Engine::new()
-        .compile("lorem {{ ipsum }}")
-        .unwrap()
-        .render(value! { ipsum: 123_i32 })
-        .unwrap();
-    assert_eq!(result, "lorem 123");
-}
-
-#[test]
-fn render_inline_expr_i64() {
-    let result = Engine::new()
-        .compile("lorem {{ ipsum }}")
-        .unwrap()
-        .render(value! { ipsum: 123_i64 })
-        .unwrap();
-    assert_eq!(result, "lorem 123");
-}
-
-#[test]
-fn render_inline_expr_f64() {
-    let result = Engine::new()
-        .compile("lorem {{ ipsum }}")
-        .unwrap()
-        .render(value! { ipsum: 123.4_f64  })
-        .unwrap();
-    assert_eq!(result, "lorem 123.4");
-}
-
-#[test]
-fn render_inline_expr_string() {
-    let result = Engine::new()
-        .compile("lorem {{ ipsum }}")
-        .unwrap()
-        .render(value! { ipsum: "dolor" })
-        .unwrap();
-    assert_eq!(result, "lorem dolor");
-}
-
-#[test]
-fn render_inline_expr_literal_bool() {
-    let result = Engine::new()
-        .compile("lorem {{ true }}")
-        .unwrap()
-        .render(Value::None)
-        .unwrap();
-    assert_eq!(result, "lorem true");
-}
-
-#[test]
-fn render_inline_expr_literal_integer() {
-    let result = Engine::new()
-        .compile("lorem {{ 123 }}")
-        .unwrap()
-        .render(Value::None)
-        .unwrap();
-    assert_eq!(result, "lorem 123");
-}
-
-#[test]
-fn render_inline_expr_literal_float() {
-    let result = Engine::new()
-        .compile("lorem {{ 123.4 }}")
-        .unwrap()
-        .render(Value::None)
-        .unwrap();
-    assert_eq!(result, "lorem 123.4");
+fn render_inline_expr_literal_roundtrip() {
+    let tests = &[
+        ("true", "true"),
+        ("false", "false"),
+        ("123", "123"),
+        ("+123", "123"),
+        ("-123", "-123"),
+        ("0x1f", "31"),
+        ("0o777", "511"),
+        ("0b1010", "10"),
+        ("3.", "3"),
+        ("+3.", "3"),
+        ("-3.", "-3"),
+        ("3.14", "3.14"),
+        ("+3.14", "3.14"),
+        ("-3.14", "-3.14"),
+        ("3.14e2", "314"),
+        ("+3.14e2", "314"),
+        ("-3.14e2", "-314"),
+        ("3.14e+2", "314"),
+        ("+3.14e+2", "314"),
+        ("-3.14e+2", "-314"),
+        ("314e-2", "3.14"),
+        ("+314e-2", "3.14"),
+        ("-314e-2", "-3.14"),
+    ];
+    let engine = Engine::new();
+    for (arg, exp) in tests {
+        let result = engine
+            .compile(&format!("{{{{ {} }}}}", arg))
+            .unwrap()
+            .render(Value::None)
+            .unwrap();
+        assert_eq!(result, *exp);
+    }
 }
 
 #[test]
@@ -102,6 +79,16 @@ fn render_inline_expr_literal_string() {
         .render(Value::None)
         .unwrap();
     assert_eq!(result, "lorem test");
+}
+
+#[test]
+fn render_inline_expr_literal_string_escaped() {
+    let result = Engine::new()
+        .compile(r#"lorem {{ "escaped \n \r \t \\ \"" }}"#)
+        .unwrap()
+        .render(Value::None)
+        .unwrap();
+    assert_eq!(result, "lorem escaped \n \r \t \\ \"");
 }
 
 #[test]

@@ -477,7 +477,7 @@ fn is_ident(c: char) -> bool {
 }
 
 fn is_number(c: char) -> bool {
-    matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '.')
+    matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '-' | '+' | '.')
 }
 
 #[cfg(test)]

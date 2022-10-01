@@ -36,9 +36,21 @@ const BASE_EXPRS: &[&str] = &[
     "0x1f",
     "0o777",
     "0b1010",
+    "3.",
+    "+3.",
+    "-3.",
     "3.14",
     "+3.14",
     "-3.14",
+    "3.14e2",
+    "+3.14e2",
+    "-3.14e2",
+    "3.14e+2",
+    "+3.14e+2",
+    "-3.14e+2",
+    "314e-2",
+    "+314e-2",
+    "-314e-2",
 ];
 
 #[test]
@@ -135,6 +147,21 @@ fn compile_inline_expr_err_integer_overflow() {
    |
  1 | lorem {{ ipsum | dolor: 0xffffffffffffffff }}
    |                         ^^^^^^^^^^^^^^^^^^ base 16 literal out of range for 64-bit integer
+"
+    )
+}
+
+#[test]
+fn compile_inline_expr_err_float_invalid() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor: +0.23d5 }}")
+        .unwrap_err();
+    assert_eq!(
+        format!("{:#}", err),
+        "
+   |
+ 1 | lorem {{ ipsum | dolor: +0.23d5 }}
+   |                         ^^^^^^^ invalid float literal
 "
     )
 }
