@@ -12,6 +12,7 @@ use crate::value::ser::variants::{SerializeStructVariant, SerializeTupleVariant}
 use crate::{Error, Result, Value};
 
 /// Convert a `T` to a `Value`.
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub fn to_value<T>(value: T) -> Result<Value>
 where
     T: Serialize,

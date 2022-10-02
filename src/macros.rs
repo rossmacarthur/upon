@@ -1,5 +1,6 @@
 // Heavily based on `serde_json::json!`
 /// Convenient macro for constructing a [`Value`][crate::Value].
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 #[macro_export]
 macro_rules! value {
     ( $($tt:tt)+ ) => {

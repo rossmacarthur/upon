@@ -11,6 +11,9 @@ keywords = ["string", "format", "template", "engine"]
 categories = ["template-engine"]
 include = ["src/**/*", "LICENSE-*", "README.md"]
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 serde = { version = "1.0.137", optional = true }
 unicode-width = { version = "0.1.9", optional = true }
@@ -21,22 +24,17 @@ serde = { version = "1.0.137", features = ["derive"] }
 [features]
 default = ["filters", "serde", "unicode"]
 
-# Enable filters
-# --------------
-#   If disabled then filters will not be available for use in templates
-#   Note: this does not affect value formatters
+# Enables support for filters in templates. This does not affect value
+# formatters. Disabling this will improve compile times.
 filters = []
 
-# Enable serde support
-# --------------------
-#   If disabled then you will have to use .render{_to_writer}_from() to render templates
-#   Note: Disabling this also disables the `value!` macro
+# Enables all serde support and pulls in the `serde` crate as a dependency. If
+# disabled then you can use `.render_from()` to render templates and construct
+# the context using `Value`'s '`From` impls.
 serde = ["dep:serde"]
 
-# Enable better unicode support
-# -----------------------------
-#   This is currently only affects error formatting
-#   If disabled then chars().count() will be used instead
+# Enables improved error formatting using the `unicode-width` crate. If disabled
+# then `.chars().count()` will be used instead.
 unicode = ["dep:unicode-width"]
 
 [workspace]

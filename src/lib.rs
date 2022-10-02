@@ -9,7 +9,7 @@
 //! - Loops: `{% for user in users %} ... {% endfor %}`
 //! - Nested templates: `{% include "nested" %}`
 //! - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
-//! - Arbitrary filter functions: `{{ user.name | replace: "\t", " " }}`
+//! - Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
 //!
 //! ### Engine
 //!
@@ -65,11 +65,32 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
+//! # Features
+//!
+//! - **filters** _(enabled by default)_ — Enables support for filters in
+//!   templates, see [`Engine::add_filter()`]. This does _not_ affect value
+//!   formatters, see [`Engine::add_formatter()`]. Disabling this will improve
+//!   compile times.
+//!
+//! - **serde** _(enabled by default)_ — Enables all serde support and pulls in
+//!   the [`serde`] crate as a dependency. If disabled then you can use
+//!   [`.render_from()`][TemplateRef::render_from] to render templates and
+//!   construct the context using [`Value`]'s `From` impls.
+//!
+//! - **unicode** _(enabled by default)_ — Enables improved error formatting
+//!   using the [`unicode-width`][unicode_width] crate. If disabled then
+//!   `.chars().count()` will be used instead.
+//!
 //! # Examples
+//!
+//! The following section contains some simple examples. See the
+//! [`examples/`][examples] directory in the repository for more.
+//!
+//! [examples]: https://github.com/rossmacarthur/upon/tree/trunk/examples
 //!
 //! ### Render using structured data
 //!
-//! Here is the same example as above except using derived data.
+//! You can render using any [`serde`] serializable data.
 //!
 //! ```
 //! #[derive(serde::Serialize)]
@@ -165,6 +186,7 @@
 //! ```
 
 #![deny(unsafe_op_in_unsafe_fn)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod compile;
 mod error;
@@ -188,6 +210,7 @@ pub use crate::filters::Filter;
 pub use crate::render::{format, Formatter};
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub use crate::value::to_value;
 pub use crate::value::Value;
 
@@ -291,6 +314,7 @@ impl<'engine> Engine<'engine> {
     ///
     /// **Note:** filters and formatters share the same namespace.
     #[cfg(feature = "filters")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
     #[inline]
     pub fn add_filter<N, F, R, A>(&mut self, name: N, f: F)
     where
@@ -378,6 +402,7 @@ impl fmt::Debug for Engine<'_> {
 impl<'engine, 'source> Template<'engine, 'source> {
     /// Render the template to a string using the provided value.
     #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
     pub fn render<S>(&self, ctx: S) -> Result<String>
     where
@@ -388,6 +413,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
 
     /// Render the template to a writer using the provided value.
     #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
     pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
     where
@@ -435,6 +461,7 @@ impl fmt::Debug for Template<'_, '_> {
 impl<'engine> TemplateRef<'engine> {
     /// Render the template to a string using the provided value.
     #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
     pub fn render<S>(&self, ctx: S) -> Result<String>
     where
@@ -445,6 +472,7 @@ impl<'engine> TemplateRef<'engine> {
 
     /// Render the template to a writer using the provided value.
     #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
     pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
     where

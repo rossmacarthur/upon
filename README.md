@@ -17,7 +17,7 @@ A simple, powerful template engine.
 - Loops: `{% for user in users %} ... {% endfor %}`
 - Nested templates: `{% include "nested" %}`
 - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
-- Arbitrary filter functions: `{{ user.name | replace: "\t", " " }}`
+- Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
 
 #### Engine
 
@@ -66,11 +66,30 @@ let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
 assert_eq!(result, "Hello John Smith!");
 ```
 
+## Features
+
+- **filters** *(enabled by default)* — Enables support for filters in
+  templates, see `Engine::add_filter()`. This does *not* affect value
+  formatters, see `Engine::add_formatter()`. Disabling this will improve
+  compile times.
+
+- **serde** *(enabled by default)* — Enables all serde support and pulls in
+  the `serde` crate as a dependency. If disabled then you can use
+  `.render_from()` to render templates and
+  construct the context using `Value`’s `From` impls.
+
+- **unicode** *(enabled by default)* — Enables improved error formatting
+  using the `unicode-width` crate. If disabled then
+  `.chars().count()` will be used instead.
+
 ## Examples
+
+The following section contains some simple examples. See the
+[`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository for more.
 
 #### Render using structured data
 
-Here is the same example as above except using derived data.
+You can render using any `serde` serializable data.
 
 ```rust
 #[derive(serde::Serialize)]

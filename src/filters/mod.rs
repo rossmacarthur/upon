@@ -83,6 +83,7 @@ where
 ///     list.pop()
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait Filter<R, A>
 where
     A: for<'a> FilterArgs<'a>,
