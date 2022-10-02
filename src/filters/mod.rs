@@ -1,3 +1,107 @@
+//! An abstraction over any filter function or closure.
+//!
+//! The [`Filter`] trait is used by the
+//! [`Engine::add_filter`][crate::Engine::add_filter] method to abstract over a
+//! variety of function and closure types. This includes filters with variable
+//! argument types, return types and arity. The first argument to a filter
+//! function will always receive the piped value or expression. It can then have
+//! up to four more arguments. The renderer will check the number of arguments
+//! and the type of arguments when the filter is used. Generally you should not
+//! try to implement any of the traits in this module yourself, instead you
+//! should defined functions or closures that adhere to the generic
+//! implementation provided.
+//!
+//! ## Argument types
+//!
+//! [`Filter`] is implemented for functions and closures that take any of the
+//! following owned types as arguments. See [`FilterArg`].
+//! - [`bool`]
+//! - [`i64`]
+//! - [`f64`]
+//! - [`String`]
+//! - [`Vec<Value>`]
+//! - [`BTreeMap<String, Value>`][std::collections::BTreeMap]
+//! - [`Value`]
+//!
+//! **Additionally:**
+//! - The _first_ argument to the filter (i.e. the piped expression) can also be
+//!   specified using the following reference types. This is preferred in most
+//!   cases because the renderer won't have to clone the value before the
+//!   calling the filter.
+//!   - [`&str`][str]
+//!   - [`&[Value]`][slice]
+//!   - [`&BTreeMap<String, Value>`][std::collections::BTreeMap]
+//!   - [`&Value`][Value]
+//!
+//! - Other arguments can also use [`&str`][str] but only if the passed
+//!   parameter is a literal string.
+//!
+//! ## Return types
+//!
+//! [`Filter`] is implemented for functions and closures that return any of the
+//! following types. See [`FilterReturn`].
+//!
+//! - `R` where `R` implements `Into<Value>`
+//! - `Option<R>` where `R` implements `Into<Value>`
+//! - `Result<R>` where `R` implements `Into<Value>`
+//!
+//! # Examples
+//!
+//! ## Using existing functions
+//!
+//! A lot of standard library functions can be used as filters, as long as they
+//! have the supported argument and return types.
+//!
+//! ```
+//! let mut engine = upon::Engine::new();
+//! engine.add_filter("lower", str::to_lowercase);
+//! engine.add_filter("abs", i64::abs);
+//! ```
+//!
+//! ## Closures
+//!
+//! Closures are perfectly valid filters.
+//!
+//! ```
+//! let mut engine = upon::Engine::new();
+//! engine.add_filter("add", |a: i64, b: i64| a + b);
+//! ```
+//!
+//! This could be use like this
+//!
+//! ```text
+//! {{ user.age | add: 10 }}
+//! ```
+//!
+//! ## Owned vs reference arguments
+//!
+//! Consider the following template.
+//!
+//! ```text
+//! {{ users | last }}
+//! ```
+//!
+//! Where the `last` filter retrieves the final element in a list. We could
+//! implement this filter taking an owned argument.
+//!
+//! ```rust
+//! # use upon::Value;
+//! fn last(mut list: Vec<Value>) -> Option<Value> {
+//!     list.pop()
+//! }
+//! ```
+//!
+//! But it would be more efficient to implement it such that it takes a slice,
+//! because then only the last element is cloned, as opposed to all the elements
+//! in the list being cloned.
+//!
+//! ```
+//! # use upon::Value;
+//! fn last(list: &[Value]) -> Option<Value> {
+//!     list.last().map(Clone::clone)
+//! }
+//! ```
+
 mod args;
 mod impls;
 
@@ -7,9 +111,9 @@ use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
-pub type FilterFn = dyn Fn(FilterState<'_>) -> Result<Value> + Send + Sync + 'static;
+pub(crate) type FilterFn = dyn Fn(FilterState<'_>) -> Result<Value> + Send + Sync + 'static;
 
-pub fn new<F, R, A>(f: F) -> Box<FilterFn>
+pub(crate) fn new<F, R, A>(f: F) -> Box<FilterFn>
 where
     F: Filter<R, A> + Send + Sync + 'static,
     R: FilterReturn,
@@ -24,65 +128,7 @@ where
 
 /// Represents any filter function.
 ///
-/// This trait is used by the [`Engine::add_filter`][crate::Engine::add_filter]
-/// method to abstract over a variety of function and closure types. This
-/// includes filters with variable argument types, return types and arity. The
-/// first argument to a filter function will always receive the piped value or
-/// expression. It can then have up to four more arguments. The renderer will
-/// check the number of arguments and the type of arguments at when the filter
-/// is used.
-///
-/// [`Filter`] is implemented for functions that return any of the following
-/// types.
-///
-/// - `R` where `R` implements `Into<Value>`
-/// - `Option<R>` where `R` implements `Into<Value>`
-/// - `Result<R>` where `R` implements `Into<Value>`
-///
-/// [`Filter`] is implemented for functions that take any of the following owned
-/// types as arguments.
-/// - [`bool`]
-/// - [`i64`]
-/// - [`f64`]
-/// - [`String`]
-/// - [`Vec<Value>`]
-/// - [`BTreeMap<String, Value>`][std::collections::BTreeMap]
-/// - [`Value`]
-///
-/// The first argument can also specified using the following reference types.
-/// - [`&str`][str]
-/// - [`&[Value]`][Vec<Value>]
-/// - [`&BTreeMap<String, Value>`][std::collections::BTreeMap]
-/// - [`&Value`][Value]
-///
-/// Other arguments can also use [`&str`][str] if the value passed in is a
-/// literal.
-///
-/// ## Examples
-///
-/// Consider the following template.
-///
-/// ```text
-/// {{ user.name | split: " " | last }}
-/// ```
-///
-/// We could implement the `split` and `last` filters like this:
-///
-/// ```rust
-/// use upon::{Engine, Value};
-///
-/// let mut engine = Engine::new();
-/// engine.add_filter("split", split);
-/// engine.add_filter("last", last);
-///
-/// fn split(s: &str, sep: &str) -> Vec<String> {
-///     s.split(sep).map(String::from).collect()
-/// }
-///
-/// fn last(mut list: Vec<Value>) -> Option<Value> {
-///     list.pop()
-/// }
-/// ```
+/// See the [module][crate::filters] documentation for more information.
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait Filter<R, A>
 where
@@ -92,19 +138,38 @@ where
     fn filter(&self, args: <A as FilterArgs<'_>>::Output) -> R;
 }
 
+/// Represents *all* the arguments to a filter.
+///
+/// See the [module][crate::filters] documentation for more information.
+#[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait FilterArgs<'a> {
+    #[doc(hidden)]
     type Output: 'a;
+    #[doc(hidden)]
     fn from_state(state: FilterState<'a>) -> Result<Self::Output>;
 }
 
+/// Represents an argument to a filter.
+///
+/// See the [module][crate::filters] documentation for more information.
+#[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait FilterArg<'a> {
+    #[doc(hidden)]
     type Output: 'a;
+    #[doc(hidden)]
     fn from_value(v: Value) -> args::Result<Self::Output>;
+    #[doc(hidden)]
     fn from_value_ref(v: &'a Value) -> args::Result<Self::Output>;
+    #[doc(hidden)]
     fn from_cow_mut(v: &'a mut ValueCow<'a>) -> args::Result<Self::Output>;
 }
 
+/// Represents a return value from a filter.
+///
+/// See the [module][crate::filters] documentation for more information.
+#[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait FilterReturn {
+    #[doc(hidden)]
     fn to_value(self) -> Result<Value>;
 }
 

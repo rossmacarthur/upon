@@ -125,7 +125,7 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! See the [`Filter`] trait documentation for more information on filters.
+//! See the [`filters`] module documentation for more information on filters.
 //!
 //! ### Render a template using custom syntax
 //!
@@ -191,7 +191,8 @@
 mod compile;
 mod error;
 #[cfg(feature = "filters")]
-mod filters;
+#[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
+pub mod filters;
 #[cfg(feature = "serde")]
 mod macros;
 mod render;
@@ -205,8 +206,6 @@ use std::fmt;
 use std::io;
 
 pub use crate::error::Error;
-#[cfg(feature = "filters")]
-pub use crate::filters::Filter;
 pub use crate::render::{format, Formatter};
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
@@ -216,7 +215,7 @@ pub use crate::value::Value;
 
 use crate::compile::Searcher;
 #[cfg(feature = "filters")]
-use crate::filters::{FilterArgs, FilterFn, FilterReturn};
+use crate::filters::{Filter, FilterArgs, FilterFn, FilterReturn};
 use crate::types::program;
 
 /// A type alias for results in this crate.
@@ -313,6 +312,9 @@ impl<'engine> Engine<'engine> {
     /// Add a new filter to the engine.
     ///
     /// **Note:** filters and formatters share the same namespace.
+    ///
+    /// See the [`filters`] module documentation for more information on
+    /// filters.
     #[cfg(feature = "filters")]
     #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
     #[inline]

@@ -54,3 +54,27 @@ fn engine_add_template_owned_source() -> upon::Result<()> {
     assert_eq!(result, "ipsum");
     Ok(())
 }
+
+#[test]
+fn engine_add_template_nested() {
+    use upon::filters::*;
+
+    #[derive(Default)]
+    struct Wrapper<'engine> {
+        engine: Engine<'engine>,
+    }
+
+    impl<'engine> Wrapper<'engine> {
+        fn add_filter<F, R, A>(&mut self, name: &'engine str, f: F)
+        where
+            F: Filter<R, A> + Send + Sync + 'static,
+            R: FilterReturn,
+            A: for<'a> FilterArgs<'a>,
+        {
+            self.engine.add_filter(name, f);
+        }
+    }
+
+    let mut engine = Wrapper::default();
+    engine.add_filter("lower", str::to_lowercase);
+}

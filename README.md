@@ -122,7 +122,7 @@ let result = engine
 assert_eq!(result, "Hello world!");
 ```
 
-See the `Filter` trait documentation for more information on filters.
+See the `filters` module documentation for more information on filters.
 
 #### Render a template using custom syntax
 
