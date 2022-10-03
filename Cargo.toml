@@ -1,6 +1,6 @@
 [package]
 name = "upon"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Ross MacArthur <ross@macarthur.io>"]
 edition = "2021"
 description = "A simple, powerful template engine"
