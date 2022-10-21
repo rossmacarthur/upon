@@ -92,7 +92,7 @@ impl AhoCorasick {
     }
 
     fn state(&self, id: S) -> &State {
-        &self.states[id as usize]
+        &self.states[id]
     }
 }
 

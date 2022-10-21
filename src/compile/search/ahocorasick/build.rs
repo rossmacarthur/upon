@@ -224,8 +224,8 @@ impl Builder {
         assert!(src != dst, "src {} must not be equal to dst {}", src, dst);
 
         // Simply gets a mutable reference to both states.
-        let i = src as usize;
-        let j = dst as usize;
+        let i = src;
+        let j = dst;
         let (src, dst) = if i < j {
             let (left, right) = self.states.split_at_mut(j);
             (&mut left[i], &mut right[0])
@@ -259,11 +259,11 @@ impl Builder {
     }
 
     fn state(&self, id: S) -> &State {
-        &self.states[id as usize]
+        &self.states[id]
     }
 
     fn state_mut(&mut self, id: S) -> &mut State {
-        &mut self.states[id as usize]
+        &mut self.states[id]
     }
 
     fn start(&self) -> &State {
