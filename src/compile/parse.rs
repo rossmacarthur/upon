@@ -166,7 +166,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // for the `if`.
                         Block::ElseIf(not, cond) => {
                             let err =
-                                || Error::new("unexpected `else if` block", self.source(), span);
+                                || Error::syntax("unexpected `else if` block", self.source(), span);
                             match blocks.last_mut().ok_or_else(err)? {
                                 State::If {
                                     has_else: has_else @ false,
@@ -197,7 +197,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // scope stack since an `else` clause starts a new
                         // scope.
                         Block::Else => {
-                            let err = || Error::new("unexpected `else` block", self.source(), span);
+                            let err =
+                                || Error::syntax("unexpected `else` block", self.source(), span);
                             match blocks.last_mut().ok_or_else(err)? {
                                 State::If {
                                     has_else: has_else @ false,
@@ -220,7 +221,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // the way are desugared into an `if` statement.
                         Block::EndIf => {
                             let err =
-                                || Error::new("unexpected `endif` block", self.source(), span);
+                                || Error::syntax("unexpected `endif` block", self.source(), span);
 
                             loop {
                                 match blocks.pop().ok_or_else(err)? {
@@ -273,7 +274,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // We expect that the previous block was a `for` block.
                         Block::EndFor => {
                             let err =
-                                || Error::new("unexpected `endfor` block", self.source(), span);
+                                || Error::syntax("unexpected `endfor` block", self.source(), span);
 
                             let for_loop = match blocks.pop().ok_or_else(err)? {
                                 State::For { vars, iterable, .. } => {
@@ -309,7 +310,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                         // We expect that the previous block was a `with` block.
                         Block::EndWith => {
                             let err =
-                                || Error::new("unexpected `endwith` block", self.source(), span);
+                                || Error::syntax("unexpected `endwith` block", self.source(), span);
 
                             let with = match blocks.pop().ok_or_else(err)? {
                                 State::With { expr, name, .. } => {
@@ -343,7 +344,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 State::For { span, .. } => ("unclosed `for` block", span),
                 State::With { span, .. } => ("unclosed `with` block", span),
             };
-            return Err(Error::new(msg, self.source(), *span));
+            return Err(Error::syntax(msg, self.source(), *span));
         }
 
         assert!(
@@ -626,14 +627,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             .try_fold(0i64, |acc, (j, &d)| {
                 let x = (d as char).to_digit(radix).ok_or_else(|| {
                     let m = span.m + i + j;
-                    Error::new(
+                    Error::syntax(
                         format!("invalid digit for base {} literal", radix),
                         self.source(),
                         m..m + 1,
                     )
                 })?;
                 let err = || {
-                    Error::new(
+                    Error::syntax(
                         format!("base {} literal out of range for 64-bit integer", radix),
                         self.source(),
                         span,
@@ -654,7 +655,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse_literal_float(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
         let float: f64 = raw
             .parse()
-            .map_err(|_| Error::new("invalid float literal", self.source(), span))?;
+            .map_err(|_| Error::syntax("invalid float literal", self.source(), span))?;
         let value = match sign {
             Sign::Neg => Value::Float(-float),
             Sign::Pos => Value::Float(float),
@@ -687,7 +688,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                             '"' => '"',
                             _ => {
                                 let j = iter.next().unwrap().0;
-                                return Err(Error::new(
+                                return Err(Error::syntax(
                                     "unknown escape character",
                                     self.source(),
                                     i..j,
@@ -710,7 +711,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn expect_keyword(&mut self, exp: Keyword) -> Result<Span> {
         let (kw, span) = self.parse_keyword()?;
         if kw != exp {
-            return Err(Error::new(
+            return Err(Error::syntax(
                 format!(
                     "expected keyword `{}`, found keyword `{}`",
                     exp.human(),
@@ -789,11 +790,11 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
     fn err_unexpected_eof(&self, exp: impl Display) -> Error {
         let n = self.source().len();
-        Error::new(format!("expected {}, found EOF", exp), self.source(), n..n)
+        Error::syntax(format!("expected {}, found EOF", exp), self.source(), n..n)
     }
 
     fn err_unexpected_token(&self, exp: impl Display, got: Token, span: Span) -> Error {
-        Error::new(
+        Error::syntax(
             format!("expected {}, found {}", exp, got.human()),
             self.source(),
             span,
@@ -801,7 +802,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     fn err_unexpected_keyword(&self, kw: impl Display, span: Span) -> Error {
-        Error::new(format!("unexpected keyword `{}`", kw), self.source(), span)
+        Error::syntax(format!("unexpected keyword `{}`", kw), self.source(), span)
     }
 }
 

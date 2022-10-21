@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use upon::{value, Engine, Value};
+use upon::{value, Engine, Error, Value};
 
 #[test]
 fn render_filter_arity_1() {
@@ -93,13 +93,14 @@ fn render_filter_err_expected_0_args() {
         .unwrap()
         .render(upon::value! { name: "John Smith" })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "filter expected 0 arguments",
         "
    |
  1 | {{ name | test: 123 }}
-   |           ^^^^ filter expected 0 arguments
-"
+   |           ^^^^ REASON
+",
     );
 }
 
@@ -112,13 +113,14 @@ fn render_filter_err_expected_n_args() {
         .unwrap()
         .render(upon::value! { name: "John Smith" })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "filter expected 3 arguments",
         "
    |
  1 | {{ name | test }}
-   |           ^^^^ filter expected 3 arguments
-"
+   |           ^^^^ REASON
+",
     );
 }
 
@@ -194,13 +196,14 @@ fn render_filter_err_expected_value_type() {
         .unwrap()
         .render(upon::value! { name:"John Smith" })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "filter expected bool value, found string",
         "
    |
  1 | {{ name | test }}
-   |           ^^^^ filter expected bool value, found string
-"
+   |           ^^^^ REASON
+",
     );
 }
 
@@ -213,13 +216,14 @@ fn render_filter_err_expected_arg_type() {
         .unwrap()
         .render(upon::value! { name:"John Smith" })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "filter expected bool argument, found integer",
         "
    |
  1 | {{ name | test: 123 }}
-   |                 ^^^ filter expected bool argument, found integer
-"
+   |                 ^^^ REASON
+",
     );
 }
 
@@ -240,12 +244,21 @@ fn render_filter_err_expected_arg_reference() {
             surname: "Smith"
         })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "filter expected reference argument but this string can only be passed as owned",
         "
    |
  2 | {{ surname | prepend: name }}
-   |                       ^^^^ filter expected reference argument but this string can only be passed as owned
-"
+   |                       ^^^^ REASON
+",
     );
+}
+
+#[track_caller]
+fn assert_err(err: &Error, reason: &str, pretty: &str) {
+    let display = format!("failed to render: {}", reason);
+    let display_alt = format!("failed to render{}", pretty.replace("REASON", reason));
+    assert_eq!(err.to_string(), display);
+    assert_eq!(format!("{:#}", err), display_alt);
 }

@@ -112,10 +112,7 @@ impl<'a> Renderer<'a> {
                 }
             }
             if templates.len() > self.engine.max_include_depth {
-                return Err(Error::from(format!(
-                    "reached maximum include depth ({})",
-                    self.engine.max_include_depth
-                )));
+                return Err(Error::max_include_depth(self.engine.max_include_depth));
             }
         }
 
@@ -156,7 +153,7 @@ impl<'a> Renderer<'a> {
                 Instr::Emit(span) => {
                     let value = expr.take().unwrap();
                     (self.engine.default_formatter)(f, &value)
-                        .map_err(|err| err.with_span(&t.source, *span))?;
+                        .map_err(|err| err.into_render(&t.source, *span))?;
                 }
 
                 Instr::EmitRaw(span) => {
@@ -182,17 +179,18 @@ impl<'a> Renderer<'a> {
                                 args: &[],
                             })?;
                             (self.engine.default_formatter)(f, &result)
-                                .map_err(|err| err.with_span(&t.source, *span))?;
+                                .map_err(|err| err.into_render(&t.source, *span))?;
                         }
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
                         Some(EngineFn::Formatter(formatter)) => {
                             let value = expr.take().unwrap();
-                            formatter(f, &value).map_err(|err| err.with_span(&t.source, *span))?;
+                            formatter(f, &value)
+                                .map_err(|err| err.into_render(&t.source, *span))?;
                         }
                         // No filter or formatter exists.
                         None => {
-                            return Err(Error::new(
+                            return Err(Error::render(
                                 "unknown filter or formatter",
                                 &t.source,
                                 name.span,
@@ -273,7 +271,7 @@ impl<'a> Renderer<'a> {
                         // The referenced function is a formatter which is not valid
                         // in the middle of an expression.
                         Some(EngineFn::Formatter(_)) => {
-                            return Err(Error::new(
+                            return Err(Error::render(
                                 "expected filter, found formatter",
                                 &t.source,
                                 name.span,
@@ -281,7 +279,7 @@ impl<'a> Renderer<'a> {
                         }
                         // No filter or formatter exists.
                         None => {
-                            return Err(Error::new("unknown filter", &t.source, name.span));
+                            return Err(Error::render("unknown filter", &t.source, name.span));
                         }
                     }
                 }
@@ -297,7 +295,7 @@ impl<'a> Renderer<'a> {
         self.engine
             .templates
             .get(name.name.as_str())
-            .ok_or_else(|| Error::new("unknown template", source, name.span))
+            .ok_or_else(|| Error::render("unknown template", source, name.span))
     }
 }
 
@@ -321,7 +319,7 @@ pub fn format(f: &mut Formatter<'_>, value: &Value) -> Result<()> {
         Value::String(s) => write!(f, "{}", s)?,
         value => {
             Err(format!(
-                "expected renderable value, but expression evaluated to {}",
+                "expression evaluated to unformattable type {}",
                 value.human()
             ))?;
         }

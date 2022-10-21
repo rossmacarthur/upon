@@ -7,7 +7,7 @@ impl ValueCow<'_> {
     pub fn as_bool(&self, source: &str, span: Span) -> Result<bool> {
         match &**self {
             Value::Bool(cond) => Ok(*cond),
-            value => Err(Error::new(
+            value => Err(Error::render(
                 format!(
                     "expected bool, but expression evaluated to {}",
                     value.human()
@@ -89,13 +89,17 @@ pub fn lookup<'a>(source: &str, value: &'a Value, p: &ast::Ident) -> Result<&'a 
     match value {
         Value::List(list) => match raw.parse::<usize>() {
             Ok(i) => Ok(&list[i]),
-            Err(_) => Err(Error::new("cannot index list with string", source, *span)),
+            Err(_) => Err(Error::render(
+                "cannot index list with string",
+                source,
+                *span,
+            )),
         },
         Value::Map(map) => match map.get(raw) {
             Some(value) => Ok(value),
-            None => Err(Error::new("not found in map", source, *span)),
+            None => Err(Error::render("not found in map", source, *span)),
         },
-        value => Err(Error::new(
+        value => Err(Error::render(
             format!("cannot index into {}", value.human()),
             source,
             *span,

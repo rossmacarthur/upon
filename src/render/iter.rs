@@ -52,7 +52,7 @@ impl<'a> LoopState<'a> {
     ) -> Result<Self> {
         let human = iterable.human();
         let err = || {
-            Error::new(
+            Error::render(
                 format!("expected iterable, but expression evaluated to {}", human),
                 source,
                 span,
@@ -61,7 +61,7 @@ impl<'a> LoopState<'a> {
 
         let unpack_list_item = |vars: &'a ast::LoopVars| match vars {
             ast::LoopVars::Item(item) => Ok(item),
-            ast::LoopVars::KeyValue(kv) => Err(Error::new(
+            ast::LoopVars::KeyValue(kv) => Err(Error::render(
                 "cannot unpack list item into two variables",
                 source,
                 kv.span,
@@ -69,7 +69,7 @@ impl<'a> LoopState<'a> {
         };
 
         let unpack_map_item = |vars: &'a ast::LoopVars| match vars {
-            ast::LoopVars::Item(item) => Err(Error::new(
+            ast::LoopVars::Item(item) => Err(Error::render(
                 "cannot unpack map item into one variable",
                 source,
                 item.span,
@@ -157,7 +157,7 @@ impl<'a> LoopState<'a> {
             }};
         }
 
-        let err = |span| Error::new("cannot index into string", source, span);
+        let err = |span| Error::render("cannot index into string", source, span);
 
         match self {
             Self::ListBorrowed {
@@ -240,11 +240,11 @@ impl<'a> LoopState<'a> {
             "index" => Value::Integer(i as i64),
             "first" => Value::Bool(i == 0),
             "last" => Value::Bool(rem == 0),
-            _ => return Err(Error::new("not found in map", source, path[1].span)),
+            _ => return Err(Error::render("not found in map", source, path[1].span)),
         };
 
         if !path[2..].is_empty() {
-            return Err(Error::new(
+            return Err(Error::render(
                 format!("cannot index into {}", v.human()),
                 source,
                 path[2].span,

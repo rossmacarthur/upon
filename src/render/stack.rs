@@ -62,7 +62,11 @@ impl<'a> Stack<'a> {
                 _ => {}
             }
         }
-        Err(Error::new("not found in this scope", source, path[0].span))
+        Err(Error::render(
+            "not found in this scope",
+            source,
+            path[0].span,
+        ))
     }
 
     pub fn push(&mut self, state: State<'a>) {

@@ -1,4 +1,4 @@
-use upon::Engine;
+use upon::{Engine, Error};
 
 #[test]
 fn compile_empty() {
@@ -81,13 +81,14 @@ fn compile_inline_expr_filter_args() {
 #[test]
 fn compile_inline_expr_err_eof() {
     let err = Engine::new().compile("lorem {{ ipsum.dolor |").unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected identifier, found EOF",
         "
    |
  1 | lorem {{ ipsum.dolor |
-   |                       ^ expected identifier, found EOF
-"
+   |                       ^ REASON
+",
     )
 }
 
@@ -96,13 +97,14 @@ fn compile_inline_expr_err_args_eof() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor:")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected token, found EOF",
         "
    |
  1 | lorem {{ ipsum | dolor:
-   |                        ^ expected token, found EOF
-"
+   |                        ^ REASON
+",
     )
 }
 
@@ -111,13 +113,14 @@ fn compile_inline_expr_err_unexpected_keyword() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor: for }}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected keyword `for`",
         r#"
    |
  1 | lorem {{ ipsum | dolor: for }}
-   |                         ^^^ unexpected keyword `for`
-"#
+   |                         ^^^ REASON
+"#,
     )
 }
 
@@ -126,13 +129,14 @@ fn compile_inline_expr_err_integer_invalid_digit() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor: 0b0131 }}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "invalid digit for base 2 literal",
         "
    |
  1 | lorem {{ ipsum | dolor: 0b0131 }}
-   |                             ^ invalid digit for base 2 literal
-"
+   |                             ^ REASON
+",
     )
 }
 
@@ -141,13 +145,14 @@ fn compile_inline_expr_err_integer_overflow() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor: 0xffffffffffffffff }}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "base 16 literal out of range for 64-bit integer",
         "
    |
  1 | lorem {{ ipsum | dolor: 0xffffffffffffffff }}
-   |                         ^^^^^^^^^^^^^^^^^^ base 16 literal out of range for 64-bit integer
-"
+   |                         ^^^^^^^^^^^^^^^^^^ REASON
+",
     )
 }
 
@@ -156,13 +161,14 @@ fn compile_inline_expr_err_float_invalid() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor: +0.23d5 }}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "invalid float literal",
         "
    |
  1 | lorem {{ ipsum | dolor: +0.23d5 }}
-   |                         ^^^^^^^ invalid float literal
-"
+   |                         ^^^^^^^ REASON
+",
     )
 }
 
@@ -171,13 +177,14 @@ fn compile_inline_expr_err_unknown_escape_character() {
     let err = Engine::new()
         .compile(r#"lorem {{ ipsum | dolor: "sit \x" }}"#)
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unknown escape character",
         r#"
    |
  1 | lorem {{ ipsum | dolor: "sit \x" }}
-   |                               ^ unknown escape character
-"#
+   |                               ^ REASON
+"#,
     )
 }
 
@@ -186,13 +193,14 @@ fn compile_inline_expr_err_unexpected_comma_token() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor: ,")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected expression, found comma",
         "
    |
  1 | lorem {{ ipsum | dolor: ,
-   |                         ^ expected expression, found comma
-"
+   |                         ^ REASON
+",
     )
 }
 
@@ -201,13 +209,14 @@ fn compile_inline_expr_err_empty() {
     let err = Engine::new()
         .compile("lorem {{ }} ipsum dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected expression, found end expression",
         "
    |
  1 | lorem {{ }} ipsum dolor
-   |          ^^ expected expression, found end expression
-"
+   |          ^^ REASON
+",
     );
 }
 
@@ -216,13 +225,14 @@ fn compile_inline_expr_err_unexpected_pipe_token() {
     let err = Engine::new()
         .compile("lorem {{ | }} ipsum dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected expression, found pipe",
         "
    |
  1 | lorem {{ | }} ipsum dolor
-   |          ^ expected expression, found pipe
-"
+   |          ^ REASON
+",
     );
 }
 
@@ -231,13 +241,14 @@ fn compile_inline_expr_err_unexpected_period_token() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | . }} dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected identifier, found period",
         "
    |
  1 | lorem {{ ipsum | . }} dolor
-   |                  ^ expected identifier, found period
-"
+   |                  ^ REASON
+",
     );
 }
 
@@ -246,13 +257,14 @@ fn compile_inline_expr_err_expected_function() {
     let err = Engine::new()
         .compile("lorem {{ ipsum.dolor | }} sit")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected identifier, found end expression",
         "
    |
  1 | lorem {{ ipsum.dolor | }} sit
-   |                        ^^ expected identifier, found end expression
-"
+   |                        ^^ REASON
+",
     );
 }
 
@@ -261,13 +273,14 @@ fn compile_inline_expr_err_expected_end_expression() {
     let err = Engine::new()
         .compile("lorem {{ ipsum dolor }} sit")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected end expression, found identifier",
         "
    |
  1 | lorem {{ ipsum dolor }} sit
-   |                ^^^^^ expected end expression, found identifier
-"
+   |                ^^^^^ REASON
+",
     );
 }
 
@@ -315,13 +328,14 @@ fn compile_if_statement_err_expected_keyword() {
     let err = Engine::new()
         .compile("lorem {% fi ipsum %} dolor {% endif %} sit")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected keyword, found identifier",
         "
    |
  1 | lorem {% fi ipsum %} dolor {% endif %} sit
-   |          ^^ expected keyword, found identifier
-"
+   |          ^^ REASON
+",
     );
 }
 
@@ -330,13 +344,14 @@ fn compile_if_statement_err_unexpected_keyword() {
     let err = Engine::new()
         .compile("lorem {% in ipsum %} dolor {% endif %} sit")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected keyword `in`",
         "
    |
  1 | lorem {% in ipsum %} dolor {% endif %} sit
-   |          ^^ unexpected keyword `in`
-"
+   |          ^^ REASON
+",
     );
 }
 
@@ -345,13 +360,14 @@ fn compile_if_statement_err_unexpected_endif_block() {
     let err = Engine::new()
         .compile("lorem {% endif %} ipsum")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `endif` block",
         "
    |
  1 | lorem {% endif %} ipsum
-   |       ^^^^^^^^^^^ unexpected `endif` block
-"
+   |       ^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -360,13 +376,14 @@ fn compile_if_statement_err_unexpected_else_if_block() {
     let err = Engine::new()
         .compile("lorem {% else if cond %} {% endif %} ipsum")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `else if` block",
         "
    |
  1 | lorem {% else if cond %} {% endif %} ipsum
-   |       ^^^^^^^^^^^^^^^^^^ unexpected `else if` block
-"
+   |       ^^^^^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -375,13 +392,14 @@ fn compile_if_statement_err_unexpected_else_block() {
     let err = Engine::new()
         .compile("lorem {% else %} {% endif %} ipsum")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `else` block",
         "
    |
  1 | lorem {% else %} {% endif %} ipsum
-   |       ^^^^^^^^^^ unexpected `else` block
-"
+   |       ^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -390,13 +408,14 @@ fn compile_if_statement_err_unexpected_endfor_block() {
     let err = Engine::new()
         .compile("lorem {% if ipsum %} {% endfor %} dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `endfor` block",
         "
    |
  1 | lorem {% if ipsum %} {% endfor %} dolor
-   |                      ^^^^^^^^^^^^ unexpected `endfor` block
-"
+   |                      ^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -405,13 +424,14 @@ fn compile_if_else_statement_err_unclosed_if_block() {
     let err = Engine::new()
         .compile("lorem {% if ipsum %} dolor {% else if sit %}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unclosed `if` block",
         "
    |
  1 | lorem {% if ipsum %} dolor {% else if sit %}
-   |       ^^^^^^^^^^^^^^ unclosed `if` block
-"
+   |       ^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -420,13 +440,14 @@ fn compile_if_statement_err_unclosed_if_block() {
     let err = Engine::new()
         .compile("lorem {% if ipsum %} dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unclosed `if` block",
         "
    |
  1 | lorem {% if ipsum %} dolor
-   |       ^^^^^^^^^^^^^^ unclosed `if` block
-"
+   |       ^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -449,13 +470,14 @@ fn compile_for_statement_err_trailing_comma() {
     let err = Engine::new()
         .compile("lorem {% for ipsum, in dolor %} sit")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected identifier, found keyword",
         "
    |
  1 | lorem {% for ipsum, in dolor %} sit
-   |                     ^^ expected identifier, found keyword
-"
+   |                     ^^ REASON
+",
     );
 }
 
@@ -464,13 +486,14 @@ fn compile_for_statement_err_unexpected_keyword() {
     let err = Engine::new()
         .compile("lorem {% for ipsum endif %} dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected keyword `in`, found keyword `endif`",
         "
    |
  1 | lorem {% for ipsum endif %} dolor
-   |                    ^^^^^ expected keyword `in`, found keyword `endif`
-"
+   |                    ^^^^^ REASON
+",
     );
 }
 
@@ -479,13 +502,14 @@ fn compile_for_statement_err_missing_iterable() {
     let err = Engine::new()
         .compile("lorem {% for ipsum in %} dolor")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected expression, found end block",
         "
    |
  1 | lorem {% for ipsum in %} dolor
-   |                       ^^ expected expression, found end block
-"
+   |                       ^^ REASON
+",
     );
 }
 
@@ -494,13 +518,14 @@ fn compile_for_statement_err_unexpected_endfor_block() {
     let err = Engine::new()
         .compile("lorem {% endfor %} ipsum")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `endfor` block",
         "
    |
  1 | lorem {% endfor %} ipsum
-   |       ^^^^^^^^^^^^ unexpected `endfor` block
-"
+   |       ^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -509,13 +534,14 @@ fn compile_for_statement_err_unexpected_else_block() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %} {% else %} {% endif %}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `else` block",
         "
    |
  1 | lorem {% for _, ipsum in dolor %} {% else %} {% endif %}
-   |                                   ^^^^^^^^^^ unexpected `else` block
-"
+   |                                   ^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -524,13 +550,14 @@ fn compile_for_statement_err_unexpected_else_if_block() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %} {% else if cond %}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `else if` block",
         "
    |
  1 | lorem {% for _, ipsum in dolor %} {% else if cond %}
-   |                                   ^^^^^^^^^^^^^^^^^^ unexpected `else if` block
-"
+   |                                   ^^^^^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -539,13 +566,14 @@ fn compile_for_statement_err_unexpected_endif_block() {
     let err = Engine::new()
         .compile("lorem {% for _, ipsum in dolor %} {% endif %}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `endif` block",
         "
    |
  1 | lorem {% for _, ipsum in dolor %} {% endif %}
-   |                                   ^^^^^^^^^^^ unexpected `endif` block
-"
+   |                                   ^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -554,13 +582,14 @@ fn compile_for_statement_err_unclosed_for_block() {
     let err = Engine::new()
         .compile("lorem {% for ipsum, dolor in sit %} amet")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unclosed `for` block",
         "
    |
  1 | lorem {% for ipsum, dolor in sit %} amet
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unclosed `for` block
-"
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -576,13 +605,14 @@ fn compile_with_statement_err_unclosed_with_block() {
     let err = Engine::new()
         .compile("lorem {% with ipsum as dolor %} sit")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unclosed `with` block",
         "
    |
  1 | lorem {% with ipsum as dolor %} sit
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^ unclosed `with` block
-"
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -591,13 +621,14 @@ fn compile_with_statement_err_unexpected_endwith_block() {
     let err = Engine::new()
         .compile("lorem {% with ipsum as dolor %} sit {% else %} {% endif %}")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `else` block",
         "
    |
  1 | lorem {% with ipsum as dolor %} sit {% else %} {% endif %}
-   |                                     ^^^^^^^^^^ unexpected `else` block
-"
+   |                                     ^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -606,13 +637,14 @@ fn compile_with_statement_err_unexpected_else_block() {
     let err = Engine::new()
         .compile("lorem {% endwith %} ipsum")
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unexpected `endwith` block",
         "
    |
  1 | lorem {% endwith %} ipsum
-   |       ^^^^^^^^^^^^^ unexpected `endwith` block
-"
+   |       ^^^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -635,4 +667,12 @@ fn compile_include_with_statement_filters() {
     Engine::new()
         .compile(r#"lorem {% include "ipsum" with dolor.sit | amet: 1337 %}"#)
         .unwrap();
+}
+
+#[track_caller]
+fn assert_err(err: &Error, reason: &str, pretty: &str) {
+    let display = format!("invalid syntax: {}", reason);
+    let display_alt = format!("invalid syntax{}", pretty.replace("REASON", reason));
+    assert_eq!(err.to_string(), display);
+    assert_eq!(format!("{:#}", err), display_alt);
 }

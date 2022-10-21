@@ -1,8 +1,9 @@
+use std::collections::BTreeMap;
+use std::error::Error as _;
 use std::fmt::Write;
 use std::io;
-use std::{collections::BTreeMap, error::Error};
 
-use upon::{value, Engine, Formatter, Result, Value};
+use upon::{value, Engine, Error, Formatter, Result, Value};
 
 #[test]
 fn render_comment() {
@@ -126,7 +127,7 @@ fn render_inline_expr_list_index() {
 #[test]
 fn render_inline_expr_custom_formatter() {
     let mut engine = Engine::new();
-    engine.add_formatter("format_list", list_formmatter);
+    engine.add_formatter("format_list", format_list);
     let result = engine
         .compile("lorem {{ ipsum | format_list }}")
         .unwrap()
@@ -138,23 +139,24 @@ fn render_inline_expr_custom_formatter() {
 #[test]
 fn render_inline_expr_custom_formatter_err() {
     let mut engine = Engine::new();
-    engine.add_formatter("format_list", list_formmatter);
+    engine.add_formatter("format_list", format_list);
     let err = engine
         .compile("lorem {{ ipsum | format_list }}")
         .unwrap()
         .render(value! { ipsum: { sit: "amet"} })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected list",
         "
    |
  1 | lorem {{ ipsum | format_list }}
-   |          ^^^^^^^^^^^^^^^^^^^ failed to format, expected list
-"
+   |          ^^^^^^^^^^^^^^^^^^^ REASON
+",
     );
 }
 
-fn list_formmatter(f: &mut Formatter<'_>, v: &Value) -> Result<()> {
+fn format_list(f: &mut Formatter<'_>, v: &Value) -> Result<()> {
     match v {
         Value::List(list) => {
             for (i, item) in list.iter().enumerate() {
@@ -165,7 +167,7 @@ fn list_formmatter(f: &mut Formatter<'_>, v: &Value) -> Result<()> {
             }
             Ok(())
         }
-        _ => Err("failed to format, expected list".to_string())?,
+        _ => Err("expected list".to_string())?,
     }
 }
 
@@ -176,13 +178,14 @@ fn render_inline_expr_err_unknown_filter_or_formatter() {
         .unwrap()
         .render(value! { ipsum: true })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unknown filter or formatter",
         "
    |
  1 | lorem {{ ipsum | unknown }}
-   |                  ^^^^^^^ unknown filter or formatter
-"
+   |                  ^^^^^^^ REASON
+",
     );
 }
 
@@ -195,13 +198,14 @@ fn render_inline_expr_err_unknown_filter_found_formatter() {
         .unwrap()
         .render(value! { ipsum: true })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected filter, found formatter",
         "
    |
  1 | lorem {{ ipsum | another | unknown }}
-   |                  ^^^^^^^ expected filter, found formatter
-"
+   |                  ^^^^^^^ REASON
+",
     );
 }
 
@@ -212,13 +216,14 @@ fn render_inline_expr_err_unknown_filter() {
         .unwrap()
         .render(value! { ipsum: true })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unknown filter",
         "
    |
  1 | lorem {{ ipsum | another | unknown }}
-   |                  ^^^^^^^ unknown filter
-"
+   |                  ^^^^^^^ REASON
+",
     );
 }
 
@@ -229,13 +234,14 @@ fn render_inline_expr_err_unrenderable() {
         .unwrap()
         .render(value! { ipsum: {} })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expression evaluated to unformattable type map",
         "
    |
  1 | lorem {{ ipsum }}
-   |          ^^^^^ expected renderable value, but expression evaluated to map
-"
+   |          ^^^^^ REASON
+",
     );
 }
 
@@ -246,13 +252,14 @@ fn render_inline_expr_err_cannot_index_into_none() {
         .unwrap()
         .render(value! { ipsum: None })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "cannot index into none",
         "
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ cannot index into none
-"
+   |                ^^^^^ REASON
+",
     );
 }
 
@@ -263,13 +270,14 @@ fn render_inline_expr_err_cannot_index_into_string() {
         .unwrap()
         .render(value! { ipsum: "testing..." })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "cannot index into string",
         "
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ cannot index into string
-"
+   |                ^^^^^ REASON
+",
     );
 }
 
@@ -280,13 +288,14 @@ fn render_inline_expr_err_cannot_index_list_with_string() {
         .unwrap()
         .render(value! { ipsum: ["test", "ing..."] })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "cannot index list with string",
         "
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ cannot index list with string
-"
+   |                ^^^^^ REASON
+",
     );
 }
 
@@ -297,13 +306,14 @@ fn render_inline_expr_err_not_found_in_map() {
         .unwrap()
         .render(value! { ipsum : { } })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "not found in map",
         "
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ not found in map
-"
+   |                ^^^^^ REASON
+",
     );
 }
 
@@ -408,13 +418,14 @@ fn render_if_statement_err_cond_not_bool() {
         .unwrap()
         .render(value! { ipsum: { dolor: { } } })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected bool, but expression evaluated to map",
         "
    |
  1 | lorem {% if ipsum.dolor %}{{ sit }}{% endif %}
-   |             ^^^^^^^^^^^ expected bool, but expression evaluated to map
-"
+   |             ^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -425,13 +436,14 @@ fn render_if_statement_err_cond_not_not_bool() {
         .unwrap()
         .render(value! { ipsum: { dolor: { } } })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected bool, but expression evaluated to map",
         "
    |
  1 | lorem {% if not ipsum.dolor %}{{ sit }}{% endif %}
-   |                 ^^^^^^^^^^^ expected bool, but expression evaluated to map
-"
+   |                 ^^^^^^^^^^^ REASON
+",
     );
 }
 
@@ -505,13 +517,14 @@ fn render_for_statement_err_not_iterable() {
         .unwrap()
         .render(value! { dolor: true })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "expected iterable, but expression evaluated to bool",
         "
    |
  1 | lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}
-   |                       ^^^^^ expected iterable, but expression evaluated to bool
-"
+   |                       ^^^^^ REASON
+",
     );
 }
 
@@ -522,13 +535,14 @@ fn render_for_statement_err_list_with_two_vars() {
         .unwrap()
         .render(value! { dolor: ["sit", "amet"] })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "cannot unpack list item into two variables",
         "
    |
  1 | lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}
-   |              ^^^^^^^^ cannot unpack list item into two variables
-"
+   |              ^^^^^^^^ REASON
+",
     );
 }
 
@@ -539,13 +553,14 @@ fn render_for_statement_err_map_with_one_var() {
         .unwrap()
         .render(value! { dolor: { sit: "amet" }})
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "cannot unpack map item into one variable",
         "
    |
  1 | lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}
-   |              ^^^^^ cannot unpack map item into one variable
-"
+   |              ^^^^^ REASON
+",
     );
 }
 
@@ -556,13 +571,14 @@ fn render_for_statement_err_loop_var_scope() {
         .unwrap()
         .render(value! { dolor: { ipsum: false }})
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "not found in this scope",
         "
    |
  1 | lorem {% for _, ipsum in dolor %}{% endfor %}{{ ipsum }}
-   |                                                 ^^^^^ not found in this scope
-"
+   |                                                 ^^^^^ REASON
+",
     );
 }
 
@@ -583,13 +599,14 @@ fn render_with_statement_err_var_scope() {
         .unwrap()
         .render(value! { ipsum: "test" })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "not found in this scope",
         "
    |
  1 | lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %}{{ dolor }}
-   |                                                           ^^^^^ not found in this scope
-"
+   |                                                           ^^^^^ REASON
+",
     );
 }
 
@@ -651,13 +668,14 @@ fn render_include_statement_err_parent_template_scope() {
         .unwrap()
         .render(value! { ipsum: { dolor: "test" }})
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "not found in this scope",
         r#"
    |
  1 | {{ ipsum.dolor }}
-   |    ^^^^^ not found in this scope
-"#
+   |    ^^^^^ REASON
+"#,
     );
 }
 
@@ -668,13 +686,14 @@ fn render_include_statement_err_unknown_template() {
         .unwrap()
         .render(Value::None)
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "unknown template",
         r#"
    |
  1 | lorem {% include "nested" %} sit
-   |                  ^^^^^^^^ unknown template
-"#
+   |                  ^^^^^^^^ REASON
+"#,
     );
 }
 
@@ -689,7 +708,10 @@ fn render_include_statement_err_maximum_depth() {
         .unwrap()
         .render(Value::None)
         .unwrap_err();
-    assert_eq!(err.to_string(), "reached maximum include depth (64)");
+    assert_eq!(
+        err.to_string(),
+        "failed to render: reached maximum include depth (64)"
+    );
 }
 
 #[test]
@@ -722,7 +744,7 @@ fn render_to_writer_err_io() {
         .unwrap()
         .render_to_writer(&mut w, value! { ipsum : "test" })
         .unwrap_err();
-    assert_eq!(format!("{:#}", err), "IO error");
+    assert_eq!(format!("{:#}", err), "io error");
     assert_eq!(format!("{:#}", err.source().unwrap()), "address in use");
 }
 
@@ -734,13 +756,14 @@ fn render_to_writer_err_not_io() {
         .unwrap()
         .render_to_writer(&mut w, value! { dolor : "test" })
         .unwrap_err();
-    assert_eq!(
-        format!("{:#}", err),
+    assert_err(
+        &err,
+        "not found in this scope",
         "
    |
  1 | lorem {{ ipsum }}
-   |          ^^^^^ not found in this scope
-"
+   |          ^^^^^ REASON
+",
     );
 }
 
@@ -787,4 +810,12 @@ impl io::Write for Writer {
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
+}
+
+#[track_caller]
+fn assert_err(err: &Error, reason: &str, pretty: &str) {
+    let display = format!("failed to render: {}", reason);
+    let display_alt = format!("failed to render{}", pretty.replace("REASON", reason));
+    assert_eq!(err.to_string(), display);
+    assert_eq!(format!("{:#}", err), display_alt);
 }

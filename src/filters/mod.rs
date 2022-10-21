@@ -359,7 +359,7 @@ fn check_args(state: &FilterState<'_>, exp: usize) -> Result<()> {
     if state.args.len() == exp {
         Ok(())
     } else {
-        Err(Error::new(
+        Err(Error::render(
             format!("filter expected {} arguments", exp),
             state.source,
             state.filter.span,
@@ -403,7 +403,7 @@ fn err_expected_arg(err: args::Error, source: &str, span: Span) -> Error {
             )
         }
     };
-    Error::new(msg, source, span)
+    Error::render(msg, source, span)
 }
 
 fn err_expected_val(err: args::Error, source: &str, span: Span) -> Error {
@@ -415,7 +415,7 @@ fn err_expected_val(err: args::Error, source: &str, span: Span) -> Error {
             unreachable!()
         }
     };
-    Error::new(msg, source, span)
+    Error::render(msg, source, span)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

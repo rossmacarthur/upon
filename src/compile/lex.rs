@@ -378,7 +378,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
     }
 
     fn err_unclosed(&self, begin: Span, end: Token) -> Error {
-        Error::new(
+        Error::syntax(
             format!("unclosed {}", end.pair().human()),
             self.source,
             begin,
@@ -386,15 +386,15 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
     }
 
     fn err_unexpected_token(&self, tk: Token, span: impl Into<Span>) -> Error {
-        Error::new(format!("unexpected {}", tk.human()), self.source, span)
+        Error::syntax(format!("unexpected {}", tk.human()), self.source, span)
     }
 
     fn err_unexpected_character(&self, span: impl Into<Span>) -> Error {
-        Error::new("unexpected character", self.source, span)
+        Error::syntax("unexpected character", self.source, span)
     }
 
     fn err_undelimited_string(&self, span: impl Into<Span>) -> Error {
-        Error::new("undelimited string", self.source, span)
+        Error::syntax("undelimited string", self.source, span)
     }
 }
 
