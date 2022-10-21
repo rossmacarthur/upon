@@ -27,7 +27,7 @@ fn to_value_out_of_range_integral() {
     let err = to_value(u64::MAX).unwrap_err().to_string();
     assert_eq!(
         err,
-        "failed to serialize value: out of range integral type conversion attempted"
+        "serialize error: out of range integral type conversion attempted"
     );
 }
 
@@ -183,7 +183,7 @@ fn to_value_map_key_not_string() {
         to_value(BTreeMap::from([(Some("a"), "b"), (Some("c"), "d")]))
             .unwrap_err()
             .to_string(),
-        "failed to serialize value: map key must be a string"
+        "serialize error: map key must be a string"
     );
 }
 

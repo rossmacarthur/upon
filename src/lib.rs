@@ -251,6 +251,7 @@ pub struct Template<'engine, 'source> {
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
+    name: &'engine str,
     template: &'engine program::Template<'engine>,
 }
 
@@ -356,18 +357,23 @@ impl<'engine> Engine<'engine> {
         N: Into<Cow<'engine, str>>,
         S: Into<Cow<'engine, str>>,
     {
-        let template = compile::template(self, source.into())?;
-        self.templates.insert(name.into(), template);
+        let name = name.into();
+        let source = source.into();
+        let template = compile::template(self, source).map_err(|e| e.with_template_name(&name))?;
+        self.templates.insert(name, template);
         Ok(())
     }
 
     /// Lookup a template by name.
     #[inline]
     pub fn get_template(&self, name: &str) -> Option<TemplateRef<'_>> {
-        self.templates.get(name).map(|template| TemplateRef {
-            engine: self,
-            template,
-        })
+        self.templates
+            .get_key_value(name)
+            .map(|(name, template)| TemplateRef {
+                engine: self,
+                name,
+                template,
+            })
     }
 
     /// Compile a template.
@@ -470,6 +476,7 @@ impl<'engine> TemplateRef<'engine> {
         S: serde::Serialize,
     {
         render::template(self.engine, self.template, to_value(ctx)?)
+            .map_err(|e| e.with_template_name(self.name))
     }
 
     /// Render the template to a writer using the provided value.
@@ -482,6 +489,7 @@ impl<'engine> TemplateRef<'engine> {
         S: serde::Serialize,
     {
         render::template_to(self.engine, self.template, writer, to_value(ctx)?)
+            .map_err(|e| e.with_template_name(self.name))
     }
 
     /// Render the template to a string using the provided value.
@@ -491,6 +499,7 @@ impl<'engine> TemplateRef<'engine> {
         V: Into<Value>,
     {
         render::template(self.engine, self.template, ctx.into())
+            .map_err(|e| e.with_template_name(self.name))
     }
 
     /// Render the template to a writer using the provided value.
@@ -501,6 +510,7 @@ impl<'engine> TemplateRef<'engine> {
         V: Into<Value>,
     {
         render::template_to(self.engine, self.template, writer, ctx.into())
+            .map_err(|e| e.with_template_name(self.name))
     }
 
     /// Returns the original template source.

@@ -9,6 +9,9 @@ pub struct Error {
     /// The type of error, possibly carries a source error.
     kind: ErrorKind,
 
+    /// Optional template name.
+    name: Option<String>,
+
     /// Optional additional reason for this kind of error.
     reason: Option<String>,
 
@@ -59,6 +62,7 @@ impl Error {
     pub(crate) fn syntax(reason: impl Into<String>, source: &str, span: impl Into<Span>) -> Self {
         Self {
             kind: ErrorKind::Syntax,
+            name: None,
             reason: Some(reason.into()),
             pretty: Some(Pretty::build(source, span.into())),
         }
@@ -68,6 +72,7 @@ impl Error {
     pub(crate) fn render(reason: impl Into<String>, source: &str, span: impl Into<Span>) -> Self {
         Self {
             kind: ErrorKind::Render,
+            name: None,
             reason: Some(reason.into()),
             pretty: Some(Pretty::build(source, span.into())),
         }
@@ -77,9 +82,16 @@ impl Error {
     pub(crate) fn max_include_depth(max: usize) -> Self {
         Self {
             kind: ErrorKind::Render,
+            name: None,
             reason: Some(format!("reached maximum include depth ({})", max)),
             pretty: None,
         }
+    }
+
+    /// Attaches a template name to the error, if it is not already set.
+    pub(crate) fn with_template_name(mut self, name: &str) -> Self {
+        self.name.get_or_insert(name.into());
+        self
     }
 
     /// Attaches pretty information to the error and converts it to a render
@@ -96,6 +108,7 @@ impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
         Self {
             kind: ErrorKind::Io(err),
+            name: None,
             reason: None,
             pretty: None,
         }
@@ -106,6 +119,7 @@ impl From<fmt::Error> for Error {
     fn from(err: fmt::Error) -> Self {
         Self {
             kind: ErrorKind::Fmt(err),
+            name: None,
             reason: None,
             pretty: None,
         }
@@ -116,6 +130,7 @@ impl From<String> for Error {
     fn from(msg: String) -> Self {
         Self {
             kind: ErrorKind::Other,
+            name: None,
             reason: Some(msg),
             pretty: None,
         }
@@ -131,6 +146,7 @@ impl serde::ser::Error for Error {
     {
         Self {
             kind: ErrorKind::Serialize,
+            name: None,
             reason: Some(msg.to_string()),
             pretty: None,
         }
@@ -149,44 +165,36 @@ impl std::error::Error for Error {
 
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if !f.alternate() {
+            writeln!(f, "{:#}", self)?;
+        }
+
         f.debug_struct("Error")
             .field("kind", &self.kind)
+            .field("name", &self.name)
             .field("reason", &self.reason)
             .field("pretty", &self.pretty)
             .finish()?;
-
-        match (&self.pretty, &self.reason) {
-            (Some(p), Some(r)) if !f.alternate() => {
-                write!(f, "\n\n{}", self.kind)?;
-                p.fmt_with_reason(f, r)?
-            }
-            _ => {}
-        }
         Ok(())
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.kind.fmt(f)?;
-        match (&self.pretty, &self.reason) {
-            (Some(p), Some(r)) if f.alternate() => p.fmt_with_reason(f, r)?,
-            (_, Some(r)) => write!(f, ": {}", r)?,
-            _ => {}
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Syntax => write!(f, "invalid syntax"),
-            Self::Render => write!(f, "failed to render"),
-            Self::Serialize => write!(f, "failed to serialize value"),
-            Self::Io(_) => write!(f, "io error"),
-            Self::Fmt(_) => write!(f, "format error"),
-            Self::Other => write!(f, "other error"),
+        let msg = match &self.kind {
+            ErrorKind::Syntax => "invalid syntax",
+            ErrorKind::Render | ErrorKind::Other => "render error",
+            ErrorKind::Serialize => "serialize error",
+            ErrorKind::Io(_) => "io error",
+            ErrorKind::Fmt(_) => "format error",
+        };
+        match (&self.reason, &self.pretty) {
+            (Some(r), Some(p)) if f.alternate() => {
+                write!(f, "{}", msg)?;
+                p.fmt_with_reason(f, self.name.as_deref(), r)
+            }
+            (Some(reason), _) => write!(f, "{msg}: {reason}"),
+            _ => write!(f, "{msg}"),
         }
     }
 }
@@ -225,25 +233,33 @@ impl Pretty {
         }
     }
 
-    fn fmt_with_reason(&self, f: &mut fmt::Formatter<'_>, reason: &str) -> fmt::Result {
+    fn fmt_with_reason(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        name: Option<&str>,
+        reason: &str,
+    ) -> fmt::Result {
         let num = (self.ln + 1).to_string();
+        let col = self.col + 1;
         let pad = display_width(&num);
+        let align = self.col + self.width;
+
+        let z = "";
         let pipe = "|";
+        let equals = "=";
         let underline = "^".repeat(self.width);
+        let extra = "-".repeat(3_usize.saturating_sub(self.width));
+        let name = name.unwrap_or("<anonymous>");
+        let text = &self.text;
+
         write!(
             f,
-            "\n \
-                {0:pad$} {pipe}\n \
-                {num:>} {pipe} {text}\n \
-                {0:pad$} {pipe} {underline:>width$} {msg}\n",
-            "",
-            pad = pad,
-            pipe = pipe,
-            num = num,
-            text = self.text,
-            underline = underline,
-            width = self.col + self.width,
-            msg = reason
+            "\n\n {z:pad$}--> {name}:{num}:{col}\
+             \n {z:pad$} {pipe}\
+             \n {num:>} {pipe} {text}\
+             \n {z:pad$} {pipe} {underline:>align$}{extra}\
+             \n {z:pad$} {pipe}\
+             \n {z:pad$} {equals} reason: {reason}\n",
         )
     }
 }

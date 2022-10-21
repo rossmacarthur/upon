@@ -7,9 +7,12 @@ fn lex_while_eof() {
         &err,
         "expected end expression, found EOF",
         "
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum
-   |               ^ REASON
+   |               ^--
+   |
+   = reason: REASON
 ",
     );
 }
@@ -54,9 +57,12 @@ fn lex_err_unexpected_end_expr() {
         &err,
         "unexpected end expression",
         "
+  --> <anonymous>:1:13
    |
  1 | lorem ipsum }} dolor sit amet
-   |             ^^ REASON
+   |             ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -70,9 +76,12 @@ fn lex_err_unexpected_end_block() {
         &err,
         "unexpected end block",
         "
+  --> <anonymous>:1:13
    |
  1 | lorem ipsum %} dolor sit amet
-   |             ^^ REASON
+   |             ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -86,9 +95,12 @@ fn lex_err_unclosed_begin_expr() {
         &err,
         "unclosed begin expression",
         "
+  --> <anonymous>:1:13
    |
  1 | lorem ipsum {{ {{ dolor sit amet
-   |             ^^ REASON
+   |             ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -102,9 +114,12 @@ fn lex_err_unclosed_begin_block() {
         &err,
         "unclosed begin block",
         "
+  --> <anonymous>:1:13
    |
  1 | lorem ipsum {% {{ dolor sit amet
-   |             ^^ REASON
+   |             ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -118,9 +133,12 @@ fn lex_err_unexpected_end_tag_after_begin_block() {
         &err,
         "unexpected end block",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem ipsum {{ %} dolor sit amet
-   |                ^^ REASON
+   |                ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -134,9 +152,12 @@ fn lex_err_unexpected_character() {
         &err,
         "unexpected character",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem ipsum {{ ✨ }} dolor sit amet
-   |                ^^ REASON
+   |                ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -150,9 +171,12 @@ fn lex_err_unclosed_begin_comment() {
         &err,
         "unclosed begin comment",
         "
+  --> <anonymous>:1:13
    |
  1 | lorem ipsum {# {{ dolor sit amet
-   |             ^^ REASON
+   |             ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -166,9 +190,12 @@ fn lex_err_unexpected_end_tag_after_begin_comment() {
         &err,
         "unexpected end block",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem ipsum {# %} dolor sit amet
-   |                ^^ REASON
+   |                ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -180,9 +207,12 @@ fn lex_err_undelimited_string_eof() {
         &err,
         "undelimited string",
         r#"
+  --> <anonymous>:1:10
    |
  1 | lorem {% "ipsum
-   |          ^^^^^^ REASON
+   |          ^^^^^^
+   |
+   = reason: REASON
 "#,
     );
 }
@@ -196,9 +226,12 @@ fn lex_err_undelimited_string_newline() {
         &err,
         "undelimited string",
         r#"
+  --> <anonymous>:1:10
    |
  1 | lorem {% "ipsum
-   |          ^^^^^^ REASON
+   |          ^^^^^^
+   |
+   = reason: REASON
 "#,
     );
 }
@@ -206,7 +239,7 @@ fn lex_err_undelimited_string_newline() {
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
     let display = format!("invalid syntax: {}", reason);
-    let display_alt = format!("invalid syntax{}", pretty.replace("REASON", reason));
+    let display_alt = format!("invalid syntax\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
     assert_eq!(format!("{:#}", err), display_alt);
 }

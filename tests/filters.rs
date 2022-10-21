@@ -97,9 +97,12 @@ fn render_filter_err_expected_0_args() {
         &err,
         "filter expected 0 arguments",
         "
+  --> <anonymous>:1:11
    |
  1 | {{ name | test: 123 }}
-   |           ^^^^ REASON
+   |           ^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -117,9 +120,12 @@ fn render_filter_err_expected_n_args() {
         &err,
         "filter expected 3 arguments",
         "
+  --> <anonymous>:1:11
    |
  1 | {{ name | test }}
-   |           ^^^^ REASON
+   |           ^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -200,9 +206,12 @@ fn render_filter_err_expected_value_type() {
         &err,
         "filter expected bool value, found string",
         "
+  --> <anonymous>:1:11
    |
  1 | {{ name | test }}
-   |           ^^^^ REASON
+   |           ^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -220,9 +229,12 @@ fn render_filter_err_expected_arg_type() {
         &err,
         "filter expected bool argument, found integer",
         "
+  --> <anonymous>:1:17
    |
  1 | {{ name | test: 123 }}
-   |                 ^^^ REASON
+   |                 ^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -248,17 +260,20 @@ fn render_filter_err_expected_arg_reference() {
         &err,
         "filter expected reference argument but this string can only be passed as owned",
         "
+  --> <anonymous>:2:23
    |
  2 | {{ surname | prepend: name }}
-   |                       ^^^^ REASON
+   |                       ^^^^
+   |
+   = reason: REASON
 ",
     );
 }
 
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("failed to render: {}", reason);
-    let display_alt = format!("failed to render{}", pretty.replace("REASON", reason));
+    let display = format!("render error: {}", reason);
+    let display_alt = format!("render error\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
     assert_eq!(format!("{:#}", err), display_alt);
 }

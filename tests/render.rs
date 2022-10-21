@@ -149,9 +149,12 @@ fn render_inline_expr_custom_formatter_err() {
         &err,
         "expected list",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {{ ipsum | format_list }}
-   |          ^^^^^^^^^^^^^^^^^^^ REASON
+   |          ^^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -182,9 +185,12 @@ fn render_inline_expr_err_unknown_filter_or_formatter() {
         &err,
         "unknown filter or formatter",
         "
+  --> <anonymous>:1:18
    |
  1 | lorem {{ ipsum | unknown }}
-   |                  ^^^^^^^ REASON
+   |                  ^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -202,9 +208,12 @@ fn render_inline_expr_err_unknown_filter_found_formatter() {
         &err,
         "expected filter, found formatter",
         "
+  --> <anonymous>:1:18
    |
  1 | lorem {{ ipsum | another | unknown }}
-   |                  ^^^^^^^ REASON
+   |                  ^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -220,9 +229,12 @@ fn render_inline_expr_err_unknown_filter() {
         &err,
         "unknown filter",
         "
+  --> <anonymous>:1:18
    |
  1 | lorem {{ ipsum | another | unknown }}
-   |                  ^^^^^^^ REASON
+   |                  ^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -238,9 +250,12 @@ fn render_inline_expr_err_unrenderable() {
         &err,
         "expression evaluated to unformattable type map",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {{ ipsum }}
-   |          ^^^^^ REASON
+   |          ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -256,9 +271,12 @@ fn render_inline_expr_err_cannot_index_into_none() {
         &err,
         "cannot index into none",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ REASON
+   |                ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -274,9 +292,12 @@ fn render_inline_expr_err_cannot_index_into_string() {
         &err,
         "cannot index into string",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ REASON
+   |                ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -292,9 +313,12 @@ fn render_inline_expr_err_cannot_index_list_with_string() {
         &err,
         "cannot index list with string",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ REASON
+   |                ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -310,9 +334,12 @@ fn render_inline_expr_err_not_found_in_map() {
         &err,
         "not found in map",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^ REASON
+   |                ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -422,9 +449,12 @@ fn render_if_statement_err_cond_not_bool() {
         &err,
         "expected bool, but expression evaluated to map",
         "
+  --> <anonymous>:1:13
    |
  1 | lorem {% if ipsum.dolor %}{{ sit }}{% endif %}
-   |             ^^^^^^^^^^^ REASON
+   |             ^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -440,9 +470,12 @@ fn render_if_statement_err_cond_not_not_bool() {
         &err,
         "expected bool, but expression evaluated to map",
         "
+  --> <anonymous>:1:17
    |
  1 | lorem {% if not ipsum.dolor %}{{ sit }}{% endif %}
-   |                 ^^^^^^^^^^^ REASON
+   |                 ^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -521,9 +554,12 @@ fn render_for_statement_err_not_iterable() {
         &err,
         "expected iterable, but expression evaluated to bool",
         "
+  --> <anonymous>:1:23
    |
  1 | lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}
-   |                       ^^^^^ REASON
+   |                       ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -539,9 +575,12 @@ fn render_for_statement_err_list_with_two_vars() {
         &err,
         "cannot unpack list item into two variables",
         "
+  --> <anonymous>:1:14
    |
  1 | lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}
-   |              ^^^^^^^^ REASON
+   |              ^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -557,9 +596,12 @@ fn render_for_statement_err_map_with_one_var() {
         &err,
         "cannot unpack map item into one variable",
         "
+  --> <anonymous>:1:14
    |
  1 | lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}
-   |              ^^^^^ REASON
+   |              ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -575,9 +617,12 @@ fn render_for_statement_err_loop_var_scope() {
         &err,
         "not found in this scope",
         "
+  --> <anonymous>:1:49
    |
  1 | lorem {% for _, ipsum in dolor %}{% endfor %}{{ ipsum }}
-   |                                                 ^^^^^ REASON
+   |                                                 ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -603,9 +648,12 @@ fn render_with_statement_err_var_scope() {
         &err,
         "not found in this scope",
         "
+  --> <anonymous>:1:59
    |
  1 | lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %}{{ dolor }}
-   |                                                           ^^^^^ REASON
+   |                                                           ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -672,9 +720,12 @@ fn render_include_statement_err_parent_template_scope() {
         &err,
         "not found in this scope",
         r#"
+  --> <anonymous>:1:4
    |
  1 | {{ ipsum.dolor }}
-   |    ^^^^^ REASON
+   |    ^^^^^
+   |
+   = reason: REASON
 "#,
     );
 }
@@ -690,9 +741,12 @@ fn render_include_statement_err_unknown_template() {
         &err,
         "unknown template",
         r#"
+  --> <anonymous>:1:18
    |
  1 | lorem {% include "nested" %} sit
-   |                  ^^^^^^^^ REASON
+   |                  ^^^^^^^^
+   |
+   = reason: REASON
 "#,
     );
 }
@@ -710,7 +764,7 @@ fn render_include_statement_err_maximum_depth() {
         .unwrap_err();
     assert_eq!(
         err.to_string(),
-        "failed to render: reached maximum include depth (64)"
+        "render error: reached maximum include depth (64)"
     );
 }
 
@@ -760,9 +814,12 @@ fn render_to_writer_err_not_io() {
         &err,
         "not found in this scope",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {{ ipsum }}
-   |          ^^^^^ REASON
+   |          ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -814,8 +871,8 @@ impl io::Write for Writer {
 
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("failed to render: {}", reason);
-    let display_alt = format!("failed to render{}", pretty.replace("REASON", reason));
+    let display = format!("render error: {}", reason);
+    let display_alt = format!("render error\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
     assert_eq!(format!("{:#}", err), display_alt);
 }

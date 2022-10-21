@@ -85,9 +85,12 @@ fn compile_inline_expr_err_eof() {
         &err,
         "expected identifier, found EOF",
         "
+  --> <anonymous>:1:23
    |
  1 | lorem {{ ipsum.dolor |
-   |                       ^ REASON
+   |                       ^--
+   |
+   = reason: REASON
 ",
     )
 }
@@ -101,9 +104,12 @@ fn compile_inline_expr_err_args_eof() {
         &err,
         "expected token, found EOF",
         "
+  --> <anonymous>:1:24
    |
  1 | lorem {{ ipsum | dolor:
-   |                        ^ REASON
+   |                        ^--
+   |
+   = reason: REASON
 ",
     )
 }
@@ -117,9 +123,12 @@ fn compile_inline_expr_err_unexpected_keyword() {
         &err,
         "unexpected keyword `for`",
         r#"
+  --> <anonymous>:1:25
    |
  1 | lorem {{ ipsum | dolor: for }}
-   |                         ^^^ REASON
+   |                         ^^^
+   |
+   = reason: REASON
 "#,
     )
 }
@@ -133,9 +142,12 @@ fn compile_inline_expr_err_integer_invalid_digit() {
         &err,
         "invalid digit for base 2 literal",
         "
+  --> <anonymous>:1:29
    |
  1 | lorem {{ ipsum | dolor: 0b0131 }}
-   |                             ^ REASON
+   |                             ^--
+   |
+   = reason: REASON
 ",
     )
 }
@@ -149,9 +161,12 @@ fn compile_inline_expr_err_integer_overflow() {
         &err,
         "base 16 literal out of range for 64-bit integer",
         "
+  --> <anonymous>:1:25
    |
  1 | lorem {{ ipsum | dolor: 0xffffffffffffffff }}
-   |                         ^^^^^^^^^^^^^^^^^^ REASON
+   |                         ^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     )
 }
@@ -165,9 +180,12 @@ fn compile_inline_expr_err_float_invalid() {
         &err,
         "invalid float literal",
         "
+  --> <anonymous>:1:25
    |
  1 | lorem {{ ipsum | dolor: +0.23d5 }}
-   |                         ^^^^^^^ REASON
+   |                         ^^^^^^^
+   |
+   = reason: REASON
 ",
     )
 }
@@ -181,9 +199,12 @@ fn compile_inline_expr_err_unknown_escape_character() {
         &err,
         "unknown escape character",
         r#"
+  --> <anonymous>:1:31
    |
  1 | lorem {{ ipsum | dolor: "sit \x" }}
-   |                               ^ REASON
+   |                               ^--
+   |
+   = reason: REASON
 "#,
     )
 }
@@ -197,9 +218,12 @@ fn compile_inline_expr_err_unexpected_comma_token() {
         &err,
         "expected expression, found comma",
         "
+  --> <anonymous>:1:25
    |
  1 | lorem {{ ipsum | dolor: ,
-   |                         ^ REASON
+   |                         ^--
+   |
+   = reason: REASON
 ",
     )
 }
@@ -213,9 +237,12 @@ fn compile_inline_expr_err_empty() {
         &err,
         "expected expression, found end expression",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {{ }} ipsum dolor
-   |          ^^ REASON
+   |          ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -229,9 +256,12 @@ fn compile_inline_expr_err_unexpected_pipe_token() {
         &err,
         "expected expression, found pipe",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {{ | }} ipsum dolor
-   |          ^ REASON
+   |          ^--
+   |
+   = reason: REASON
 ",
     );
 }
@@ -245,9 +275,12 @@ fn compile_inline_expr_err_unexpected_period_token() {
         &err,
         "expected identifier, found period",
         "
+  --> <anonymous>:1:18
    |
  1 | lorem {{ ipsum | . }} dolor
-   |                  ^ REASON
+   |                  ^--
+   |
+   = reason: REASON
 ",
     );
 }
@@ -261,9 +294,12 @@ fn compile_inline_expr_err_expected_function() {
         &err,
         "expected identifier, found end expression",
         "
+  --> <anonymous>:1:24
    |
  1 | lorem {{ ipsum.dolor | }} sit
-   |                        ^^ REASON
+   |                        ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -277,9 +313,12 @@ fn compile_inline_expr_err_expected_end_expression() {
         &err,
         "expected end expression, found identifier",
         "
+  --> <anonymous>:1:16
    |
  1 | lorem {{ ipsum dolor }} sit
-   |                ^^^^^ REASON
+   |                ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -332,9 +371,12 @@ fn compile_if_statement_err_expected_keyword() {
         &err,
         "expected keyword, found identifier",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {% fi ipsum %} dolor {% endif %} sit
-   |          ^^ REASON
+   |          ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -348,9 +390,12 @@ fn compile_if_statement_err_unexpected_keyword() {
         &err,
         "unexpected keyword `in`",
         "
+  --> <anonymous>:1:10
    |
  1 | lorem {% in ipsum %} dolor {% endif %} sit
-   |          ^^ REASON
+   |          ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -364,9 +409,12 @@ fn compile_if_statement_err_unexpected_endif_block() {
         &err,
         "unexpected `endif` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% endif %} ipsum
-   |       ^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -380,9 +428,12 @@ fn compile_if_statement_err_unexpected_else_if_block() {
         &err,
         "unexpected `else if` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% else if cond %} {% endif %} ipsum
-   |       ^^^^^^^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -396,9 +447,12 @@ fn compile_if_statement_err_unexpected_else_block() {
         &err,
         "unexpected `else` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% else %} {% endif %} ipsum
-   |       ^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -412,9 +466,12 @@ fn compile_if_statement_err_unexpected_endfor_block() {
         &err,
         "unexpected `endfor` block",
         "
+  --> <anonymous>:1:22
    |
  1 | lorem {% if ipsum %} {% endfor %} dolor
-   |                      ^^^^^^^^^^^^ REASON
+   |                      ^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -428,9 +485,12 @@ fn compile_if_else_statement_err_unclosed_if_block() {
         &err,
         "unclosed `if` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% if ipsum %} dolor {% else if sit %}
-   |       ^^^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -444,9 +504,12 @@ fn compile_if_statement_err_unclosed_if_block() {
         &err,
         "unclosed `if` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% if ipsum %} dolor
-   |       ^^^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -474,9 +537,12 @@ fn compile_for_statement_err_trailing_comma() {
         &err,
         "expected identifier, found keyword",
         "
+  --> <anonymous>:1:21
    |
  1 | lorem {% for ipsum, in dolor %} sit
-   |                     ^^ REASON
+   |                     ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -490,9 +556,12 @@ fn compile_for_statement_err_unexpected_keyword() {
         &err,
         "expected keyword `in`, found keyword `endif`",
         "
+  --> <anonymous>:1:20
    |
  1 | lorem {% for ipsum endif %} dolor
-   |                    ^^^^^ REASON
+   |                    ^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -506,9 +575,12 @@ fn compile_for_statement_err_missing_iterable() {
         &err,
         "expected expression, found end block",
         "
+  --> <anonymous>:1:23
    |
  1 | lorem {% for ipsum in %} dolor
-   |                       ^^ REASON
+   |                       ^^-
+   |
+   = reason: REASON
 ",
     );
 }
@@ -522,9 +594,12 @@ fn compile_for_statement_err_unexpected_endfor_block() {
         &err,
         "unexpected `endfor` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% endfor %} ipsum
-   |       ^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -538,9 +613,12 @@ fn compile_for_statement_err_unexpected_else_block() {
         &err,
         "unexpected `else` block",
         "
+  --> <anonymous>:1:35
    |
  1 | lorem {% for _, ipsum in dolor %} {% else %} {% endif %}
-   |                                   ^^^^^^^^^^ REASON
+   |                                   ^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -554,9 +632,12 @@ fn compile_for_statement_err_unexpected_else_if_block() {
         &err,
         "unexpected `else if` block",
         "
+  --> <anonymous>:1:35
    |
  1 | lorem {% for _, ipsum in dolor %} {% else if cond %}
-   |                                   ^^^^^^^^^^^^^^^^^^ REASON
+   |                                   ^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -570,9 +651,12 @@ fn compile_for_statement_err_unexpected_endif_block() {
         &err,
         "unexpected `endif` block",
         "
+  --> <anonymous>:1:35
    |
  1 | lorem {% for _, ipsum in dolor %} {% endif %}
-   |                                   ^^^^^^^^^^^ REASON
+   |                                   ^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -586,9 +670,12 @@ fn compile_for_statement_err_unclosed_for_block() {
         &err,
         "unclosed `for` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% for ipsum, dolor in sit %} amet
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -609,9 +696,12 @@ fn compile_with_statement_err_unclosed_with_block() {
         &err,
         "unclosed `with` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% with ipsum as dolor %} sit
-   |       ^^^^^^^^^^^^^^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -625,9 +715,12 @@ fn compile_with_statement_err_unexpected_endwith_block() {
         &err,
         "unexpected `else` block",
         "
+  --> <anonymous>:1:37
    |
  1 | lorem {% with ipsum as dolor %} sit {% else %} {% endif %}
-   |                                     ^^^^^^^^^^ REASON
+   |                                     ^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -641,9 +734,12 @@ fn compile_with_statement_err_unexpected_else_block() {
         &err,
         "unexpected `endwith` block",
         "
+  --> <anonymous>:1:7
    |
  1 | lorem {% endwith %} ipsum
-   |       ^^^^^^^^^^^^^ REASON
+   |       ^^^^^^^^^^^^^
+   |
+   = reason: REASON
 ",
     );
 }
@@ -672,7 +768,7 @@ fn compile_include_with_statement_filters() {
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
     let display = format!("invalid syntax: {}", reason);
-    let display_alt = format!("invalid syntax{}", pretty.replace("REASON", reason));
+    let display_alt = format!("invalid syntax\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
     assert_eq!(format!("{:#}", err), display_alt);
 }
