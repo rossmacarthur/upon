@@ -143,6 +143,7 @@ fn lex_err_unexpected_end_tag_after_begin_block() {
     );
 }
 
+#[cfg(feature = "unicode")]
 #[test]
 fn lex_err_unexpected_character() {
     let err = Engine::new()

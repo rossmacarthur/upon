@@ -591,6 +591,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "unicode")]
     #[test]
     fn lex_expr() {
         let tokens =

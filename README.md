@@ -78,9 +78,10 @@ assert_eq!(result, "Hello John Smith!");
   `.render_from()` to render templates and
   construct the context using `Value`’s `From` impls.
 
-- **unicode** *(enabled by default)* — Enables improved error formatting
-  using the `unicode-width` crate. If disabled then
-  `.chars().count()` will be used instead.
+- **unicode** *(enabled by default)* — Enables unicode support and pulls in
+  the `unicode-ident` and `unicode-width`
+  crates. If disabled then unicode identifiers will no longer be allowed in
+  templates and `.chars().count()` will be used in error formatting.
 
 ## Examples
 
@@ -162,7 +163,7 @@ shows how you could add `debug` formatter to the engine.
 
 ```rust
 use std::fmt::Write;
-use upon::{Formatter, Value, Result};
+use upon::{Value, Result};
 
 let mut engine = upon::Engine::new();
 engine.add_formatter("debug", |f, value| {
@@ -177,6 +178,8 @@ let result = engine
 
 assert_eq!(result, "User age: Value::Integer(23)");
 ```
+
+See the `fmt` module documentation for more information.
 
 ## Benchmarks
 

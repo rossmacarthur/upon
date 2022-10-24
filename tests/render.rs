@@ -1,3 +1,5 @@
+#![cfg(feature = "serde")]
+
 use std::collections::BTreeMap;
 use std::error::Error as _;
 use std::fmt::Write;
@@ -93,6 +95,7 @@ fn render_inline_expr_literal_string_escaped() {
     assert_eq!(result, "lorem escaped \n \r \t \\ \"");
 }
 
+#[cfg(feature = "filters")]
 #[test]
 fn render_inline_expr_literal_with_filter() {
     let mut engine = Engine::new();
@@ -115,6 +118,7 @@ fn render_inline_expr_map_index() {
     assert_eq!(result, "lorem sit");
 }
 
+#[cfg(feature = "unicode")]
 #[test]
 fn render_inline_expr_map_index_unicode_ident() {
     let result = Engine::new()
@@ -524,6 +528,7 @@ fn render_for_statement_list() {
     assert_eq!(result, "lorem test");
 }
 
+#[cfg(feature = "filters")]
 #[test]
 fn render_for_statement_filtered_list() {
     let mut engine = Engine::new();
@@ -562,6 +567,7 @@ fn render_for_statement_loop_index() {
     );
 }
 
+#[cfg(feature = "filters")]
 #[test]
 fn render_for_statement_filtered_map() {
     let mut engine = Engine::new();
@@ -716,6 +722,7 @@ fn render_include_with_statement() {
     assert_eq!(result, "lorem test sit");
 }
 
+#[cfg(feature = "filters")]
 #[test]
 fn render_include_with_statement_owned() {
     let mut engine = Engine::new();

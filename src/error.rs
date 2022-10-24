@@ -31,6 +31,7 @@ enum ErrorKind {
     /// A serialization error.
     ///
     /// This can happen when serializing the data to be rendered fails.
+    #[cfg(feature = "serde")]
     Serialize,
 
     /// Rendering failed.
@@ -42,6 +43,7 @@ enum ErrorKind {
     /// A filter error.
     ///
     /// This can happen if a user defined filter returns an error.
+    #[cfg(feature = "filters")]
     Filter,
 
     /// A format error.
@@ -95,12 +97,14 @@ impl Error {
     }
 
     /// Attaches pretty information to the error.
+    #[cfg(feature = "filters")]
     pub(crate) fn enrich(mut self, source: &str, span: impl Into<Span>) -> Self {
         self.pretty
             .get_or_insert_with(|| Pretty::build(source, span.into()));
         self
     }
 
+    #[cfg(feature = "filters")]
     pub(crate) fn filter(reason: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::Filter,
@@ -188,8 +192,10 @@ impl std::fmt::Display for Error {
         let msg = match &self.kind {
             ErrorKind::Syntax => "invalid syntax",
             ErrorKind::Render => "render error",
+            #[cfg(feature = "filters")]
             ErrorKind::Filter => "filter error",
             ErrorKind::Format => "format error",
+            #[cfg(feature = "serde")]
             ErrorKind::Serialize => "serialize error",
             ErrorKind::Io(_) => "io error",
         };

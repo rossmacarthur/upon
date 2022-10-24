@@ -1,3 +1,5 @@
+#![cfg(feature = "serde")]
+
 use std::thread;
 
 use upon::{value, Engine};
@@ -55,6 +57,7 @@ fn engine_add_template_owned_source() -> upon::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "filters")]
 #[test]
 fn engine_add_template_nested() {
     use upon::filters::*;

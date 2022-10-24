@@ -1,3 +1,6 @@
+#![cfg(feature = "filters")]
+#![cfg(feature = "serde")]
+
 use std::collections::BTreeMap;
 
 use upon::{value, Engine, Error, Value};
