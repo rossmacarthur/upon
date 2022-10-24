@@ -77,9 +77,10 @@
 //!   [`.render_from()`][TemplateRef::render_from] to render templates and
 //!   construct the context using [`Value`]'s `From` impls.
 //!
-//! - **unicode** _(enabled by default)_ — Enables improved error formatting
-//!   using the [`unicode-width`][unicode_width] crate. If disabled then
-//!   `.chars().count()` will be used instead.
+//! - **unicode** _(enabled by default)_ — Enables unicode support and pulls in
+//!   the [`unicode-ident`][unicode_ident] and [`unicode-width`][unicode_width]
+//!   crates. If disabled then unicode identifiers will no longer be allowed in
+//!   templates and `.chars().count()` will be used in error formatting.
 //!
 //! # Examples
 //!

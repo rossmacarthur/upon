@@ -248,7 +248,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     '"' => self.lex_string(iter, i)?,
                     c if c.is_ascii_digit() => self.lex_number(iter),
                     c if is_whitespace(c) => self.lex_whitespace(iter),
-                    c if is_ident(c) => self.lex_ident_or_keyword(iter, i),
+                    c if is_ident_start(c) => self.lex_ident_or_keyword(iter, i),
 
                     // Any other character...
                     _ => {
@@ -472,6 +472,22 @@ fn is_whitespace(c: char) -> bool {
     matches!(c, '\t' | ' ')
 }
 
+#[cfg(feature = "unicode")]
+fn is_ident_start(c: char) -> bool {
+    c == '_' || unicode_ident::is_xid_start(c)
+}
+
+#[cfg(feature = "unicode")]
+fn is_ident(c: char) -> bool {
+    unicode_ident::is_xid_continue(c)
+}
+
+#[cfg(not(feature = "unicode"))]
+fn is_ident_start(c: char) -> bool {
+    matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_')
+}
+
+#[cfg(not(feature = "unicode"))]
 fn is_ident(c: char) -> bool {
     matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_')
 }
@@ -578,7 +594,8 @@ mod tests {
     #[test]
     fn lex_expr() {
         let tokens =
-            lex("lorem ipsum {{ .|\t aZ_0 :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet").unwrap();
+            lex("lorem ipsum {{ .|\t _aZ_0 привіт :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet")
+                .unwrap();
         assert_eq!(
             tokens,
             [
@@ -588,7 +605,9 @@ mod tests {
                 (Token::Period, "."),
                 (Token::Pipe, "|"),
                 (Token::Whitespace, "\t "),
-                (Token::Ident, "aZ_0"),
+                (Token::Ident, "_aZ_0"),
+                (Token::Whitespace, " "),
+                (Token::Ident, "привіт"),
                 (Token::Whitespace, " "),
                 (Token::Colon, ":"),
                 (Token::String, "\"hello\\n\""),

@@ -16,6 +16,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 serde = { version = "1.0.137", optional = true }
+unicode-ident = { version = "1.0.5", optional = true }
 unicode-width = { version = "0.1.9", optional = true }
 
 [dev-dependencies]
@@ -33,9 +34,9 @@ filters = []
 # the context using `Value`'s '`From` impls.
 serde = ["dep:serde"]
 
-# Enables improved error formatting using the `unicode-width` crate. If disabled
-# then `.chars().count()` will be used instead.
-unicode = ["dep:unicode-width"]
+# Allows unicode identifiers in templates and enables improved error
+# formatting.
+unicode = ["dep:unicode-ident", "dep:unicode-width"]
 
 [workspace]
 members = ["benches", "fuzz", "tools/*"]

@@ -116,6 +116,16 @@ fn render_inline_expr_map_index() {
 }
 
 #[test]
+fn render_inline_expr_map_index_unicode_ident() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum.привіт }}")
+        .unwrap()
+        .render(value! { ipsum: { привіт: "sit"} })
+        .unwrap();
+    assert_eq!(result, "lorem sit");
+}
+
+#[test]
 fn render_inline_expr_list_index() {
     let result = Engine::new()
         .compile("lorem {{ ipsum.1 }}")
