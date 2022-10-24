@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, Options, Parser, Tag};
 use pulldown_cmark_to_cmark::{cmark_resume_with_options, Options as Options2};
+use pulldown_cmark_toc as toc;
 
 const WORKSPACE_DIR: &str = env!("CARGO_WORKSPACE_DIR");
 
@@ -23,11 +24,17 @@ fn update_readme(engine: &upon::Engine) -> Result<()> {
     let readme = PathBuf::from_iter([WORKSPACE_DIR, "README.md"]);
     let librs = PathBuf::from_iter([WORKSPACE_DIR, "src", "lib.rs"]);
     let text = get_module_comment(&librs)?;
-    let docs = reformat(&text)?;
+    let events = reformat(&text);
+    let (summary, rest) = extract_first_paragraph(events);
+    let docs = to_cmark(rest)?;
+    let toc = toc::TableOfContents::new(&docs)
+        .to_cmark_with_options(toc::Options::default().levels(2..=6));
     let result = engine
         .compile(include_str!("README_TEMPLATE.md"))?
         .render(upon::value! {
-            docs: docs
+            summary: to_cmark(summary)?,
+            docs: docs,
+            toc: toc,
         })?;
     fs::write(&readme, result)?;
     Ok(())
@@ -37,13 +44,18 @@ fn update_syntax(engine: &upon::Engine) -> Result<()> {
     let syntax = PathBuf::from_iter([WORKSPACE_DIR, "SYNTAX.md"]);
     let syntaxrs = PathBuf::from_iter([WORKSPACE_DIR, "src", "syntax.rs"]);
     let text = get_module_comment(&syntaxrs)?;
-    let docs = reformat(&text)?;
-    let i = docs.find(|c| c == '\n').unwrap();
-
+    let events = reformat(&text);
+    let (_, rest) = extract_first_paragraph(events);
+    let (summary, rest) = extract_first_paragraph(rest);
+    let docs = to_cmark(rest)?;
+    let toc = toc::TableOfContents::new(&docs)
+        .to_cmark_with_options(toc::Options::default().levels(2..=6));
     let result = engine
         .compile(include_str!("SYNTAX_TEMPLATE.md"))?
         .render(upon::value! {
-            docs: &docs[i+2..]
+            summary: to_cmark(summary)?,
+            docs: docs,
+            toc: toc,
         })?;
     fs::write(&syntax, result)?;
     Ok(())
@@ -60,12 +72,37 @@ fn get_module_comment(path: &Path) -> Result<String> {
 }
 
 /// Reformat a Markdown file and increase the heading level.
-fn reformat(text: &str) -> Result<String> {
+fn reformat(text: &str) -> Vec<Event> {
     let mut events = Vec::from_iter(Parser::new_ext(text, Options::all()));
     events = fix_headings(events);
     events = fix_code_blocks(events);
     events = fix_links(events);
-    to_cmark(events)
+    events
+}
+
+fn extract_first_paragraph(events: Vec<Event>) -> (Vec<Event>, Vec<Event>) {
+    let mut iter = events.into_iter();
+    let mut left = Vec::new();
+    let mut right = Vec::new();
+    let mut count = 0;
+    for event in iter.by_ref() {
+        match event {
+            Event::Start(Tag::Paragraph) => {
+                count += 1;
+                left.push(event);
+            }
+            Event::End(Tag::Paragraph) => {
+                count -= 1;
+                left.push(event);
+                if count == 0 {
+                    break;
+                }
+            }
+            event => left.push(event),
+        }
+    }
+    right.extend(iter);
+    (left, right)
 }
 
 /// Increases each heading level by one.

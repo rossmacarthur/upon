@@ -6,11 +6,28 @@
 [![Docs.rs Latest](https://img.shields.io/badge/docs.rs-latest-blue.svg)](https://docs.rs/upon)
 [![Build Status](https://img.shields.io/github/workflow/status/rossmacarthur/upon/build/trunk)](https://github.com/rossmacarthur/upon/actions?query=workflow%3Abuild)
 
-A simple, powerful template engine.
+A lightweight and powerful template engine for Rust.
 
-## Features
+## Table of Contents
 
-#### Syntax
+- [Overview](#overview)
+  - [Syntax](#syntax)
+  - [Engine](#engine)
+  - [Why another template engine?](#why-another-template-engine)
+- [Getting started](#getting-started)
+- [Features](#features)
+- [Examples](#examples)
+  - [Render using structured data](#render-using-structured-data)
+  - [Transform data using filters](#transform-data-using-filters)
+  - [Render a template using custom syntax](#render-a-template-using-custom-syntax)
+  - [Render a template to an `impl io::Write`](#render-a-template-to-an-impl-iowrite)
+  - [Add and use a custom formatter](#add-and-use-a-custom-formatter)
+- [Benchmarks](#benchmarks)
+- [License](#license)
+
+## Overview
+
+### Syntax
 
 - Expressions: `{{ user.name }}`
 - Conditionals: `{% if user.enabled %} ... {% endif %}`
@@ -19,7 +36,9 @@ A simple, powerful template engine.
 - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
 - Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
 
-#### Engine
+See the `syntax` module for the full syntax documentation.
+
+### Engine
 
 - Clear and well documented API
 - Customizable value formatters: `{{ user.name | escape_html }}`
@@ -27,13 +46,36 @@ A simple, powerful template engine.
 - Render using any `serde` serializable values
 - Convenient macro for quick rendering:
   `upon::value!{ name: "John", age: 42 }`
+- Pretty error messages when displayed using `{:#}`
 - Minimal dependencies and decent runtime performance
+
+### Why another template engine?
+
+It’s true there are already a lot of template engines for Rust!
+
+I created `upon` because I required a template engine that had runtime
+compiled templates, configurable syntax delimiters and minimal dependencies.
+I also didn’t need support for arbitrary expressions in the template syntax
+but occasionally I needed something more flexible than outputting simple
+values. Performance was also a concern for me, template engines like
+[Handlebars] and [Tera] have a lot of features but can be up to five to
+seven times slower to render than engines like [TinyTemplate].
+
+Basically I wanted something like [TinyTemplate] with support for
+configurable delimiters and user defined filter functions. The syntax is
+inspired by template engines like [Liquid] and [Jinja].
 
 ## Getting started
 
-Your entry point is the `Engine` struct. The engine stores the syntax
-config, filter functions, and compiled templates. Generally, you only need
-to construct one engine during the lifetime of a program.
+First, add the crate to your Cargo manifest.
+
+```sh
+cargo add upon
+```
+
+Now construct an `Engine`. The engine stores the syntax config, filter
+functions, formatters, and compiled templates. Generally, you only need to
+construct one engine during the lifetime of a program.
 
 ```rust
 let engine = upon::Engine::new();
@@ -88,7 +130,7 @@ assert_eq!(result, "Hello John Smith!");
 The following section contains some simple examples. See the
 [`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository for more.
 
-#### Render using structured data
+### Render using structured data
 
 You can render using any `serde` serializable data.
 
@@ -108,7 +150,7 @@ let result = upon::Engine::new()
 assert_eq!(result, "Hello John Smith");
 ```
 
-#### Transform data using filters
+### Transform data using filters
 
 Data can be transformed using registered filters.
 
@@ -125,7 +167,7 @@ assert_eq!(result, "Hello world!");
 
 See the `filters` module documentation for more information on filters.
 
-#### Render a template using custom syntax
+### Render a template using custom syntax
 
 The template syntax can be set by constructing an engine using
 `Engine::with_syntax`.
@@ -140,7 +182,7 @@ let result = upon::Engine::with_syntax(syntax)
 assert_eq!(result, "Hello John Smith");
 ```
 
-#### Render a template to an `impl io::Write`
+### Render a template to an `impl io::Write`
 
 You can render a template directly to a buffer implementing `io::Write`
 by using `.render_to_writer()`.
@@ -155,7 +197,7 @@ upon::Engine::new()
     .render_to_writer(stdout, upon::value! { user: { name: "John Smith" }})?;
 ```
 
-#### Add and use a custom formatter
+### Add and use a custom formatter
 
 You can add your own custom formatter’s or even override the default
 formatter using `Engine::set_default_formatter`. The following example
@@ -180,6 +222,13 @@ assert_eq!(result, "User age: Value::Integer(23)");
 ```
 
 See the `fmt` module documentation for more information.
+
+[Handlebars]: https://crates.io/crates/handlebars
+[Tera]: https://crates.io/crates/tera
+[TinyTemplate]: https://crates.io/crates/tinytemplate
+[TinyTemplate]: https://crates.io/crates/tinytemplate
+[Liquid]: https://liquidjs.com
+[Jinja]: https://jinja.palletsprojects.com
 
 ## Benchmarks
 

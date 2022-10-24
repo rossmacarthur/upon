@@ -6,6 +6,13 @@
 [![Docs.rs Latest](https://img.shields.io/badge/docs.rs-latest-blue.svg)](https://docs.rs/upon)
 [![Build Status](https://img.shields.io/github/workflow/status/rossmacarthur/upon/build/trunk)](https://github.com/rossmacarthur/upon/actions?query=workflow%3Abuild)
 
+{{ summary }}
+
+## Table of Contents
+
+{{ toc }}- [Benchmarks](#benchmarks)
+- [License](#license)
+
 {{ docs }}
 
 ## Benchmarks

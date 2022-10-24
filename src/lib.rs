@@ -1,8 +1,8 @@
-//! A simple, powerful template engine.
+//! A lightweight and powerful template engine for Rust.
 //!
-//! # Features
+//! # Overview
 //!
-//! ### Syntax
+//! ## Syntax
 //!
 //! - Expressions: `{{ user.name }}`
 //! - Conditionals: `{% if user.enabled %} ... {% endif %}`
@@ -11,7 +11,9 @@
 //! - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
 //! - Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
 //!
-//! ### Engine
+//! See the [`syntax`] module for the full syntax documentation.
+//!
+//! ## Engine
 //!
 //! - Clear and well documented API
 //! - Customizable value formatters: `{{ user.name | escape_html }}`
@@ -19,13 +21,42 @@
 //! - Render using any [`serde`] serializable values
 //! - Convenient macro for quick rendering:
 //!   `upon::value!{ name: "John", age: 42 }`
+//! - Pretty error messages when displayed using `{:#}`
 //! - Minimal dependencies and decent runtime performance
+//!
+//! ## Why another template engine?
+//!
+//! It's true there are already a lot of template engines for Rust!
+//!
+//! I created `upon` because I required a template engine that had runtime
+//! compiled templates, configurable syntax delimiters and minimal dependencies.
+//! I also didn't need support for arbitrary expressions in the template syntax
+//! but occasionally I needed something more flexible than outputting simple
+//! values. Performance was also a concern for me, template engines like
+//! [Handlebars] and [Tera] have a lot of features but can be up to five to
+//! seven times slower to render than engines like [TinyTemplate].
+//!
+//! Basically I wanted something like [TinyTemplate] with support for
+//! configurable delimiters and user defined filter functions. The syntax is
+//! inspired by template engines like [Liquid] and [Jinja].
+//!
+//! [Jinja]: https://jinja.palletsprojects.com
+//! [Handlebars]: https://crates.io/crates/handlebars
+//! [Liquid]: https://liquidjs.com
+//! [Tera]: https://crates.io/crates/tera
+//! [TinyTemplate]: https://crates.io/crates/tinytemplate
 //!
 //! # Getting started
 //!
-//! Your entry point is the [`Engine`] struct. The engine stores the syntax
-//! config, filter functions, and compiled templates. Generally, you only need
-//! to construct one engine during the lifetime of a program.
+//! First, add the crate to your Cargo manifest.
+//!
+//! ```sh
+//! cargo add upon
+//! ```
+//!
+//! Now construct an [`Engine`]. The engine stores the syntax config, filter
+//! functions, formatters, and compiled templates. Generally, you only need to
+//! construct one engine during the lifetime of a program.
 //!
 //! ```
 //! let engine = upon::Engine::new();
@@ -89,7 +120,7 @@
 //!
 //! [examples]: https://github.com/rossmacarthur/upon/tree/trunk/examples
 //!
-//! ### Render using structured data
+//! ## Render using structured data
 //!
 //! You can render using any [`serde`] serializable data.
 //!
@@ -110,7 +141,7 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! ### Transform data using filters
+//! ## Transform data using filters
 //!
 //! Data can be transformed using registered filters.
 //!
@@ -128,7 +159,7 @@
 //!
 //! See the [`filters`] module documentation for more information on filters.
 //!
-//! ### Render a template using custom syntax
+//! ## Render a template using custom syntax
 //!
 //! The template syntax can be set by constructing an engine using
 //! [`Engine::with_syntax`].
@@ -144,7 +175,7 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! ### Render a template to an `impl io::Write`
+//! ## Render a template to an `impl io::Write`
 //!
 //! You can render a template directly to a buffer implementing [`io::Write`]
 //! by using [`.render_to_writer()`][TemplateRef::render_to_writer].
@@ -161,7 +192,7 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! ### Add and use a custom formatter
+//! ## Add and use a custom formatter
 //!
 //! You can add your own custom formatter's or even override the default
 //! formatter using [`Engine::set_default_formatter`]. The following example

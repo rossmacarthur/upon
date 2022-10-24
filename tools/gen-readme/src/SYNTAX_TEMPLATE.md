@@ -2,4 +2,10 @@
 
 # syntax
 
+{{ summary }}
+
+## Table of Contents
+
+{{ toc }}
+
 {{ docs }}

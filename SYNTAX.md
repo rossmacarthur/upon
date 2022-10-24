@@ -10,6 +10,20 @@ specific syntax delimiters in the template. Because `upon` allows you to
 configure these delimiters, this document will only refer to the
 **default** configuration.
 
+## Table of Contents
+
+- [Expressions](#expressions)
+  - [Literals](#literals)
+  - [Values](#values)
+  - [Filters](#filters)
+- [Blocks](#blocks)
+  - [Conditionals](#conditionals)
+  - [Loops](#loops)
+  - [With](#with)
+  - [Include](#include)
+- [Whitespace control](#whitespace-control)
+
+
 ## Expressions
 
 Expressions are available everywhere in templates and they can be emitted by

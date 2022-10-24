@@ -7,5 +7,3 @@ publish = false
 [dependencies]
 either = "1.6.1"
 itertools = "0.10.3"
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = "1.0.81"

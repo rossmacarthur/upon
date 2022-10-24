@@ -1,5 +1,4 @@
 use std::env;
-use std::ffi::OsStr;
 use std::fs;
 use std::iter;
 use std::path::PathBuf;
@@ -10,10 +9,11 @@ use std::io;
 
 use either::Either;
 use itertools::Itertools;
-use serde::Deserialize;
+
+const WORKSPACE_DIR: &str = env!("CARGO_WORKSPACE_DIR");
 
 fn main() -> io::Result<()> {
-    let path = cargo_workspace_dir().join("src/filters/impls.rs");
+    let path = PathBuf::from_iter([WORKSPACE_DIR, "src", "filters", "impls.rs"]);
     let tmp = path.with_extension("tmp");
 
     let prev = fs::read_to_string(&path).unwrap_or_else(|_| String::new());
@@ -208,24 +208,4 @@ where
         write!(s, "{},", item).unwrap();
     }
     s
-}
-
-fn cargo_workspace_dir() -> PathBuf {
-    env::var("CARGO_WORKSPACE_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            #[derive(Deserialize)]
-            struct Manifest {
-                workspace_root: PathBuf,
-            }
-            let cargo = env::var_os("CARGO");
-            let cargo = cargo.as_deref().unwrap_or_else(|| OsStr::new("cargo"));
-            let output = process::Command::new(cargo)
-                .args(["metadata", "--format-version=1", "--no-deps"])
-                .current_dir(env!("CARGO_MANIFEST_DIR"))
-                .output()
-                .unwrap();
-            let manifest: Manifest = serde_json::from_slice(&output.stdout).unwrap();
-            manifest.workspace_root
-        })
 }
