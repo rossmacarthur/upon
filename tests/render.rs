@@ -3,7 +3,8 @@ use std::error::Error as _;
 use std::fmt::Write;
 use std::io;
 
-use upon::{value, Engine, Error, Formatter, Result, Value};
+use upon::fmt;
+use upon::{value, Engine, Error, Value};
 
 #[test]
 fn render_comment() {
@@ -137,6 +138,29 @@ fn render_inline_expr_custom_formatter() {
 }
 
 #[test]
+fn render_inline_expr_default_formatter_err() {
+    let mut engine = Engine::new();
+    engine.set_default_formatter(&format_list);
+    let err = engine
+        .compile("lorem {{ ipsum }}")
+        .unwrap()
+        .render(value! { ipsum: { sit: "amet"} })
+        .unwrap_err();
+    assert_format_err(
+        &err,
+        "expected list",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum }}
+   |          ^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn render_inline_expr_custom_formatter_err() {
     let mut engine = Engine::new();
     engine.add_formatter("format_list", format_list);
@@ -145,28 +169,28 @@ fn render_inline_expr_custom_formatter_err() {
         .unwrap()
         .render(value! { ipsum: { sit: "amet"} })
         .unwrap_err();
-    assert_err(
+    assert_format_err(
         &err,
         "expected list",
         "
-  --> <anonymous>:1:10
+  --> <anonymous>:1:18
    |
  1 | lorem {{ ipsum | format_list }}
-   |          ^^^^^^^^^^^^^^^^^^^
+   |                  ^^^^^^^^^^^
    |
    = reason: REASON
 ",
     );
 }
 
-fn format_list(f: &mut Formatter<'_>, v: &Value) -> Result<()> {
+fn format_list(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
     match v {
         Value::List(list) => {
             for (i, item) in list.iter().enumerate() {
                 if i != 0 {
                     f.write_char(';')?;
                 }
-                upon::format(f, item)?;
+                fmt::default(f, item)?;
             }
             Ok(())
         }
@@ -246,7 +270,7 @@ fn render_inline_expr_err_unrenderable() {
         .unwrap()
         .render(value! { ipsum: {} })
         .unwrap_err();
-    assert_err(
+    assert_format_err(
         &err,
         "expression evaluated to unformattable type map",
         "
@@ -867,6 +891,14 @@ impl io::Write for Writer {
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
+}
+
+#[track_caller]
+fn assert_format_err(err: &Error, reason: &str, pretty: &str) {
+    let display = format!("format error: {}", reason);
+    let display_alt = format!("format error\n{}", pretty.replace("REASON", reason));
+    assert_eq!(err.to_string(), display);
+    assert_eq!(format!("{:#}", err), display_alt);
 }
 
 #[track_caller]

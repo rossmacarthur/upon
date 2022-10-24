@@ -270,6 +270,37 @@ fn render_filter_err_expected_arg_reference() {
     );
 }
 
+#[test]
+fn render_filter_err_custom() {
+    let mut engine = Engine::new();
+    engine.add_filter("test", |_: &Value| Err::<bool, _>("test error"));
+    let err = engine
+        .compile("{{ name | test }}")
+        .unwrap()
+        .render(upon::value! { name:"John Smith" })
+        .unwrap_err();
+    assert_filter_err(
+        &err,
+        "test error",
+        "
+  --> <anonymous>:1:11
+   |
+ 1 | {{ name | test }}
+   |           ^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[track_caller]
+fn assert_filter_err(err: &Error, reason: &str, pretty: &str) {
+    let display = format!("filter error: {}", reason);
+    let display_alt = format!("filter error\n{}", pretty.replace("REASON", reason));
+    assert_eq!(err.to_string(), display);
+    assert_eq!(format!("{:#}", err), display_alt);
+}
+
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
     let display = format!("render error: {}", reason);

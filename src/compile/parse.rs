@@ -446,12 +446,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         while self.is_next(Token::Pipe)? {
             self.expect(Token::Pipe)?;
             let name = self.parse_ident()?;
-            let span = name.span.combine(expr.span());
-            let args = if self.is_next(Token::Colon)? {
+            let (args, span) = if self.is_next(Token::Colon)? {
                 let span = self.expect(Token::Colon)?;
-                Some(self.parse_args(span)?)
+                let args = self.parse_args(span)?;
+                let span = expr.span().combine(args.span);
+                (Some(args), span)
             } else {
-                None
+                (None, expr.span().combine(name.span))
             };
             expr = ast::Expr::Call(ast::Call {
                 name,

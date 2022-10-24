@@ -168,7 +168,7 @@
 //!
 //! ```
 //! use std::fmt::Write;
-//! use upon::{Formatter, Value, Result};
+//! use upon::{Value, Result};
 //!
 //! let mut engine = upon::Engine::new();
 //! engine.add_formatter("debug", |f, value| {
@@ -184,6 +184,8 @@
 //! assert_eq!(result, "User age: Value::Integer(23)");
 //! # Ok::<(), upon::Error>(())
 //! ```
+//!
+//! See the [`fmt`] module documentation for more information.
 
 #![deny(unsafe_op_in_unsafe_fn)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -193,6 +195,7 @@ mod error;
 #[cfg(feature = "filters")]
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub mod filters;
+pub mod fmt;
 #[cfg(feature = "serde")]
 mod macros;
 mod render;
@@ -202,11 +205,10 @@ mod value;
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::fmt;
 use std::io;
 
 pub use crate::error::Error;
-pub use crate::render::{format, Formatter};
+use crate::fmt::FormatFn;
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -235,9 +237,6 @@ enum EngineFn {
     Filter(Box<FilterFn>),
     Formatter(Box<FormatFn>),
 }
-
-/// A formatter function or closure.
-type FormatFn = dyn Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static;
 
 /// A compiled template.
 #[cfg_attr(internal_debug, derive(Debug))]
@@ -283,7 +282,7 @@ impl<'engine> Engine<'engine> {
     pub fn with_syntax(syntax: Syntax<'engine>) -> Self {
         Self {
             searcher: Searcher::new(syntax),
-            default_formatter: &format,
+            default_formatter: &fmt::default,
             functions: BTreeMap::new(),
             templates: BTreeMap::new(),
             max_include_depth: 64,
@@ -294,7 +293,7 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn set_default_formatter<F>(&mut self, f: &'engine F)
     where
-        F: Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static,
+        F: Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result + Sync + Send + 'static,
     {
         self.default_formatter = f;
     }
@@ -337,7 +336,7 @@ impl<'engine> Engine<'engine> {
     pub fn add_formatter<N, F>(&mut self, name: N, f: F)
     where
         N: Into<Cow<'engine, str>>,
-        F: Fn(&mut Formatter<'_>, &Value) -> Result<()> + Sync + Send + 'static,
+        F: Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result + Sync + Send + 'static,
     {
         self.functions
             .insert(name.into(), EngineFn::Formatter(Box::new(f)));
@@ -391,8 +390,8 @@ impl<'engine> Engine<'engine> {
     }
 }
 
-impl fmt::Debug for Engine<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for Engine<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut d = f.debug_struct("Engine");
         d.field("searcher", &self.searcher);
         d.field("functions", &self.functions.keys());
@@ -458,8 +457,8 @@ impl<'engine, 'source> Template<'engine, 'source> {
 }
 
 #[cfg(not(internal_debug))]
-impl fmt::Debug for Template<'_, '_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for Template<'_, '_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Template")
             .field("engine", &self.engine)
             .finish_non_exhaustive()
@@ -521,8 +520,8 @@ impl<'engine> TemplateRef<'engine> {
 }
 
 #[cfg(not(internal_debug))]
-impl fmt::Debug for TemplateRef<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for TemplateRef<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TemplateRef")
             .field("engine", &self.engine)
             .finish_non_exhaustive()

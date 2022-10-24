@@ -173,6 +173,12 @@ pub trait FilterReturn {
     fn to_value(self) -> Result<Value>;
 }
 
+/// Represents an error value from a filter.
+pub trait FilterError {
+    #[doc(hidden)]
+    fn to_error(self) -> Error;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Filter
 ////////////////////////////////////////////////////////////////////////////////
@@ -443,11 +449,28 @@ where
     }
 }
 
-impl<T> FilterReturn for Result<T>
+impl<T, E> FilterReturn for std::result::Result<T, E>
 where
     T: Into<Value>,
+    E: FilterError,
 {
     fn to_value(self) -> Result<Value> {
-        self.map(Into::into)
+        self.map(Into::into).map_err(FilterError::to_error)
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FilterError
+////////////////////////////////////////////////////////////////////////////////
+
+impl FilterError for String {
+    fn to_error(self) -> Error {
+        Error::filter(self)
+    }
+}
+
+impl FilterError for &str {
+    fn to_error(self) -> Error {
+        Error::filter(self)
     }
 }

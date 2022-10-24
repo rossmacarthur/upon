@@ -1,7 +1,6 @@
 use std::cmp::max;
-use std::fmt;
-use std::io;
 
+use crate::fmt;
 use crate::types::span::Span;
 
 /// An error that can occur during template compilation or rendering.
@@ -29,32 +28,33 @@ enum ErrorKind {
     /// the exact failure.
     Syntax,
 
-    /// Rendering failed.
-    ///
-    /// This can happen for a variety of reasons during rendering. This excludes
-    /// formatting and IO errors and max include depth which are defined below.
-    Render,
-
     /// A serialization error.
     ///
     /// This can happen when serializing the data to be rendered fails.
     Serialize,
 
-    /// An IO error.
+    /// Rendering failed.
     ///
-    /// This can only happen when rendering to a type implementing
-    /// `std::io::Write` and some IO occurs.
-    Io(io::Error),
+    /// This can happen for a variety of reasons during rendering. This excludes
+    /// filter, format and IO errors which are defined below.
+    Render,
+
+    /// A filter error.
+    ///
+    /// This can happen if a user defined filter returns an error.
+    Filter,
 
     /// A format error.
     ///
     /// This can happen if the expression's value formatter returns an error
     /// while formatting a value into the buffer.
-    Fmt(fmt::Error),
+    Format,
 
-    /// Any other error, typically constructed from a String in a user defined
-    /// source like a filter or formatter.
-    Other,
+    /// An IO error.
+    ///
+    /// This can only happen when rendering to a type implementing
+    /// `std::io::Write` and some IO occurs.
+    Io(std::io::Error),
 }
 
 impl Error {
@@ -94,18 +94,34 @@ impl Error {
         self
     }
 
-    /// Attaches pretty information to the error and converts it to a render
-    /// error kind.
-    pub(crate) fn into_render(mut self, source: &str, span: impl Into<Span>) -> Self {
-        assert!(self.pretty.is_none());
-        self.kind = ErrorKind::Render;
-        self.pretty = Some(Pretty::build(source, span.into()));
+    /// Attaches pretty information to the error.
+    pub(crate) fn enrich(mut self, source: &str, span: impl Into<Span>) -> Self {
+        self.pretty
+            .get_or_insert_with(|| Pretty::build(source, span.into()));
         self
+    }
+
+    pub(crate) fn filter(reason: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::Filter,
+            name: None,
+            reason: Some(reason.into()),
+            pretty: None,
+        }
+    }
+
+    pub(crate) fn format(err: fmt::Error, source: &str, span: impl Into<Span>) -> Self {
+        Self {
+            kind: ErrorKind::Format,
+            name: None,
+            reason: err.message(),
+            pretty: Some(Pretty::build(source, span.into())),
+        }
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
         Self {
             kind: ErrorKind::Io(err),
             name: None,
@@ -115,23 +131,12 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<fmt::Error> for Error {
-    fn from(err: fmt::Error) -> Self {
+impl From<std::fmt::Error> for Error {
+    fn from(_: std::fmt::Error) -> Self {
         Self {
-            kind: ErrorKind::Fmt(err),
+            kind: ErrorKind::Format,
             name: None,
             reason: None,
-            pretty: None,
-        }
-    }
-}
-
-impl From<String> for Error {
-    fn from(msg: String) -> Self {
-        Self {
-            kind: ErrorKind::Other,
-            name: None,
-            reason: Some(msg),
             pretty: None,
         }
     }
@@ -142,7 +147,7 @@ impl From<String> for Error {
 impl serde::ser::Error for Error {
     fn custom<T>(msg: T) -> Self
     where
-        T: fmt::Display,
+        T: std::fmt::Display,
     {
         Self {
             kind: ErrorKind::Serialize,
@@ -157,14 +162,13 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.kind {
             ErrorKind::Io(err) => Some(err),
-            ErrorKind::Fmt(err) => Some(err),
             _ => None,
         }
     }
 }
 
-impl fmt::Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if !f.alternate() {
             writeln!(f, "{:#}", self)?;
         }
@@ -179,14 +183,15 @@ impl fmt::Debug for Error {
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let msg = match &self.kind {
             ErrorKind::Syntax => "invalid syntax",
-            ErrorKind::Render | ErrorKind::Other => "render error",
+            ErrorKind::Render => "render error",
+            ErrorKind::Filter => "filter error",
+            ErrorKind::Format => "format error",
             ErrorKind::Serialize => "serialize error",
             ErrorKind::Io(_) => "io error",
-            ErrorKind::Fmt(_) => "format error",
         };
         match (&self.reason, &self.pretty) {
             (Some(r), Some(p)) if f.alternate() => {
@@ -235,10 +240,10 @@ impl Pretty {
 
     fn fmt_with_reason(
         &self,
-        f: &mut fmt::Formatter<'_>,
+        f: &mut std::fmt::Formatter<'_>,
         name: Option<&str>,
         reason: &str,
-    ) -> fmt::Result {
+    ) -> std::fmt::Result {
         let num = (self.ln + 1).to_string();
         let col = self.col + 1;
         let pad = display_width(&num);

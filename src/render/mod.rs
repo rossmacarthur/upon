@@ -1,4 +1,3 @@
-mod fmt;
 mod iter;
 mod stack;
 mod value;
@@ -6,14 +5,12 @@ mod value;
 use std::fmt::Write;
 use std::io;
 
-pub use crate::render::fmt::Formatter;
-
-use crate::render::fmt::Writer;
+use crate::fmt::{Formatter, Writer};
 use crate::render::iter::LoopState;
 pub use crate::render::stack::{Stack, State};
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
-use crate::types::span::{index, Span};
+use crate::types::span::index;
 use crate::value::ValueCow;
 use crate::{Engine, EngineFn, Error, Result, Value};
 
@@ -51,7 +48,6 @@ pub struct FilterState<'a> {
     pub source: &'a str,
     pub filter: &'a ast::Ident,
     pub value: &'a mut ValueCow<'a>,
-    pub value_span: Span,
     pub args: &'a [ast::BaseExpr],
 }
 
@@ -153,11 +149,13 @@ impl<'a> Renderer<'a> {
                 Instr::Emit(span) => {
                     let value = expr.take().unwrap();
                     (self.engine.default_formatter)(f, &value)
-                        .map_err(|err| err.into_render(&t.source, *span))?;
+                        .map_err(|err| Error::format(err, &t.source, *span))?;
                 }
 
                 Instr::EmitRaw(span) => {
                     let raw = unsafe { index(&t.source, *span) };
+                    // We don't need to enrich this error because it can only
+                    // fail because of an IO error.
                     f.write_str(raw)?;
                 }
 
@@ -175,18 +173,18 @@ impl<'a> Renderer<'a> {
                                 source: &t.source,
                                 filter: name,
                                 value: &mut value,
-                                value_span: *span,
                                 args: &[],
-                            })?;
+                            })
+                            .map_err(|err| err.enrich(&t.source, name.span))?;
                             (self.engine.default_formatter)(f, &result)
-                                .map_err(|err| err.into_render(&t.source, *span))?;
+                                .map_err(|err| Error::format(err, &t.source, *span))?;
                         }
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
                         Some(EngineFn::Formatter(formatter)) => {
                             let value = expr.take().unwrap();
                             formatter(f, &value)
-                                .map_err(|err| err.into_render(&t.source, *span))?;
+                                .map_err(|err| Error::format(err, &t.source, name.span))?;
                         }
                         // No filter or formatter exists.
                         None => {
@@ -247,7 +245,7 @@ impl<'a> Renderer<'a> {
                     debug_assert!(prev.is_none());
                 }
 
-                Instr::Apply(name, span, args) => {
+                Instr::Apply(name, _, args) => {
                     let name_raw = unsafe { index(&t.source, name.span) };
                     match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.
@@ -263,9 +261,9 @@ impl<'a> Renderer<'a> {
                                 source: &t.source,
                                 filter: name,
                                 value: &mut value,
-                                value_span: *span,
                                 args,
-                            })?;
+                            })
+                            .map_err(|e| e.enrich(&t.source, name.span))?;
                             expr.replace(ValueCow::Owned(result));
                         }
                         // The referenced function is a formatter which is not valid
@@ -297,32 +295,4 @@ impl<'a> Renderer<'a> {
             .get(name.name.as_str())
             .ok_or_else(|| Error::render("unknown template", source, name.span))
     }
-}
-
-/// The default value formatter.
-///
-/// Values are formatted as follows:
-/// - [`Value::None`]: empty string
-/// - [`Value::Bool`]: `true` or `false`
-/// - [`Value::Integer`]: the integer formatted using [`Display`][std::fmt::Display]
-/// - [`Value::Float`]: the float formatted using [`Display`][std::fmt::Display]
-/// - [`Value::String`]: the string, unescaped
-///
-/// This is public so that it can be called as part of custom formatters.
-#[inline]
-pub fn format(f: &mut Formatter<'_>, value: &Value) -> Result<()> {
-    match value {
-        Value::None => {}
-        Value::Bool(b) => write!(f, "{}", b)?,
-        Value::Integer(n) => write!(f, "{}", n)?,
-        Value::Float(n) => write!(f, "{}", n)?,
-        Value::String(s) => write!(f, "{}", s)?,
-        value => {
-            Err(format!(
-                "expression evaluated to unformattable type {}",
-                value.human()
-            ))?;
-        }
-    }
-    Ok(())
 }
