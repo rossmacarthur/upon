@@ -46,6 +46,11 @@
 //! [Tera]: https://crates.io/crates/tera
 //! [TinyTemplate]: https://crates.io/crates/tinytemplate
 //!
+//! ## MSRV
+//!
+//! Currently the minimum supported version for `upon` is Rust 1.60. The MSRV
+//! policy is to support the last **five** minor versions of Rust (~30 weeks).
+//!
 //! # Getting started
 //!
 //! First, add the crate to your Cargo manifest.

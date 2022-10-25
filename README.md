@@ -14,6 +14,7 @@ A lightweight and powerful template engine for Rust.
   - [Syntax](#syntax)
   - [Engine](#engine)
   - [Why another template engine?](#why-another-template-engine)
+  - [MSRV](#msrv)
 - [Getting started](#getting-started)
 - [Features](#features)
 - [Examples](#examples)
@@ -64,6 +65,11 @@ seven times slower to render than engines like [TinyTemplate].
 Basically I wanted something like [TinyTemplate] with support for
 configurable delimiters and user defined filter functions. The syntax is
 inspired by template engines like [Liquid] and [Jinja].
+
+### MSRV
+
+Currently the minimum supported version for `upon` is Rust 1.60. The MSRV
+policy is to support the last **five** minor versions of Rust (~30 weeks).
 
 ## Getting started
 

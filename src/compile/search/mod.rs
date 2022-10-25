@@ -29,7 +29,11 @@ impl Searcher {
         T: AsRef<[u8]>,
     {
         let (kind, i, j) = self.find_at(haystack, at)?;
-        (at == i).then_some((kind, j))
+        if at == i {
+            Some((kind, j))
+        } else {
+            None
+        }
     }
 }
 
