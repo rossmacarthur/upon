@@ -42,7 +42,6 @@
 //! following types. See [`FilterReturn`].
 //!
 //! - `R` where `R` implements `Into<Value>`
-//! - `Option<R>` where `R` implements `Into<Value>`
 //! - `Result<R>` where `R` implements `Into<Value>`
 //!
 //! # Examples
@@ -434,18 +433,6 @@ where
 {
     fn to_value(self) -> Result<Value> {
         Ok(self.into())
-    }
-}
-
-impl<T> FilterReturn for Option<T>
-where
-    T: Into<Value>,
-{
-    fn to_value(self) -> Result<Value> {
-        match self {
-            Some(r) => Ok(r.into()),
-            None => Ok(Value::None),
-        }
     }
 }
 

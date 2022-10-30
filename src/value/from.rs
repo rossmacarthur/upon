@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::Value;
 
@@ -87,6 +87,16 @@ where
     }
 }
 
+impl<K, V> From<HashMap<K, V>> for Value
+where
+    K: Into<String>,
+    V: Into<Value>,
+{
+    fn from(map: HashMap<K, V>) -> Self {
+        Self::Map(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
+    }
+}
+
 impl<K, V, const N: usize> From<[(K, V); N]> for Value
 where
     K: Into<String>,
@@ -94,5 +104,46 @@ where
 {
     fn from(map: [(K, V); N]) -> Self {
         Self::Map(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
+    }
+}
+
+impl<V> From<Option<V>> for Value
+where
+    V: Into<Value>,
+{
+    fn from(opt: Option<V>) -> Self {
+        match opt {
+            None => Self::None,
+            Some(value) => value.into(),
+        }
+    }
+}
+
+impl<V> FromIterator<V> for Value
+where
+    V: Into<Value>,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = V>,
+    {
+        Self::List(iter.into_iter().map(Into::into).collect())
+    }
+}
+
+impl<K, V> FromIterator<(K, V)> for Value
+where
+    K: Into<String>,
+    V: Into<Value>,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (K, V)>,
+    {
+        Self::Map(
+            iter.into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        )
     }
 }
