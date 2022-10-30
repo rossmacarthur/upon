@@ -4,7 +4,7 @@
 use std::cmp::{max, min};
 use std::ops::{Index, Range};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Span {
     pub m: usize,
     pub n: usize,
@@ -33,6 +33,12 @@ impl From<Range<usize>> for Span {
             m: r.start,
             n: r.end,
         }
+    }
+}
+
+impl std::fmt::Debug for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&(self.m..self.n), f)
     }
 }
 

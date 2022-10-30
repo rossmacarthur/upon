@@ -227,16 +227,17 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-mod compile;
-mod error;
 #[cfg(feature = "filters")]
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub mod filters;
 pub mod fmt;
+pub mod syntax;
+
+mod compile;
+mod error;
 #[cfg(feature = "serde")]
 mod macros;
 mod render;
-pub mod syntax;
 mod types;
 mod value;
 
@@ -245,7 +246,6 @@ use std::collections::BTreeMap;
 use std::io;
 
 pub use crate::error::Error;
-use crate::fmt::FormatFn;
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -255,6 +255,7 @@ pub use crate::value::Value;
 use crate::compile::Searcher;
 #[cfg(feature = "filters")]
 use crate::filters::{Filter, FilterArgs, FilterFn, FilterReturn};
+use crate::fmt::FormatFn;
 use crate::types::program;
 
 /// A type alias for results in this crate.
@@ -276,7 +277,6 @@ enum EngineFn {
 }
 
 /// A compiled template.
-#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: program::Template<'source>,
@@ -284,7 +284,6 @@ pub struct Template<'engine, 'source> {
 
 /// A reference to a compiled template in an [`Engine`].
 #[derive(Clone, Copy)]
-#[cfg_attr(internal_debug, derive(Debug))]
 pub struct TemplateRef<'engine> {
     engine: &'engine Engine<'engine>,
     name: &'engine str,
@@ -429,17 +428,24 @@ impl<'engine> Engine<'engine> {
 
 impl std::fmt::Debug for Engine<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut d = f.debug_struct("Engine");
-        d.field("searcher", &self.searcher);
-        d.field("functions", &self.functions.keys());
-        #[cfg(not(internal_debug))]
-        {
-            d.field("templates", &self.templates.keys()).finish()
-        }
-        #[cfg(internal_debug)]
-        {
-            d.field("templates", &self.templates).finish()
-        }
+        f.debug_struct("Engine")
+            .field("searcher", &(..))
+            .field("default_formatter", &(..))
+            .field("functions", &self.functions)
+            .field("templates", &self.templates)
+            .field("max_include_depth", &self.max_include_depth)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for EngineFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            #[cfg(feature = "filters")]
+            Self::Filter(_) => "Filter",
+            Self::Formatter(_) => "Formatter",
+        };
+        f.debug_tuple(name).finish()
     }
 }
 
@@ -493,12 +499,12 @@ impl<'engine, 'source> Template<'engine, 'source> {
     }
 }
 
-#[cfg(not(internal_debug))]
 impl std::fmt::Debug for Template<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Template")
-            .field("engine", &self.engine)
-            .finish_non_exhaustive()
+            .field("engine", &(..))
+            .field("template", &self.template)
+            .finish()
     }
 }
 
@@ -556,11 +562,12 @@ impl<'engine> TemplateRef<'engine> {
     }
 }
 
-#[cfg(not(internal_debug))]
 impl std::fmt::Debug for TemplateRef<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TemplateRef")
-            .field("engine", &self.engine)
-            .finish_non_exhaustive()
+            .field("engine", &(..))
+            .field("name", &self.name)
+            .field("template", &self.template)
+            .finish()
     }
 }

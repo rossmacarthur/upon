@@ -62,3 +62,10 @@ pub enum Instr {
     /// Apply the filter to the value at the top of the stack
     Apply(ast::Ident, Span, Option<ast::Args>),
 }
+
+#[cfg(not(internal_debug))]
+impl std::fmt::Debug for Template<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<compiled>")
+    }
+}
