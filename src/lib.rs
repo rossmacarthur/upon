@@ -11,8 +11,6 @@
 //! - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
 //! - Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
 //!
-//! See the [`syntax`] module for the full syntax documentation.
-//!
 //! ## Engine
 //!
 //! - Clear and well documented API
@@ -32,9 +30,9 @@
 //! compiled templates, configurable syntax delimiters and minimal dependencies.
 //! I also didn't need support for arbitrary expressions in the template syntax
 //! but occasionally I needed something more flexible than outputting simple
-//! values. Performance was also a concern for me, template engines like
-//! [Handlebars] and [Tera] have a lot of features but can be up to five to
-//! seven times slower to render than engines like [TinyTemplate].
+//! values (hence filters). Performance was also a concern for me, template
+//! engines like [Handlebars] and [Tera] have a lot of features but can be up to
+//! five to seven times slower to render than engines like [TinyTemplate].
 //!
 //! Basically I wanted something like [TinyTemplate] with support for
 //! configurable delimiters and user defined filter functions. The syntax is
@@ -48,8 +46,8 @@
 //!
 //! ## MSRV
 //!
-//! Currently the minimum supported version for `upon` is Rust 1.60. The MSRV
-//! policy is to support the last **five** minor versions of Rust (~30 weeks).
+//! Currently the minimum supported version for `upon` is Rust 1.60. The policy
+//! of this crate is to only increase the MSRV in a breaking release.
 //!
 //! # Getting started
 //!
@@ -265,15 +263,27 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct Engine<'engine> {
     searcher: Searcher,
     default_formatter: &'engine FormatFn,
-    functions: BTreeMap<Cow<'engine, str>, EngineFn>,
+    functions: BTreeMap<Cow<'engine, str>, EngineBoxFn>,
     templates: BTreeMap<Cow<'engine, str>, program::Template<'engine>>,
     max_include_depth: usize,
 }
 
-enum EngineFn {
+/// A type of function stored in the engine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EngineFn {
+    /// A value formatter. See [`Engine::add_formatter`].
+    Formatter,
+
+    /// A filter. See [`Engine::add_filter`].
+    #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
+    #[cfg(feature = "filters")]
+    Filter,
+}
+
+enum EngineBoxFn {
+    Formatter(Box<FormatFn>),
     #[cfg(feature = "filters")]
     Filter(Box<FilterFn>),
-    Formatter(Box<FormatFn>),
 }
 
 /// A compiled template.
@@ -325,15 +335,6 @@ impl<'engine> Engine<'engine> {
         }
     }
 
-    /// Set the default formatter.
-    #[inline]
-    pub fn set_default_formatter<F>(&mut self, f: &'engine F)
-    where
-        F: Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result + Sync + Send + 'static,
-    {
-        self.default_formatter = f;
-    }
-
     /// Set the maximum length of the template render stack.
     ///
     /// This is the maximum number of nested `{% include ... %}` statements that
@@ -345,16 +346,56 @@ impl<'engine> Engine<'engine> {
         self.max_include_depth = depth;
     }
 
-    /// Add a new filter to the engine.
+    /// Set the default formatter.
     ///
-    /// **Note:** filters and formatters share the same namespace.
+    /// The default formatter defines how values are formatted in the rendered
+    /// template. If not configured this defaults to [`fmt::default`] which does
+    /// not perform any escaping. See the [`fmt`] module documentation for more
+    /// information on value formatters.
+    #[inline]
+    pub fn set_default_formatter<F>(&mut self, f: &'engine F)
+    where
+        F: Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result + Sync + Send + 'static,
+    {
+        self.default_formatter = f;
+    }
+
+    /// Add a new value formatter to the engine.
+    ///
+    /// See the [`fmt`] module documentation for more information on formatters.
+    ///
+    /// # Note
+    ///
+    /// Formatters and filters share the same namespace. If a filter or
+    /// formatter with the same name already exists in the engine, it is
+    /// replaced and `Some(_)` with the type of function that was replaced is
+    /// returned, else `None` is returned.
+    #[inline]
+    pub fn add_formatter<N, F>(&mut self, name: N, f: F) -> Option<EngineFn>
+    where
+        N: Into<Cow<'engine, str>>,
+        F: Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result + Sync + Send + 'static,
+    {
+        self.functions
+            .insert(name.into(), EngineBoxFn::Formatter(Box::new(f)))
+            .map(|f| f.discriminant())
+    }
+
+    /// Add a new filter to the engine.
     ///
     /// See the [`filters`] module documentation for more information on
     /// filters.
+    ///
+    /// # Note
+    ///
+    /// Formatters and filters share the same namespace. If a filter or
+    /// formatter with the same name already exists in the engine, it is
+    /// replaced and `Some(_)` with the type of function that was replaced is
+    /// returned, else `None` is returned.
     #[cfg(feature = "filters")]
     #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
     #[inline]
-    pub fn add_filter<N, F, R, A>(&mut self, name: N, f: F)
+    pub fn add_filter<N, F, R, A>(&mut self, name: N, f: F) -> Option<EngineFn>
     where
         N: Into<Cow<'engine, str>>,
         F: Filter<R, A> + Send + Sync + 'static,
@@ -362,30 +403,30 @@ impl<'engine> Engine<'engine> {
         A: for<'a> FilterArgs<'a>,
     {
         self.functions
-            .insert(name.into(), EngineFn::Filter(filters::new(f)));
+            .insert(name.into(), EngineBoxFn::Filter(filters::new(f)))
+            .map(|f| f.discriminant())
     }
 
-    /// Add a new value formatter to the engine.
+    /// Remove a formatter or filter by name.
     ///
-    /// **Note:** filters and formatters share the same namespace.
-    #[inline]
-    pub fn add_formatter<N, F>(&mut self, name: N, f: F)
-    where
-        N: Into<Cow<'engine, str>>,
-        F: Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result + Sync + Send + 'static,
-    {
-        self.functions
-            .insert(name.into(), EngineFn::Formatter(Box::new(f)));
+    /// # Note
+    ///
+    /// Formatters and filters share the same namespace. If a filter or
+    /// formatter with name existed in the engine, it is replaced and `Some(_)`
+    /// with the type of function that was replaced is returned, else `None` is
+    /// returned.
+    pub fn remove_function(&mut self, name: &str) -> Option<EngineFn> {
+        self.functions.remove(name).map(|f| f.discriminant())
     }
 
     /// Add a template to the engine.
     ///
     /// The template will be compiled and stored under the given name.
     ///
-    /// You can either pass a borrowed ([`&str`]) or owned ([`String`]) template
-    /// to this function. When passing a borrowed template, the lifetime needs
-    /// to be at least as long as the engine lifetime. For shorter template
-    /// lifetimes use [`.compile(..)`][Engine::compile].
+    /// You can either pass a borrowed template ([`&str`]) or owned template
+    /// ([`String`]) to this function. When passing a borrowed template, the
+    /// lifetime needs to be at least as long as the engine lifetime. For
+    /// shorter template lifetimes use [`.compile(..)`][Engine::compile].
     #[inline]
     pub fn add_template<N, S>(&mut self, name: N, source: S) -> Result<()>
     where
@@ -411,11 +452,20 @@ impl<'engine> Engine<'engine> {
             })
     }
 
+    /// Remove a template by name.
+    ///
+    /// Returns `true` if a template was removed, `false` if there was no
+    /// template of that name.
+    #[inline]
+    pub fn remove_template(&mut self, name: &str) -> bool {
+        self.templates.remove(name).is_some()
+    }
+
     /// Compile a template.
     ///
     /// The template will not be stored in the engine. The advantage over using
-    /// [`.add_template(..)`][Engine::add_template] here is that the template
-    /// source does not need to outlive the engine.
+    /// [`.add_template(..)`][Engine::add_template] here is that if the template
+    /// source is borrowed, it does not need to outlive the engine.
     #[inline]
     pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
         let template = compile::template(self, Cow::Borrowed(source))?;
@@ -438,7 +488,17 @@ impl std::fmt::Debug for Engine<'_> {
     }
 }
 
-impl std::fmt::Debug for EngineFn {
+impl EngineBoxFn {
+    fn discriminant(&self) -> EngineFn {
+        match self {
+            #[cfg(feature = "filters")]
+            Self::Filter(_) => EngineFn::Filter,
+            Self::Formatter(_) => EngineFn::Formatter,
+        }
+    }
+}
+
+impl std::fmt::Debug for EngineBoxFn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = match self {
             #[cfg(feature = "filters")]

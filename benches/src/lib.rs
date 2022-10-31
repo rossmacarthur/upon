@@ -232,7 +232,7 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
     #[inline]
     fn add_filters(&mut self) {
         self.add_filter("lower", str::to_lowercase);
-        self.add_filter("reverse", |s: &str| String::from_iter(s.chars().rev()))
+        self.add_filter("reverse", |s: &str| String::from_iter(s.chars().rev()));
     }
 
     #[inline]

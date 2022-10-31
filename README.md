@@ -37,8 +37,6 @@ A lightweight and powerful template engine for Rust.
 - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
 - Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
 
-See the `syntax` module for the full syntax documentation.
-
 ### Engine
 
 - Clear and well documented API
@@ -58,9 +56,9 @@ I created `upon` because I required a template engine that had runtime
 compiled templates, configurable syntax delimiters and minimal dependencies.
 I also didn’t need support for arbitrary expressions in the template syntax
 but occasionally I needed something more flexible than outputting simple
-values. Performance was also a concern for me, template engines like
-[Handlebars] and [Tera] have a lot of features but can be up to five to
-seven times slower to render than engines like [TinyTemplate].
+values (hence filters). Performance was also a concern for me, template
+engines like [Handlebars] and [Tera] have a lot of features but can be up to
+five to seven times slower to render than engines like [TinyTemplate].
 
 Basically I wanted something like [TinyTemplate] with support for
 configurable delimiters and user defined filter functions. The syntax is
@@ -68,8 +66,8 @@ inspired by template engines like [Liquid] and [Jinja].
 
 ### MSRV
 
-Currently the minimum supported version for `upon` is Rust 1.60. The MSRV
-policy is to support the last **five** minor versions of Rust (~30 weeks).
+Currently the minimum supported version for `upon` is Rust 1.60. The policy
+of this crate is to only increase the MSRV in a breaking release.
 
 ## Getting started
 

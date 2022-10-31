@@ -12,7 +12,7 @@ use crate::types::ast;
 use crate::types::program::{Instr, Template};
 use crate::types::span::index;
 use crate::value::ValueCow;
-use crate::{Engine, EngineFn, Error, Result, Value};
+use crate::{Engine, EngineBoxFn, Error, Result, Value};
 
 pub fn template<'a>(
     engine: &'a Engine<'a>,
@@ -166,7 +166,7 @@ impl<'a> Renderer<'a> {
                         // it and then emit the value using the default
                         // formatter.
                         #[cfg(feature = "filters")]
-                        Some(EngineFn::Filter(filter)) => {
+                        Some(EngineBoxFn::Filter(filter)) => {
                             let mut value = expr.take().unwrap();
                             let result = filter(FilterState {
                                 stack,
@@ -181,7 +181,7 @@ impl<'a> Renderer<'a> {
                         }
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
-                        Some(EngineFn::Formatter(formatter)) => {
+                        Some(EngineBoxFn::Formatter(formatter)) => {
                             let value = expr.take().unwrap();
                             formatter(f, &value)
                                 .map_err(|err| Error::format(err, &t.source, name.span))?;
@@ -250,7 +250,7 @@ impl<'a> Renderer<'a> {
                     match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.
                         #[cfg(feature = "filters")]
-                        Some(EngineFn::Filter(filter)) => {
+                        Some(EngineBoxFn::Filter(filter)) => {
                             let mut value = expr.take().unwrap();
                             let args = args
                                 .as_ref()
@@ -268,7 +268,7 @@ impl<'a> Renderer<'a> {
                         }
                         // The referenced function is a formatter which is not valid
                         // in the middle of an expression.
-                        Some(EngineFn::Formatter(_)) => {
+                        Some(EngineBoxFn::Formatter(_)) => {
                             return Err(Error::render(
                                 "expected filter, found formatter",
                                 &t.source,
