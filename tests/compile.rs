@@ -24,6 +24,20 @@ fn compile_inline_expr() {
         .unwrap();
 }
 
+#[test]
+fn compile_inline_expr_index() {
+    Engine::new()
+        .compile("lorem {{ ipsum.123.dolor }} sit amet")
+        .unwrap();
+}
+
+#[test]
+fn compile_inline_expr_filter_with_index() {
+    Engine::new()
+        .compile("lorem {{ ipsum | dolor: 0.5, sit.123.amet }}")
+        .unwrap();
+}
+
 const BASE_EXPRS: &[&str] = &[
     "nested.path",
     r#""normal""#,

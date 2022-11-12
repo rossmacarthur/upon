@@ -529,7 +529,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     /// Parses an identifier or index.
     fn parse_ident_or_index(&mut self) -> Result<ast::Ident> {
         let span = match self.parse()? {
-            (Token::Number, span) if is_base10_integer(&self.source()[span]) => span,
+            (Token::Index, span) => span,
             (Token::Ident, span) => span,
             (tk, span) => {
                 return Err(self.err_unexpected_token("identifier", tk, span));
@@ -851,8 +851,4 @@ impl Keyword {
             _ => unreachable!(),
         }
     }
-}
-
-fn is_base10_integer(s: &str) -> bool {
-    s.chars().all(|c| c.is_ascii_digit())
 }

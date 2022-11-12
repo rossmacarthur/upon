@@ -48,6 +48,14 @@ enum State {
         end: Token,
     },
 
+    /// Between expression or block tags and within a path.
+    BlockPath {
+        /// The span of the begin tag.
+        begin: Span,
+        /// The end token we are expecting.
+        end: Token,
+    },
+
     /// Between comment tags.
     Comment {
         /// The span of the begin tag.
@@ -55,6 +63,13 @@ enum State {
         /// The end token we are expecting.
         end: Token,
     },
+}
+
+#[derive(Clone, Copy)]
+#[cfg_attr(internal_debug, derive(Debug))]
+enum BlockState {
+    Unknown,
+    Path,
 }
 
 /// The unit yielded by the lexer.
@@ -92,6 +107,8 @@ pub enum Token {
     Keyword,
     /// An attribute or variable
     Ident,
+    /// An index into a list.
+    Index,
     /// An integer or float literal, e.g. `19`, `0b1011`, or `0o777`, or `0x7f`.
     Number,
     /// A string literal, e.g. `"Hello World!\n"`.
@@ -136,7 +153,8 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
 
         match self.state {
             State::Template => self.lex_template(i),
-            State::Block { begin, end } => self.lex_block(begin, end, i),
+            State::Block { begin, end } => self.lex_block(BlockState::Unknown, begin, end, i),
+            State::BlockPath { begin, end } => self.lex_block(BlockState::Path, begin, end, i),
             State::Comment { begin, end } => self.lex_comment(begin, end, i),
         }
     }
@@ -203,7 +221,13 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         }
     }
 
-    fn lex_block(&mut self, begin: Span, end: Token, i: usize) -> Result<Option<(Token, Span)>> {
+    fn lex_block(
+        &mut self,
+        block_state: BlockState,
+        begin: Span,
+        end: Token,
+        i: usize,
+    ) -> Result<Option<(Token, Span)>> {
         // We are between two tags {{ ... }} or {% ... %} that means we
         // must parse template syntax relevant tokens and also lookout
         // for the corresponding end tag `end`.
@@ -246,7 +270,10 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
 
                     // Multi-character tokens with a distinct start character.
                     '"' => self.lex_string(iter, i)?,
-                    c if c.is_ascii_digit() => self.lex_number(iter),
+                    c if c.is_ascii_digit() => match block_state {
+                        BlockState::Path => self.lex_index(iter),
+                        BlockState::Unknown => self.lex_number(iter),
+                    },
                     c if is_whitespace(c) => self.lex_whitespace(iter),
                     c if is_ident_start(c) => self.lex_ident_or_keyword(iter, i),
 
@@ -257,6 +284,16 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                 }
             }
         };
+
+        match (block_state, tk) {
+            (BlockState::Unknown, Token::Ident) => {
+                self.state = State::BlockPath { begin, end };
+            }
+            (BlockState::Path, Token::Pipe | Token::Comma | Token::Colon) => {
+                self.state = State::Block { begin, end };
+            }
+            _ => {}
+        }
 
         // Finally, we need to update the cursor.
         self.cursor = j;
@@ -342,6 +379,13 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         (Token::Number, self.lex_while(iter, is_number))
     }
 
+    fn lex_index<I>(&mut self, iter: I) -> (Token, usize)
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        (Token::Index, self.lex_while(iter, is_index))
+    }
+
     fn lex_whitespace<I>(&mut self, iter: I) -> (Token, usize)
     where
         I: Iterator<Item = (usize, char)> + Clone,
@@ -417,6 +461,7 @@ impl Token {
             Self::Whitespace => "whitespace",
             Self::Keyword => "keyword",
             Self::Ident => "identifier",
+            Self::Index => "index",
             Self::String => "string",
             Self::Number => "number",
         }
@@ -490,6 +535,10 @@ fn is_ident_start(c: char) -> bool {
 #[cfg(not(feature = "unicode"))]
 fn is_ident(c: char) -> bool {
     matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_')
+}
+
+fn is_index(c: char) -> bool {
+    matches!(c, '0'..='9')
 }
 
 fn is_number(c: char) -> bool {
@@ -621,6 +670,27 @@ mod tests {
                 (Token::Raw, " dolor sit amet"),
             ]
         );
+    }
+
+    #[test]
+    fn lex_expr_path_with_index() {
+        let tokens = lex("lorem {{ ipsum.123.dolor }} sit amet").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem "),
+                (Token::BeginExpr, "{{"),
+                (Token::Whitespace, " "),
+                (Token::Ident, "ipsum"),
+                (Token::Period, "."),
+                (Token::Index, "123"),
+                (Token::Period, "."),
+                (Token::Ident, "dolor"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "}}"),
+                (Token::Raw, " sit amet")
+            ]
+        )
     }
 
     #[test]
