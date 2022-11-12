@@ -72,8 +72,8 @@
 //! {{ page.path | append: ".html" }}
 //! ```
 //!
-//! See the [`Filter`][crate::Filter] trait documentation for more information
-//! on filters.
+//! See the [`filters`][crate::filters] module documentation for more
+//! information on filters.
 //!
 //! # Blocks
 //!

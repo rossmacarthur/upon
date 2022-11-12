@@ -7,7 +7,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, Options, Parser, Tag};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, LinkType, Options, Parser, Tag};
 use pulldown_cmark_to_cmark::{cmark_resume_with_options, Options as Options2};
 use pulldown_cmark_toc as toc;
 
@@ -135,11 +135,29 @@ fn fix_links(events: Vec<Event>) -> Vec<Event> {
     while let Some(event) = iter.next() {
         match event {
             Event::Text(text) if text.as_ref() == "[" => {
+                let mut local = Vec::new();
                 loop {
                     match iter.next().unwrap() {
                         Event::Text(text) if text.as_ref() == "]" => break,
-                        event => events.push(event),
+                        event => local.push(event),
                     }
+                }
+
+                match &*local {
+                    &[Event::Code(CowStr::Borrowed(text))] => match maybe_link(text) {
+                        Some(uri) => {
+                            let tag = Tag::Link(
+                                LinkType::Inline,
+                                CowStr::Borrowed(uri),
+                                CowStr::Borrowed(""),
+                            );
+                            events.push(Event::Start(tag.clone()));
+                            events.push(Event::Code(CowStr::Borrowed(text)));
+                            events.push(Event::End(tag.clone()));
+                        }
+                        None => events.extend(local),
+                    },
+                    _ => events.extend(local),
                 }
 
                 match iter.peek() {
@@ -159,6 +177,49 @@ fn fix_links(events: Vec<Event>) -> Vec<Event> {
         }
     }
     events
+}
+
+fn maybe_link(text: &str) -> Option<&'static str> {
+    match text {
+        "syntax" => Some("./SYNTAX.md"),
+
+        "serde" => Some("https://crates.io/crates/serde"),
+        "unicode-ident" => Some("https://crates.io/crates/unicode-ident"),
+        "unicode-width" => Some("https://crates.io/crates/unicode-width"),
+
+        "std::io::Write" => Some("https://doc.rust-lang.org/stable/std/io/trait.Write.html"),
+        "String" => Some("https://doc.rust-lang.org/stable/std/string/struct.String.html"),
+
+        "filters" => Some("https://docs.rs/upon/latest/upon/filters/index.html"),
+        "fmt" => Some("https://docs.rs/upon/latest/upon/fmt/index.html"),
+        "Engine" => Some("https://docs.rs/upon/latest/upon/struct.Engine.html"),
+        "Value" => Some("https://docs.rs/upon/latest/upon/enum.Value.html"),
+        "set_max_include_depth" => {
+            Some("https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_max_include_depth")
+        }
+        "add_template" => {
+            Some("https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template")
+        }
+        "get_template" => {
+            Some("https://docs.rs/upon/latest/upon/struct.Engine.html#method.get_template")
+        }
+        "compile" => Some("https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile"),
+        "Engine::add_filter" => {
+            Some("https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter")
+        }
+        "Engine::add_formatter" => {
+            Some("https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter")
+        }
+        "render" => Some("https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render"),
+        "render_from" => {
+            Some("https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from")
+        }
+
+        text => {
+            eprintln!("failed to fix intradoc link: {}", text);
+            None
+        }
+    }
 }
 
 /// Fixes code blocks.

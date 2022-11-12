@@ -1,29 +1,29 @@
-//! Demonstrates how you can implement a file loader with `upon`.
-
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-fn main() -> Result<()> {
+fn main() -> upon::Result<()> {
+    // The *runtime* directory that the templates will be loaded from.
     let template_dir = PathBuf::from_iter([env!("CARGO_WORKSPACE_DIR"), "examples", "templates"]);
 
     let mut engine = upon::Engine::new();
     add_templates(&mut engine, &template_dir)?;
 
-    let result = engine
-        .get_template("index")
-        .unwrap()
-        .render(upon::value! { title: "My Webpage!", year: 2022 })?;
-    println!("{}", result);
+    // Fetch the template with name "index"
+    let template = engine.get_template("index").unwrap();
+
+    // Render the template using the provided data
+    let output = template.render(upon::value! { title: "My Webpage!", year: 2022 })?;
+
+    println!("{}", output);
 
     Ok(())
 }
 
 /// Adds all HTML templates in the given directory to the engine, using the
-/// file name as the template name.
-fn add_templates(engine: &mut upon::Engine<'_>, dir: &Path) -> Result<()> {
+/// file name as the template name. This implementation does not recurse
+/// directories.
+fn add_templates(engine: &mut upon::Engine<'_>, dir: &Path) -> upon::Result<()> {
     for entry in fs::read_dir(dir)? {
         let path = entry?.path();
 

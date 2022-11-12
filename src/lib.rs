@@ -20,6 +20,7 @@
 //! - Convenient macro for quick rendering:
 //!   `upon::value!{ name: "John", age: 42 }`
 //! - Pretty error messages when displayed using `{:#}`
+//! - Format agnostic (does _not_ escape values for HTML by default)
 //! - Minimal dependencies and decent runtime performance
 //!
 //! ## Why another template engine?
@@ -65,7 +66,7 @@
 //! let engine = upon::Engine::new();
 //! ```
 //!
-//! Next, [`.add_template`][Engine::add_template] is used to compile and store a
+//! Next, [`add_template`][Engine::add_template] is used to compile and store a
 //! template in the engine.
 //!
 //! ```
@@ -75,8 +76,8 @@
 //! ```
 //!
 //! Finally, the template is rendered by fetching it using
-//! [`.get_template`][Engine::get_template] and calling
-//! [`.render`][TemplateRef::render].
+//! [`get_template`][Engine::get_template] and calling
+//! [`render`][TemplateRef::render].
 //!
 //! ```
 //! # let mut engine = upon::Engine::new();
@@ -89,7 +90,7 @@
 //!
 //! If the lifetime of the template source is shorter than the engine lifetime
 //! or you don't need to store the compiled template then you can also use the
-//! [`.compile`][Engine::compile] function to return the template directly.
+//! [`compile`][Engine::compile] function to return the template directly.
 //!
 //! ```
 //! # let engine = upon::Engine::new();
@@ -99,128 +100,45 @@
 //! # Ok::<(), upon::Error>(())
 //! ```
 //!
-//! # Features
+//! # Further reading
 //!
-//! - **filters** _(enabled by default)_ — Enables support for filters in
-//!   templates, see [`Engine::add_filter()`]. This does _not_ affect value
-//!   formatters, see [`Engine::add_formatter()`]. Disabling this will improve
-//!   compile times.
-//!
-//! - **serde** _(enabled by default)_ — Enables all serde support and pulls in
-//!   the [`serde`] crate as a dependency. If disabled then you can use
-//!   [`.render_from()`][TemplateRef::render_from] to render templates and
-//!   construct the context using [`Value`]'s `From` impls.
-//!
-//! - **unicode** _(enabled by default)_ — Enables unicode support and pulls in
-//!   the [`unicode-ident`][unicode_ident] and [`unicode-width`][unicode_width]
-//!   crates. If disabled then unicode identifiers will no longer be allowed in
-//!   templates and `.chars().count()` will be used in error formatting.
-//!
-//! # Examples
-//!
-//! The following section contains some simple examples. See the
-//! [`examples/`][examples] directory in the repository for more.
+//! - The [`syntax`] module documentation outlines the template syntax.
+//! - The [`filters`] module documentation describes filters and how they work.
+//! - The [`fmt`] module documentation contains information on value formatters.
+//! - The [`examples/`][examples] directory in the repository contains concrete
+//!   code examples.
 //!
 //! [examples]: https://github.com/rossmacarthur/upon/tree/trunk/examples
 //!
-//! ## Render using structured data
+//! # Features
 //!
-//! You can render using any [`serde`] serializable data.
+//! The following crate features are available.
 //!
+//! - **`filters`** _(enabled by default)_ — Enables support for filters in
+//!   templates (see [`Engine::add_filter`]). This does _not_ affect value
+//!   formatters (see [`Engine::add_formatter`]). Disabling this will improve
+//!   compile times.
+//!
+//! - **`serde`** _(enabled by default)_ — Enables all serde support and pulls
+//!   in the [`serde`] crate as a dependency. If disabled then you can use
+//!   [`render_from`][TemplateRef::render_from] to render templates and
+//!   construct the context using [`Value`]'s `From` impls.
+//!
+//! - **`unicode`** _(enabled by default)_ — Enables unicode support and pulls
+//!   in the [`unicode-ident`][unicode_ident] and
+//!   [`unicode-width`][unicode_width] crates. If disabled then unicode
+//!   identifiers will no longer be allowed in templates and `.chars().count()`
+//!   will be used in error formatting.
+//!
+//! To disable all features or to use a subset you need to set `default-features
+//! = false` in your Cargo manifest and then enable the features that you would
+//! like. For example to use **`serde`** but disable **`filters`** and
+//! **`unicode`** you would do the following.
+//!
+//! ```toml
+//! [dependencies]
+//! upon = { version = "...", default-features = false, features = ["serde"] }
 //! ```
-//! #[derive(serde::Serialize)]
-//! struct Context { user: User }
-//!
-//! #[derive(serde::Serialize)]
-//! struct User { name: String }
-//!
-//! let ctx = Context { user: User { name: "John Smith".into() } };
-//!
-//! let result = upon::Engine::new()
-//!     .compile("Hello {{ user.name }}")?
-//!     .render(&ctx)?;
-//!
-//! assert_eq!(result, "Hello John Smith");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! ## Transform data using filters
-//!
-//! Data can be transformed using registered filters.
-//!
-//! ```
-//! let mut engine = upon::Engine::new();
-//! engine.add_filter("lower", str::to_lowercase);
-//!
-//! let result = engine
-//!     .compile("Hello {{ value | lower }}")?
-//!     .render(upon::value! { value: "WORLD!" })?;
-//!
-//! assert_eq!(result, "Hello world!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! See the [`filters`] module documentation for more information on filters.
-//!
-//! ## Render a template using custom syntax
-//!
-//! The template syntax can be set by constructing an engine using
-//! [`Engine::with_syntax`].
-//!
-//! ```
-//! let syntax = upon::Syntax::builder().expr("<?", "?>").block("<%", "%>").build();
-//!
-//! let result = upon::Engine::with_syntax(syntax)
-//!     .compile("Hello <? user.name ?>")?
-//!     .render(upon::value!{ user: { name: "John Smith" }})?;
-//!
-//! assert_eq!(result, "Hello John Smith");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! ## Render a template to an `impl io::Write`
-//!
-//! You can render a template directly to a buffer implementing [`io::Write`]
-//! by using [`.render_to_writer()`][TemplateRef::render_to_writer].
-//!
-//! ```
-//! use std::io;
-//!
-//! let stdout = io::BufWriter::new(io::stdout());
-//!
-//! upon::Engine::new()
-//!     .compile("Hello {{ user.name }}")?
-//!     .render_to_writer(stdout, upon::value! { user: { name: "John Smith" }})?;
-//! #
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! ## Add and use a custom formatter
-//!
-//! You can add your own custom formatter's or even override the default
-//! formatter using [`Engine::set_default_formatter`]. The following example
-//! shows how you could add `debug` formatter to the engine.
-//!
-//! ```
-//! use std::fmt::Write;
-//! use upon::{Value, Result};
-//!
-//! let mut engine = upon::Engine::new();
-//! engine.add_formatter("debug", |f, value| {
-//!     write!(f, "Value::{:?}", value)?;
-//!     Ok(())
-//! });
-//!
-//!
-//! let result = engine
-//!     .compile("User age: {{ user.age | debug }}")?
-//!     .render(upon::value! { user: { age: 23 } })?;
-//!
-//! assert_eq!(result, "User age: Value::Integer(23)");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! See the [`fmt`] module documentation for more information.
 
 #![deny(unsafe_op_in_unsafe_fn)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -229,6 +147,7 @@
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub mod filters;
 pub mod fmt;
+#[cfg(docsrs)]
 pub mod syntax;
 
 mod compile;

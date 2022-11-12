@@ -16,13 +16,8 @@ A lightweight and powerful template engine for Rust.
   - [Why another template engine?](#why-another-template-engine)
   - [MSRV](#msrv)
 - [Getting started](#getting-started)
+- [Further reading](#further-reading)
 - [Features](#features)
-- [Examples](#examples)
-  - [Render using structured data](#render-using-structured-data)
-  - [Transform data using filters](#transform-data-using-filters)
-  - [Render a template using custom syntax](#render-a-template-using-custom-syntax)
-  - [Render a template to an `impl io::Write`](#render-a-template-to-an-impl-iowrite)
-  - [Add and use a custom formatter](#add-and-use-a-custom-formatter)
 - [Benchmarks](#benchmarks)
 - [License](#license)
 
@@ -41,11 +36,12 @@ A lightweight and powerful template engine for Rust.
 
 - Clear and well documented API
 - Customizable value formatters: `{{ user.name | escape_html }}`
-- Render to a `String` or any `std::io::Write` implementor
-- Render using any `serde` serializable values
+- Render to a [`String`](https://doc.rust-lang.org/stable/std/string/struct.String.html) or any [`std::io::Write`](https://doc.rust-lang.org/stable/std/io/trait.Write.html) implementor
+- Render using any [`serde`](https://crates.io/crates/serde) serializable values
 - Convenient macro for quick rendering:
   `upon::value!{ name: "John", age: 42 }`
 - Pretty error messages when displayed using `{:#}`
+- Format agnostic (does *not* escape values for HTML by default)
 - Minimal dependencies and decent runtime performance
 
 ### Why another template engine?
@@ -77,7 +73,7 @@ First, add the crate to your Cargo manifest.
 cargo add upon
 ```
 
-Now construct an `Engine`. The engine stores the syntax config, filter
+Now construct an [`Engine`](https://docs.rs/upon/latest/upon/struct.Engine.html). The engine stores the syntax config, filter
 functions, formatters, and compiled templates. Generally, you only need to
 construct one engine during the lifetime of a program.
 
@@ -85,7 +81,7 @@ construct one engine during the lifetime of a program.
 let engine = upon::Engine::new();
 ```
 
-Next, `.add_template` is used to compile and store a
+Next, [`add_template`](https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template) is used to compile and store a
 template in the engine.
 
 ```rust
@@ -93,8 +89,8 @@ engine.add_template("hello", "Hello {{ user.name }}!")?;
 ```
 
 Finally, the template is rendered by fetching it using
-`.get_template` and calling
-`.render`.
+[`get_template`](https://docs.rs/upon/latest/upon/struct.Engine.html#method.get_template) and calling
+[`render`](https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render).
 
 ```rust
 let template = engine.get_template("hello").unwrap();
@@ -104,7 +100,7 @@ assert_eq!(result, "Hello John Smith!");
 
 If the lifetime of the template source is shorter than the engine lifetime
 or you don’t need to store the compiled template then you can also use the
-`.compile` function to return the template directly.
+[`compile`](https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile) function to return the template directly.
 
 ```rust
 let template = engine.compile("Hello {{ user.name }}!")?;
@@ -112,120 +108,42 @@ let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
 assert_eq!(result, "Hello John Smith!");
 ```
 
+## Further reading
+
+- The [`syntax`](./SYNTAX.md) module documentation outlines the template syntax.
+- The [`filters`](https://docs.rs/upon/latest/upon/filters/index.html) module documentation describes filters and how they work.
+- The [`fmt`](https://docs.rs/upon/latest/upon/fmt/index.html) module documentation contains information on value formatters.
+- The [`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository contains concrete
+  code examples.
+
 ## Features
 
-- **filters** *(enabled by default)* — Enables support for filters in
-  templates, see `Engine::add_filter()`. This does *not* affect value
-  formatters, see `Engine::add_formatter()`. Disabling this will improve
+The following crate features are available.
+
+- **`filters`** *(enabled by default)* — Enables support for filters in
+  templates (see [`Engine::add_filter`](https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter)). This does *not* affect value
+  formatters (see [`Engine::add_formatter`](https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter)). Disabling this will improve
   compile times.
 
-- **serde** *(enabled by default)* — Enables all serde support and pulls in
-  the `serde` crate as a dependency. If disabled then you can use
-  `.render_from()` to render templates and
-  construct the context using `Value`’s `From` impls.
+- **`serde`** *(enabled by default)* — Enables all serde support and pulls
+  in the [`serde`](https://crates.io/crates/serde) crate as a dependency. If disabled then you can use
+  [`render_from`](https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from) to render templates and
+  construct the context using [`Value`](https://docs.rs/upon/latest/upon/enum.Value.html)’s `From` impls.
 
-- **unicode** *(enabled by default)* — Enables unicode support and pulls in
-  the `unicode-ident` and `unicode-width`
-  crates. If disabled then unicode identifiers will no longer be allowed in
-  templates and `.chars().count()` will be used in error formatting.
+- **`unicode`** *(enabled by default)* — Enables unicode support and pulls
+  in the [`unicode-ident`](https://crates.io/crates/unicode-ident) and
+  [`unicode-width`](https://crates.io/crates/unicode-width) crates. If disabled then unicode
+  identifiers will no longer be allowed in templates and `.chars().count()`
+  will be used in error formatting.
 
-## Examples
+To disable all features or to use a subset you need to set `default-features = false` in your Cargo manifest and then enable the features that you would
+like. For example to use **`serde`** but disable **`filters`** and
+**`unicode`** you would do the following.
 
-The following section contains some simple examples. See the
-[`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository for more.
-
-### Render using structured data
-
-You can render using any `serde` serializable data.
-
-```rust
-#[derive(serde::Serialize)]
-struct Context { user: User }
-
-#[derive(serde::Serialize)]
-struct User { name: String }
-
-let ctx = Context { user: User { name: "John Smith".into() } };
-
-let result = upon::Engine::new()
-    .compile("Hello {{ user.name }}")?
-    .render(&ctx)?;
-
-assert_eq!(result, "Hello John Smith");
+```toml
+[dependencies]
+upon = { version = "...", default-features = false, features = ["serde"] }
 ```
-
-### Transform data using filters
-
-Data can be transformed using registered filters.
-
-```rust
-let mut engine = upon::Engine::new();
-engine.add_filter("lower", str::to_lowercase);
-
-let result = engine
-    .compile("Hello {{ value | lower }}")?
-    .render(upon::value! { value: "WORLD!" })?;
-
-assert_eq!(result, "Hello world!");
-```
-
-See the `filters` module documentation for more information on filters.
-
-### Render a template using custom syntax
-
-The template syntax can be set by constructing an engine using
-`Engine::with_syntax`.
-
-```rust
-let syntax = upon::Syntax::builder().expr("<?", "?>").block("<%", "%>").build();
-
-let result = upon::Engine::with_syntax(syntax)
-    .compile("Hello <? user.name ?>")?
-    .render(upon::value!{ user: { name: "John Smith" }})?;
-
-assert_eq!(result, "Hello John Smith");
-```
-
-### Render a template to an `impl io::Write`
-
-You can render a template directly to a buffer implementing `io::Write`
-by using `.render_to_writer()`.
-
-```rust
-use std::io;
-
-let stdout = io::BufWriter::new(io::stdout());
-
-upon::Engine::new()
-    .compile("Hello {{ user.name }}")?
-    .render_to_writer(stdout, upon::value! { user: { name: "John Smith" }})?;
-```
-
-### Add and use a custom formatter
-
-You can add your own custom formatter’s or even override the default
-formatter using `Engine::set_default_formatter`. The following example
-shows how you could add `debug` formatter to the engine.
-
-```rust
-use std::fmt::Write;
-use upon::{Value, Result};
-
-let mut engine = upon::Engine::new();
-engine.add_formatter("debug", |f, value| {
-    write!(f, "Value::{:?}", value)?;
-    Ok(())
-});
-
-
-let result = engine
-    .compile("User age: {{ user.age | debug }}")?
-    .render(upon::value! { user: { age: 23 } })?;
-
-assert_eq!(result, "User age: Value::Integer(23)");
-```
-
-See the `fmt` module documentation for more information.
 
 [Handlebars]: https://crates.io/crates/handlebars
 [Tera]: https://crates.io/crates/tera

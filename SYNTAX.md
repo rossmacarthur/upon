@@ -88,8 +88,8 @@ append a suffix to it.
 {{ page.path | append: ".html" }}
 ```
 
-See the `Filter` trait documentation for more information
-on filters.
+See the [`filters`](https://docs.rs/upon/latest/upon/filters/index.html) module documentation for more
+information on filters.
 
 ## Blocks
 
@@ -210,7 +210,7 @@ nested template.
 
 Self-referential templates and include cycles are allowed but the maximum
 include depth is restricted by the engine setting
-`set_max_include_depth`.
+[`set_max_include_depth`](https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_max_include_depth).
 
 ## Whitespace control
 
