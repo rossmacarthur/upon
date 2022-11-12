@@ -36,7 +36,7 @@ fn update_readme(engine: &upon::Engine) -> Result<()> {
             docs: docs,
             toc: toc,
         })?;
-    fs::write(&readme, result)?;
+    fs::write(readme, result)?;
     Ok(())
 }
 
@@ -57,7 +57,7 @@ fn update_syntax(engine: &upon::Engine) -> Result<()> {
             docs: docs,
             toc: toc,
         })?;
-    fs::write(&syntax, result)?;
+    fs::write(syntax, result)?;
     Ok(())
 }
 
