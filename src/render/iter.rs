@@ -5,7 +5,6 @@ use std::vec as list;
 
 use crate::render::value::lookup;
 use crate::types::ast;
-use crate::types::span::index;
 use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
@@ -142,7 +141,7 @@ impl<'a> LoopState<'a> {
 
     pub fn lookup_var(&self, source: &str, var: &ast::Var) -> Result<Option<ValueCow<'a>>> {
         let name = match var.first() {
-            ast::Key::Ident(ast::Ident { span }) => unsafe { index(source, *span) },
+            ast::Key::Ident(ast::Ident { span }) => &source[*span],
             ast::Key::Index(_) => return Ok(None),
         };
 
@@ -167,7 +166,7 @@ impl<'a> LoopState<'a> {
                 item,
                 value: Some((_, value)),
                 ..
-            } if unsafe { index(source, item.span) } == name => {
+            } if name == &source[item.span] => {
                 let v = resolve!(*value);
                 Ok(Some(ValueCow::Borrowed(v)))
             }
@@ -176,7 +175,7 @@ impl<'a> LoopState<'a> {
                 item,
                 value: Some((_, value)),
                 ..
-            } if unsafe { index(source, item.span) } == name => {
+            } if name == &source[item.span] => {
                 let v = resolve!(value);
                 Ok(Some(ValueCow::Owned(v.clone())))
             }
@@ -185,7 +184,7 @@ impl<'a> LoopState<'a> {
                 kv,
                 value: Some((_, (string, _))),
                 ..
-            } if unsafe { index(source, kv.key.span) } == name => {
+            } if name == &source[kv.key.span] => {
                 if let [k, ..] = var.rest() {
                     return Err(err(k.span()));
                 }
@@ -196,7 +195,7 @@ impl<'a> LoopState<'a> {
                 kv,
                 value: Some((_, (string, _))),
                 ..
-            } if unsafe { index(source, kv.key.span) } == name => {
+            } if name == &source[kv.key.span] => {
                 if let [k, ..] = var.rest() {
                     return Err(err(k.span()));
                 }
@@ -207,7 +206,7 @@ impl<'a> LoopState<'a> {
                 kv,
                 value: Some((_, (_, value))),
                 ..
-            } if unsafe { index(source, kv.value.span) } == name => {
+            } if name == &source[kv.value.span] => {
                 let v = resolve!(*value);
                 Ok(Some(ValueCow::Borrowed(v)))
             }
@@ -216,7 +215,7 @@ impl<'a> LoopState<'a> {
                 kv,
                 value: Some((_, (_, value))),
                 ..
-            } if unsafe { index(source, kv.value.span) } == name => {
+            } if name == &source[kv.value.span] => {
                 let v = resolve!(value);
                 Ok(Some(ValueCow::Owned(v.clone())))
             }
@@ -240,7 +239,7 @@ impl<'a> LoopState<'a> {
         }
 
         let name = match path[1] {
-            ast::Key::Ident(ast::Ident { span }) => unsafe { index(source, span) },
+            ast::Key::Ident(ast::Ident { span }) => &source[span],
             ast::Key::Index(_) => {
                 return Err(Error::render(
                     "cannot index into map with integer",

@@ -140,7 +140,7 @@
 //! upon = { version = "...", default-features = false, features = ["serde"] }
 //! ```
 
-#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "filters")]

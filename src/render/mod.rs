@@ -10,7 +10,6 @@ use crate::render::iter::LoopState;
 pub use crate::render::stack::{Stack, State};
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
-use crate::types::span::index;
 use crate::value::ValueCow;
 use crate::{Engine, EngineBoxFn, Error, Result, Value};
 
@@ -153,14 +152,14 @@ impl<'a> Renderer<'a> {
                 }
 
                 Instr::EmitRaw(span) => {
-                    let raw = unsafe { index(&t.source, *span) };
+                    let raw = &t.source[*span];
                     // We don't need to enrich this error because it can only
                     // fail because of an IO error.
                     f.write_str(raw)?;
                 }
 
                 Instr::EmitWith(name, span) => {
-                    let name_raw = unsafe { index(&t.source, name.span) };
+                    let name_raw = &t.source[name.span];
                     match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply
                         // it and then emit the value using the default
@@ -246,7 +245,7 @@ impl<'a> Renderer<'a> {
                 }
 
                 Instr::Apply(name, _, args) => {
-                    let name_raw = unsafe { index(&t.source, name.span) };
+                    let name_raw = &t.source[name.span];
                     match self.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.
                         #[cfg(feature = "filters")]

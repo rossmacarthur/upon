@@ -1,7 +1,6 @@
 use crate::render::iter::LoopState;
 use crate::render::value::{lookup_path, lookup_path_maybe};
 use crate::types::ast;
-use crate::types::span::index;
 use crate::value::ValueCow;
 use crate::{Error, Result};
 
@@ -41,10 +40,7 @@ impl<'a> Stack<'a> {
                     None => continue,
                 },
 
-                State::Var(name, var)
-                    if unsafe { index(source, v.first().span()) }
-                        == unsafe { index(source, name.span) } =>
-                {
+                State::Var(name, var) if source[v.first().span()] == source[name.span] => {
                     return lookup_path(source, var, v.rest());
                 }
 

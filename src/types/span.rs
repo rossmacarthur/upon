@@ -41,9 +41,3 @@ impl std::fmt::Debug for Span {
         std::fmt::Debug::fmt(&(self.m..self.n), f)
     }
 }
-
-pub unsafe fn index(s: &str, span: Span) -> &str {
-    debug_assert!(span.m <= span.n && span.n <= s.len());
-    let Span { m, n } = span;
-    unsafe { s.get_unchecked(m..n) }
-}

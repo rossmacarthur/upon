@@ -1,5 +1,5 @@
 use crate::types::ast;
-use crate::types::span::{index, Span};
+use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
@@ -106,7 +106,7 @@ pub fn lookup<'a>(source: &str, value: &'a Value, key: &ast::Key) -> Result<&'a 
         }
         Value::Map(map) => {
             let raw = match key {
-                ast::Key::Ident(ast::Ident { span }) => unsafe { index(source, *span) },
+                ast::Key::Ident(ast::Ident { span }) => &source[*span],
                 _ => {
                     return Err(Error::render(
                         "cannot index map with integer",
