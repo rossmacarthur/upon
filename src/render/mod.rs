@@ -234,8 +234,8 @@ impl<'a> Renderer<'a> {
                     return Ok(RenderState::IncludeWith { template, globals });
                 }
 
-                Instr::ExprStart(path) => {
-                    let value = stack.lookup_path(&t.source, path)?;
+                Instr::ExprStart(var) => {
+                    let value = stack.lookup_var(&t.source, var)?;
                     let prev = expr.replace(value);
                     debug_assert!(prev.is_none());
                 }

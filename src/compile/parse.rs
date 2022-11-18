@@ -468,7 +468,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     /// This is either a variable like
     ///
-    ///   user.name
+    ///   users.2.name
     ///
     /// Or a literal like
     ///
@@ -508,16 +508,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
 
             (Token::Ident, span) => {
-                let mut path = vec![ast::Ident { span }];
+                let first = ast::Key::Ident(ast::Ident { span });
+                let mut path = vec![first];
                 while self.is_next(Token::Period)? {
                     self.expect(Token::Period)?;
-                    path.push(self.parse_ident_or_index()?);
+                    path.push(self.parse_key()?);
                 }
-                let span = match path.len() {
-                    1 => path[0].span,
-                    n => path[0].span.combine(path[n - 1].span),
-                };
-                ast::BaseExpr::Var(ast::Var { path, span })
+                ast::BaseExpr::Var(ast::Var { path })
             }
             (tk, span) => {
                 return Err(self.err_unexpected_token("expression", tk, span));
@@ -526,16 +523,25 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(expr)
     }
 
-    /// Parses an identifier or index.
-    fn parse_ident_or_index(&mut self) -> Result<ast::Ident> {
-        let span = match self.parse()? {
-            (Token::Index, span) => span,
-            (Token::Ident, span) => span,
-            (tk, span) => {
-                return Err(self.err_unexpected_token("identifier", tk, span));
+    /// Parses a key.
+    ///
+    /// This is a path segment which is either an identifier or an index.
+    ///
+    ///   users
+    ///
+    ///   2
+    ///
+    ///   name
+    ///
+    fn parse_key(&mut self) -> Result<ast::Key> {
+        match self.parse()? {
+            (Token::Index, span) => {
+                let value = self.source()[span].parse().unwrap();
+                Ok(ast::Key::Index(ast::Index { value, span }))
             }
-        };
-        Ok(ast::Ident { span })
+            (Token::Ident, span) => Ok(ast::Key::Ident(ast::Ident { span })),
+            (tk, span) => Err(self.err_unexpected_token("identifier or index", tk, span)),
+        }
     }
 
     /// Parses filter arguments.

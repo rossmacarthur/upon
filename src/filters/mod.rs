@@ -382,12 +382,12 @@ where
     T: FilterArg<'a>,
 {
     match &args[i] {
-        BaseExpr::Var(var) => match stack.lookup_path(source, &var.path)? {
+        BaseExpr::Var(var) => match stack.lookup_var(source, var)? {
             ValueCow::Borrowed(v) => {
-                T::from_value_ref(v).map_err(|e| err_expected_arg(e, source, var.span))
+                T::from_value_ref(v).map_err(|e| err_expected_arg(e, source, var.span()))
             }
             ValueCow::Owned(v) => {
-                T::from_value(v).map_err(|e| err_expected_arg(e, source, var.span))
+                T::from_value(v).map_err(|e| err_expected_arg(e, source, var.span()))
             }
         },
         BaseExpr::Literal(lit) => {

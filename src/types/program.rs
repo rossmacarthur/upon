@@ -54,7 +54,7 @@ pub enum Instr {
     IncludeWith(ast::String),
 
     /// Lookup a variable and start building an expression
-    ExprStart(Vec<ast::Ident>),
+    ExprStart(ast::Var),
 
     /// Start building an expression using a literal
     ExprStartLit(Value),

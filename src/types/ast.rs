@@ -103,13 +103,26 @@ pub enum BaseExpr {
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Var {
-    pub path: Vec<Ident>,
-    pub span: Span,
+    pub path: Vec<Key>,
+}
+
+#[derive(Clone, Copy)]
+#[cfg_attr(internal_debug, derive(Debug))]
+pub enum Key {
+    Ident(Ident),
+    Index(Index),
 }
 
 #[derive(Clone, Copy)]
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Ident {
+    pub span: Span,
+}
+
+#[derive(Clone, Copy)]
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct Index {
+    pub value: usize,
     pub span: Span,
 }
 
@@ -126,7 +139,7 @@ impl Scope {
 }
 
 impl Expr {
-    pub const fn span(&self) -> Span {
+    pub fn span(&self) -> Span {
         match self {
             Self::Base(base) => base.span(),
             Self::Call(call) => call.span,
@@ -135,10 +148,37 @@ impl Expr {
 }
 
 impl BaseExpr {
+    pub fn span(&self) -> Span {
+        match self {
+            BaseExpr::Var(var) => var.span(),
+            BaseExpr::Literal(lit) => lit.span,
+        }
+    }
+}
+
+impl Var {
+    pub fn span(&self) -> Span {
+        self.first().span().combine(self.last().span())
+    }
+
+    pub fn first(&self) -> &Key {
+        self.path.first().unwrap()
+    }
+
+    pub fn last(&self) -> &Key {
+        self.path.last().unwrap()
+    }
+
+    pub fn rest(&self) -> &[Key] {
+        &self.path[1..]
+    }
+}
+
+impl Key {
     pub const fn span(&self) -> Span {
         match self {
-            BaseExpr::Var(var) => var.span,
-            BaseExpr::Literal(lit) => lit.span,
+            Key::Ident(ident) => ident.span,
+            Key::Index(index) => index.span,
         }
     }
 }

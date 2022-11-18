@@ -33,23 +33,23 @@ impl<'a> Stack<'a> {
     }
 
     /// Resolves a path to a variable on the stack.
-    pub fn lookup_path(&self, source: &str, path: &[ast::Ident]) -> Result<ValueCow<'a>> {
+    pub fn lookup_var(&self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
         for state in self.stack.iter().rev() {
             match state {
-                State::Scope(scope) => match lookup_path_maybe(source, scope, path)? {
+                State::Scope(scope) => match lookup_path_maybe(source, scope, v)? {
                     Some(value) => return Ok(value),
                     None => continue,
                 },
 
                 State::Var(name, var)
-                    if unsafe { index(source, path[0].span) }
+                    if unsafe { index(source, v.first().span()) }
                         == unsafe { index(source, name.span) } =>
                 {
-                    return lookup_path(source, var, &path[1..]);
+                    return lookup_path(source, var, v.rest());
                 }
 
                 State::Loop(loop_state) => {
-                    if let Some(value) = loop_state.lookup_path(source, path)? {
+                    if let Some(value) = loop_state.lookup_var(source, v)? {
                         return Ok(value);
                     }
                 }
@@ -65,7 +65,7 @@ impl<'a> Stack<'a> {
         Err(Error::render(
             "not found in this scope",
             source,
-            path[0].span,
+            v.first().span(),
         ))
     }
 

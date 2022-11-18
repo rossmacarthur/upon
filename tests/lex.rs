@@ -87,6 +87,25 @@ fn lex_err_unexpected_end_block() {
 }
 
 #[test]
+fn lex_err_unexpected_end_comment() {
+    let err = Engine::new()
+        .compile("lorem ipsum #} dolor sit amet")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "unexpected end comment",
+        "
+  --> <anonymous>:1:13
+   |
+ 1 | lorem ipsum #} dolor sit amet
+   |             ^^-
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn lex_err_unclosed_begin_expr() {
     let err = Engine::new()
         .compile("lorem ipsum {{ {{ dolor sit amet")

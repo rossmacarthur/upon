@@ -362,6 +362,48 @@ fn render_inline_expr_err_cannot_index_list_with_string() {
 }
 
 #[test]
+fn render_inline_expr_err_cannot_index_map_with_integer() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum.123 }}")
+        .unwrap()
+        .render(value! { ipsum: {"test": "ing...", } })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "cannot index map with integer",
+        "
+  --> <anonymous>:1:16
+   |
+ 1 | lorem {{ ipsum.123 }}
+   |                ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn render_inline_expr_err_index_out_of_bounds() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum.123 }}")
+        .unwrap()
+        .render(value! { ipsum: ["test", "ing..."] })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "index out of bounds, the length is 2",
+        "
+  --> <anonymous>:1:16
+   |
+ 1 | lorem {{ ipsum.123 }}
+   |                ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn render_inline_expr_err_not_found_in_map() {
     let err = Engine::new()
         .compile("lorem {{ ipsum.dolor }}")
@@ -555,7 +597,7 @@ fn render_for_statement_map() {
 }
 
 #[test]
-fn render_for_statement_loop_index() {
+fn render_for_statement_loop_fields() {
     let result = Engine::new()
         .compile("lorem {% for ipsum in dolor %}{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ ipsum }}  {% endfor %}")
         .unwrap()
@@ -564,6 +606,112 @@ fn render_for_statement_loop_index() {
     assert_eq!(
         result,
         "lorem 0,true,false,t  1,false,false,e  2,false,false,s  3,false,true,t  "
+    );
+}
+
+#[test]
+fn render_for_statement_loop_map() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", |f, v| {
+        writeln!(f, "{:?}", v)?;
+        Ok(())
+    });
+    let result = engine
+        .compile("lorem {% for ipsum in dolor %} {{ loop | debug }} {% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .unwrap();
+    assert_eq!(
+        result,
+        r#"lorem  Map({"first": Bool(true), "index": Integer(0), "last": Bool(false)})
+  Map({"first": Bool(false), "index": Integer(1), "last": Bool(false)})
+  Map({"first": Bool(false), "index": Integer(2), "last": Bool(false)})
+  Map({"first": Bool(false), "index": Integer(3), "last": Bool(true)})
+ "#
+    );
+}
+
+#[test]
+fn render_for_statement_err_not_found_in_map() {
+    let err = Engine::new()
+        .compile("lorem {% for ipsum in dolor %} {{ loop.xxx }} {% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "not found in map",
+        "
+  --> <anonymous>:1:40
+   |
+ 1 | lorem {% for ipsum in dolor %} {{ loop.xxx }} {% endfor %}
+   |                                        ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn render_for_statement_err_cannot_index_into_map() {
+    let err = Engine::new()
+        .compile("lorem {% for ipsum in dolor %} {{ loop.123 }} {% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "cannot index into map with integer",
+        "
+  --> <anonymous>:1:40
+   |
+ 1 | lorem {% for ipsum in dolor %} {{ loop.123 }} {% endfor %}
+   |                                        ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn render_for_statement_err_cannot_index_into_string() {
+    let err = Engine::new()
+        .compile("lorem {% for ipsum, dolor in sit %} {{ ipsum.xxx }} {% endfor %}")
+        .unwrap()
+        .render(value! { sit: {t: "e", s: "t"} })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "cannot index into string",
+        "
+  --> <anonymous>:1:46
+   |
+ 1 | lorem {% for ipsum, dolor in sit %} {{ ipsum.xxx }} {% endfor %}
+   |                                              ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn render_for_statement_err_cannot_index_into_loop_field() {
+    let err = Engine::new()
+        .compile("lorem {% for ipsum in dolor %} {{ loop.first.xxx }} {% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "cannot index into bool",
+        "
+  --> <anonymous>:1:46
+   |
+ 1 | lorem {% for ipsum in dolor %} {{ loop.first.xxx }} {% endfor %}
+   |                                              ^^^
+   |
+   = reason: REASON
+",
     );
 }
 

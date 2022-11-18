@@ -140,17 +140,20 @@ impl<'a> LoopState<'a> {
         Some(())
     }
 
-    pub fn lookup_path(&self, source: &str, path: &[ast::Ident]) -> Result<Option<ValueCow<'a>>> {
-        let name = unsafe { index(source, path[0].span) };
+    pub fn lookup_var(&self, source: &str, var: &ast::Var) -> Result<Option<ValueCow<'a>>> {
+        let name = match var.first() {
+            ast::Key::Ident(ast::Ident { span }) => unsafe { index(source, *span) },
+            ast::Key::Index(_) => return Ok(None),
+        };
 
         if name == "loop" {
-            return self.lookup_loop(source, path);
+            return self.lookup_loop(source, &var.path);
         }
 
         macro_rules! resolve {
             ($v:expr) => {{
                 let mut v = $v;
-                for p in &path[1..] {
+                for p in var.rest() {
                     v = lookup(source, v, p)?;
                 }
                 v
@@ -183,8 +186,8 @@ impl<'a> LoopState<'a> {
                 value: Some((_, (string, _))),
                 ..
             } if unsafe { index(source, kv.key.span) } == name => {
-                if let [p, ..] = &path[1..] {
-                    return Err(err(p.span));
+                if let [k, ..] = var.rest() {
+                    return Err(err(k.span()));
                 }
                 Ok(Some(ValueCow::Owned(Value::String((*string).clone()))))
             }
@@ -194,8 +197,8 @@ impl<'a> LoopState<'a> {
                 value: Some((_, (string, _))),
                 ..
             } if unsafe { index(source, kv.key.span) } == name => {
-                if let [p, ..] = &path[1..] {
-                    return Err(err(p.span));
+                if let [k, ..] = var.rest() {
+                    return Err(err(k.span()));
                 }
                 Ok(Some(ValueCow::Owned(Value::String(string.clone()))))
             }
@@ -222,7 +225,7 @@ impl<'a> LoopState<'a> {
         }
     }
 
-    pub fn lookup_loop(&self, source: &str, path: &[ast::Ident]) -> Result<Option<ValueCow<'a>>> {
+    pub fn lookup_loop(&self, source: &str, path: &[ast::Key]) -> Result<Option<ValueCow<'a>>> {
         let (i, rem) = match self.current_index_and_rem() {
             Some((i, rem)) => (i, rem),
             None => return Ok(None),
@@ -236,18 +239,29 @@ impl<'a> LoopState<'a> {
             ]))));
         }
 
-        let v = match unsafe { index(source, path[1].span) } {
+        let name = match path[1] {
+            ast::Key::Ident(ast::Ident { span }) => unsafe { index(source, span) },
+            ast::Key::Index(_) => {
+                return Err(Error::render(
+                    "cannot index into map with integer",
+                    source,
+                    path[1].span(),
+                ))
+            }
+        };
+
+        let v = match name {
             "index" => Value::Integer(i as i64),
             "first" => Value::Bool(i == 0),
             "last" => Value::Bool(rem == 0),
-            _ => return Err(Error::render("not found in map", source, path[1].span)),
+            _ => return Err(Error::render("not found in map", source, path[1].span())),
         };
 
         if !path[2..].is_empty() {
             return Err(Error::render(
                 format!("cannot index into {}", v.human()),
                 source,
-                path[2].span,
+                path[2].span(),
             ));
         }
 

@@ -150,8 +150,8 @@ impl Compiler {
 
     fn compile_base_expr(&mut self, base_expr: ast::BaseExpr) {
         match base_expr {
-            ast::BaseExpr::Var(ast::Var { path, .. }) => {
-                self.push(Instr::ExprStart(path));
+            ast::BaseExpr::Var(var) => {
+                self.push(Instr::ExprStart(var));
             }
             ast::BaseExpr::Literal(ast::Literal { value, .. }) => {
                 self.push(Instr::ExprStartLit(value));
