@@ -109,20 +109,20 @@ pub struct Var {
 #[derive(Clone, Copy)]
 #[cfg_attr(internal_debug, derive(Debug))]
 pub enum Key {
-    Ident(Ident),
-    Index(Index),
-}
-
-#[derive(Clone, Copy)]
-#[cfg_attr(internal_debug, derive(Debug))]
-pub struct Ident {
-    pub span: Span,
+    List(Index),
+    Map(Ident),
 }
 
 #[derive(Clone, Copy)]
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Index {
     pub value: usize,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy)]
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct Ident {
     pub span: Span,
 }
 
@@ -177,8 +177,8 @@ impl Var {
 impl Key {
     pub const fn span(&self) -> Span {
         match self {
-            Key::Ident(ident) => ident.span,
-            Key::Index(index) => index.span,
+            Key::List(key) => key.span,
+            Key::Map(key) => key.span,
         }
     }
 }

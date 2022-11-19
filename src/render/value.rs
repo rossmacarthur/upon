@@ -87,7 +87,7 @@ pub fn lookup<'a>(source: &str, value: &'a Value, key: &ast::Key) -> Result<&'a 
     match value {
         Value::List(list) => {
             let i = match key {
-                ast::Key::Index(ast::Index { value, .. }) => value,
+                ast::Key::List(ast::Index { value, .. }) => value,
                 _ => {
                     return Err(Error::render(
                         "cannot index list with string",
@@ -107,7 +107,7 @@ pub fn lookup<'a>(source: &str, value: &'a Value, key: &ast::Key) -> Result<&'a 
         }
         Value::Map(map) => {
             let raw = match key {
-                ast::Key::Ident(ast::Ident { span }) => &source[*span],
+                ast::Key::Map(ast::Ident { span }) => &source[*span],
                 _ => {
                     return Err(Error::render(
                         "cannot index map with integer",

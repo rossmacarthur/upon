@@ -508,7 +508,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
 
             (Token::Ident, span) => {
-                let first = ast::Key::Ident(ast::Ident { span });
+                let first = ast::Key::Map(ast::Ident { span });
                 let mut path = vec![first];
                 while self.is_next(Token::Period)? {
                     self.expect(Token::Period)?;
@@ -537,9 +537,9 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         match self.parse()? {
             (Token::Index, span) => {
                 let value = self.source()[span].parse().unwrap();
-                Ok(ast::Key::Index(ast::Index { value, span }))
+                Ok(ast::Key::List(ast::Index { value, span }))
             }
-            (Token::Ident, span) => Ok(ast::Key::Ident(ast::Ident { span })),
+            (Token::Ident, span) => Ok(ast::Key::Map(ast::Ident { span })),
             (tk, span) => Err(self.err_unexpected_token("identifier or index", tk, span)),
         }
     }

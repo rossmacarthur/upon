@@ -141,8 +141,8 @@ impl<'a> LoopState<'a> {
 
     pub fn lookup_var(&self, source: &str, var: &ast::Var) -> Result<Option<ValueCow<'a>>> {
         let name = match var.first() {
-            ast::Key::Ident(ast::Ident { span }) => &source[*span],
-            ast::Key::Index(_) => return Ok(None),
+            ast::Key::List(_) => return Ok(None),
+            ast::Key::Map(ast::Ident { span }) => &source[*span],
         };
 
         if name == "loop" {
@@ -239,14 +239,14 @@ impl<'a> LoopState<'a> {
         }
 
         let name = match path[1] {
-            ast::Key::Ident(ast::Ident { span }) => &source[span],
-            ast::Key::Index(_) => {
+            ast::Key::List(_) => {
                 return Err(Error::render(
                     "cannot index into map with integer",
                     source,
                     path[1].span(),
                 ))
             }
+            ast::Key::Map(ast::Ident { span }) => &source[span],
         };
 
         let v = match name {

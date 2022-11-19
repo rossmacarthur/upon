@@ -1,12 +1,15 @@
 #![cfg(feature = "serde")]
 
+mod helpers;
+
 use std::collections::BTreeMap;
 use std::error::Error as _;
 use std::fmt::Write;
-use std::io;
 
 use upon::fmt;
 use upon::{value, Engine, Error, Value};
+
+use crate::helpers::Writer;
 
 #[test]
 fn render_comment() {
@@ -1011,51 +1014,6 @@ fn render_to_writer_err_not_io() {
    = reason: REASON
 ",
     );
-}
-
-#[derive(Default)]
-struct Writer {
-    buf: Vec<u8>,
-    count: usize,
-    max: usize,
-}
-
-impl Writer {
-    fn new() -> Self {
-        Self {
-            buf: Vec::new(),
-            count: 0,
-            max: !0,
-        }
-    }
-
-    fn with_max(max: usize) -> Self {
-        Self {
-            buf: Vec::new(),
-            count: 0,
-            max,
-        }
-    }
-
-    #[track_caller]
-    fn into_string(self) -> String {
-        String::from_utf8(self.buf).unwrap()
-    }
-}
-
-impl io::Write for Writer {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.count += 1;
-        if self.count > self.max {
-            return Err(io::Error::from(io::ErrorKind::AddrInUse));
-        }
-        self.buf.extend_from_slice(buf);
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
 }
 
 #[track_caller]

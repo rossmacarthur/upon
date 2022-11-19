@@ -11,33 +11,14 @@ pub use crate::render::stack::{Stack, State};
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
 use crate::value::ValueCow;
-use crate::{Engine, EngineBoxFn, Error, Result, Value};
-
-pub fn template<'a>(
-    engine: &'a Engine<'a>,
-    template: &'a Template<'a>,
-    globals: Value,
-) -> Result<String> {
-    Renderer::new(engine, template).render(globals)
-}
-
-pub fn template_to<'a, W>(
-    engine: &'a Engine<'a>,
-    template: &'a Template<'a>,
-    writer: W,
-    globals: Value,
-) -> Result<()>
-where
-    W: io::Write,
-{
-    Renderer::new(engine, template).render_to(writer, globals)
-}
+use crate::{Engine, EngineBoxFn, Error, Result, Value, ValueFn};
 
 /// A renderer that interprets a compiled [`Template`].
 #[cfg_attr(internal_debug, derive(Debug))]
-struct Renderer<'a> {
+pub struct Renderer<'a> {
     engine: &'a Engine<'a>,
     template: &'a Template<'a>,
+    stack: Stack<'a>,
 }
 
 #[cfg(feature = "filters")]
@@ -63,37 +44,54 @@ enum RenderState<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn new(engine: &'a Engine<'a>, template: &'a Template<'a>) -> Self {
-        Self { engine, template }
+    pub fn new(engine: &'a Engine<'a>, template: &'a Template<'a>, globals: &'a Value) -> Self {
+        let stack = Stack::new(ValueCow::Borrowed(globals));
+        Self {
+            engine,
+            template,
+            stack,
+        }
     }
 
-    pub fn render(&self, globals: Value) -> Result<String> {
+    pub fn with_value_fn(
+        engine: &'a Engine<'a>,
+        template: &'a Template<'a>,
+        value_fn: &'a ValueFn<'a>,
+    ) -> Self {
+        let stack = Stack::with_value_fn(value_fn);
+        Self {
+            engine,
+            template,
+            stack,
+        }
+    }
+
+    pub fn render(&mut self) -> Result<String> {
         let mut s = String::with_capacity(self.template.source.len());
         let mut f = Formatter::with_string(&mut s);
-        self.render_impl(&mut f, globals)?;
+        self.render_impl(&mut f)?;
         Ok(s)
     }
 
-    pub fn render_to<W>(&self, writer: W, globals: Value) -> Result<()>
+    pub fn render_to_writer<W>(&mut self, writer: W) -> Result<()>
     where
         W: io::Write,
     {
         let mut w = Writer::new(writer);
         let mut f = Formatter::with_writer(&mut w);
-        self.render_impl(&mut f, globals)
+        self.render_impl(&mut f)
             .map_err(|err| w.take_err().map(Error::from).unwrap_or(err))
     }
 
-    fn render_impl(&self, f: &mut Formatter<'_>, globals: Value) -> Result<()> {
-        let mut stack = Stack::new(ValueCow::Borrowed(&globals));
+    fn render_impl(&mut self, f: &mut Formatter<'_>) -> Result<()> {
         let mut templates = vec![(self.template, 0, false)];
 
         while let Some((t, pc, has_scope)) = templates.last_mut() {
-            match self.render_one(f, t, pc, &mut stack)? {
+            match self.render_one(f, t, pc)? {
                 RenderState::Done => {
                     if *has_scope {
-                        stack.pop_scope();
-                        stack.pop_boundary();
+                        self.stack.pop_scope();
+                        self.stack.pop_boundary();
                     }
                     templates.pop();
                 }
@@ -101,8 +99,8 @@ impl<'a> Renderer<'a> {
                     templates.push((template, 0, false));
                 }
                 RenderState::IncludeWith { template, globals } => {
-                    stack.push(State::Boundary);
-                    stack.push(State::Scope(globals));
+                    self.stack.push(State::Boundary);
+                    self.stack.push(State::Scope(globals));
                     templates.push((template, 0, true));
                 }
             }
@@ -115,11 +113,10 @@ impl<'a> Renderer<'a> {
     }
 
     fn render_one(
-        &self,
+        &mut self,
         f: &mut Formatter<'_>,
         t: &'a Template<'a>,
         pc: &mut usize,
-        stack: &mut Stack<'a>,
     ) -> Result<RenderState<'a>> {
         // An expression that we are building
         let mut expr: Option<ValueCow<'a>> = None;
@@ -168,7 +165,7 @@ impl<'a> Renderer<'a> {
                         Some(EngineBoxFn::Filter(filter)) => {
                             let mut value = expr.take().unwrap();
                             let result = filter(FilterState {
-                                stack,
+                                stack: &self.stack,
                                 source: &t.source,
                                 filter: name,
                                 value: &mut value,
@@ -198,14 +195,14 @@ impl<'a> Renderer<'a> {
 
                 Instr::LoopStart(vars, span) => {
                     let iterable = expr.take().unwrap();
-                    stack.push(State::Loop(LoopState::new(
+                    self.stack.push(State::Loop(LoopState::new(
                         &t.source, vars, iterable, *span,
                     )?));
                 }
 
                 Instr::LoopNext(j) => {
-                    if stack.last_loop_state_mut().iterate().is_none() {
-                        stack.pop_loop_state();
+                    if self.stack.last_loop_state_mut().iterate().is_none() {
+                        self.stack.pop_loop_state();
                         *pc = *j;
                         continue;
                     }
@@ -213,11 +210,11 @@ impl<'a> Renderer<'a> {
 
                 Instr::WithStart(name) => {
                     let value = expr.take().unwrap();
-                    stack.push(State::Var(name, value))
+                    self.stack.push(State::Var(name, value))
                 }
 
                 Instr::WithEnd => {
-                    stack.pop_var();
+                    self.stack.pop_var();
                 }
 
                 Instr::Include(name) => {
@@ -234,7 +231,7 @@ impl<'a> Renderer<'a> {
                 }
 
                 Instr::ExprStart(var) => {
-                    let value = stack.lookup_var(&t.source, var)?;
+                    let value = self.stack.lookup_var(&t.source, var)?;
                     let prev = expr.replace(value);
                     debug_assert!(prev.is_none());
                 }
@@ -256,7 +253,7 @@ impl<'a> Renderer<'a> {
                                 .map(|args| args.values.as_slice())
                                 .unwrap_or(&[]);
                             let result = filter(FilterState {
-                                stack,
+                                stack: &self.stack,
                                 source: &t.source,
                                 filter: name,
                                 value: &mut value,

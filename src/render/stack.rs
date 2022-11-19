@@ -2,15 +2,17 @@ use crate::render::iter::LoopState;
 use crate::render::value::{lookup_path, lookup_path_maybe};
 use crate::types::ast;
 use crate::value::ValueCow;
-use crate::{Error, Result};
+use crate::{Error, Result, ValueFn, ValueKey};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Stack<'a> {
     stack: Vec<State<'a>>,
 }
 
-#[cfg_attr(internal_debug, derive(Debug))]
 pub enum State<'a> {
+    /// A function for fetching values.
+    ValueFn(&'a ValueFn<'a>),
+
     /// An entire scope of variables, always a map
     Scope(ValueCow<'a>),
 
@@ -24,6 +26,19 @@ pub enum State<'a> {
     Boundary,
 }
 
+#[cfg(internal_debug)]
+impl std::fmt::Debug for State<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ValueFn(_) => f.debug_tuple("ValueFn").field(&(..)).finish(),
+            Self::Scope(scope) => f.debug_tuple("Scope").field(scope).finish(),
+            Self::Var(ident, value) => f.debug_tuple("Var").field(ident).field(value).finish(),
+            Self::Loop(state) => f.debug_tuple("Loop").field(state).finish(),
+            Self::Boundary => write!(f, "Boundary"),
+        }
+    }
+}
+
 impl<'a> Stack<'a> {
     pub fn new(globals: ValueCow<'a>) -> Self {
         Self {
@@ -31,10 +46,30 @@ impl<'a> Stack<'a> {
         }
     }
 
+    pub fn with_value_fn(f: &'a ValueFn<'a>) -> Self {
+        Self {
+            stack: vec![State::ValueFn(f)],
+        }
+    }
+
     /// Resolves a path to a variable on the stack.
     pub fn lookup_var(&self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
         for state in self.stack.iter().rev() {
             match state {
+                State::ValueFn(f) => {
+                    let path: Vec<_> = v
+                        .path
+                        .iter()
+                        .map(|key| match key {
+                            ast::Key::List(k) => ValueKey::List(k.value),
+                            ast::Key::Map(k) => ValueKey::Map(&source[k.span]),
+                        })
+                        .collect();
+                    return f(&path)
+                        .map(ValueCow::Owned)
+                        .map_err(|reason| Error::render(reason, source, v.span()));
+                }
+
                 State::Scope(scope) => match lookup_path_maybe(source, scope, v)? {
                     Some(value) => return Ok(value),
                     None => continue,

@@ -174,6 +174,7 @@ use crate::compile::Searcher;
 #[cfg(feature = "filters")]
 use crate::filters::{Filter, FilterArgs, FilterFn, FilterReturn};
 use crate::fmt::FormatFn;
+use crate::render::Renderer;
 use crate::types::program;
 
 /// A type alias for results in this crate.
@@ -204,6 +205,21 @@ enum EngineBoxFn {
     Formatter(Box<FormatFn>),
     #[cfg(feature = "filters")]
     Filter(Box<FilterFn>),
+}
+
+type ValueFn<'a> = dyn Fn(&[ValueKey]) -> std::result::Result<Value, String> + 'a;
+
+/// A key in a value path.
+///
+/// Passed to custom value function in
+/// [`*_with_value_fn`][Template::render_with_value_fn] render functions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ValueKey<'a> {
+    /// An index into a list like `2` in `user.names.2`.
+    List(usize),
+
+    /// A string key into a map like `name` in `user.name`.
+    Map(&'a str),
 }
 
 /// A compiled template.
@@ -438,7 +454,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     where
         S: serde::Serialize,
     {
-        render::template(self.engine, &self.template, to_value(ctx)?)
+        Renderer::new(self.engine, &self.template, &to_value(ctx)?).render()
     }
 
     /// Render the template to a writer using the provided value.
@@ -450,7 +466,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
         W: io::Write,
         S: serde::Serialize,
     {
-        render::template_to(self.engine, &self.template, writer, to_value(ctx)?)
+        Renderer::new(self.engine, &self.template, &to_value(ctx)?).render_to_writer(writer)
     }
 
     /// Render the template to a string using the provided value.
@@ -459,7 +475,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     where
         V: Into<Value>,
     {
-        render::template(self.engine, &self.template, ctx.into())
+        Renderer::new(self.engine, &self.template, &ctx.into()).render()
     }
 
     /// Render the template to a writer using the provided value.
@@ -469,7 +485,26 @@ impl<'engine, 'source> Template<'engine, 'source> {
         W: io::Write,
         V: Into<Value>,
     {
-        render::template_to(self.engine, &self.template, writer, ctx.into())
+        Renderer::new(self.engine, &self.template, &ctx.into()).render_to_writer(writer)
+    }
+
+    /// Render the template to a string using the provided value function.
+    #[inline]
+    pub fn render_with_value_fn<F>(&self, value_fn: F) -> Result<String>
+    where
+        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+    {
+        Renderer::with_value_fn(self.engine, &self.template, &value_fn).render()
+    }
+
+    /// Render the template to a writer using the provided value function.
+    #[inline]
+    pub fn render_to_writer_with_value_fn<W, F>(&self, writer: W, value_fn: F) -> Result<()>
+    where
+        W: io::Write,
+        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+    {
+        Renderer::with_value_fn(self.engine, &self.template, &value_fn).render_to_writer(writer)
     }
 
     /// Returns the original template source.
@@ -497,7 +532,8 @@ impl<'engine> TemplateRef<'engine> {
     where
         S: serde::Serialize,
     {
-        render::template(self.engine, self.template, to_value(ctx)?)
+        Renderer::new(self.engine, self.template, &to_value(ctx)?)
+            .render()
             .map_err(|e| e.with_template_name(self.name))
     }
 
@@ -510,7 +546,8 @@ impl<'engine> TemplateRef<'engine> {
         W: io::Write,
         S: serde::Serialize,
     {
-        render::template_to(self.engine, self.template, writer, to_value(ctx)?)
+        Renderer::new(self.engine, self.template, &to_value(ctx)?)
+            .render_to_writer(writer)
             .map_err(|e| e.with_template_name(self.name))
     }
 
@@ -520,7 +557,8 @@ impl<'engine> TemplateRef<'engine> {
     where
         V: Into<Value>,
     {
-        render::template(self.engine, self.template, ctx.into())
+        Renderer::new(self.engine, self.template, &ctx.into())
+            .render()
             .map_err(|e| e.with_template_name(self.name))
     }
 
@@ -531,7 +569,31 @@ impl<'engine> TemplateRef<'engine> {
         W: io::Write,
         V: Into<Value>,
     {
-        render::template_to(self.engine, self.template, writer, ctx.into())
+        Renderer::new(self.engine, self.template, &ctx.into())
+            .render_to_writer(writer)
+            .map_err(|e| e.with_template_name(self.name))
+    }
+
+    /// Render the template to a string using the provided value function.
+    #[inline]
+    pub fn render_with_value_fn<F>(&self, value_fn: F) -> Result<String>
+    where
+        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+    {
+        Renderer::with_value_fn(self.engine, self.template, &value_fn)
+            .render()
+            .map_err(|e| e.with_template_name(self.name))
+    }
+
+    /// Render the template to a writer using the provided value function.
+    #[inline]
+    pub fn render_to_writer_with_value_fn<W, F>(&self, writer: W, value_fn: F) -> Result<()>
+    where
+        W: io::Write,
+        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+    {
+        Renderer::with_value_fn(self.engine, self.template, &value_fn)
+            .render_to_writer(writer)
             .map_err(|e| e.with_template_name(self.name))
     }
 
