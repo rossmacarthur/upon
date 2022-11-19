@@ -1,5 +1,45 @@
 // Heavily based on `serde_json::json!`
 /// Convenient macro for constructing a [`Value`][crate::Value].
+///
+/// The macro always returns a [`Value::Map`][crate::Value::Map] variant at the
+/// top level but the map values can be any variant. The keys must be
+/// identifiers not string literals, similar to Rust's struct initialization
+/// syntax.
+///
+/// # Examples
+///
+/// ```
+/// let v = upon::value!{
+///     users: [
+///         {
+///             name: "John Smith",
+///             age: 36,
+///             is_enabled: true,
+///             address: None,
+///         },
+///         {
+///             name: "Jane Doe",
+///             age: 34,
+///             is_enabled: false,
+///         },
+///     ]
+/// };
+/// ```
+///
+/// Variables and expressions can be interpolated as map values,
+/// [`to_value`][crate::to_value] will be used to convert the expression to a
+/// [`Value`][crate::Value].
+///
+/// ```
+/// let names = vec!["John", "James"];
+/// let addr = "42 Wallaby Way, Sydney";
+///
+/// let v = upon::value!{
+///     names: names,
+///     surname: "Smith",
+///     address: addr,
+/// };
+/// ```
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 #[macro_export]
 macro_rules! value {
@@ -10,6 +50,10 @@ macro_rules! value {
             map
         })
     };
+
+    () => {
+        $crate::Value::Map(::std::collections::BTreeMap::new())
+    }
 }
 
 #[macro_export]
@@ -24,12 +68,12 @@ macro_rules! _value {
 
     // Done with trailing comma.
     (@list [$($elems:expr,)*]) => {
-        $crate::_value_list![$($elems,)*]
+        $crate::_vec![$($elems,)*]
     };
 
     // Done without trailing comma.
     (@list [$($elems:expr),*]) => {
-        $crate::_value_list![$($elems),*]
+        $crate::_vec![$($elems),*]
     };
 
     // Next element is `None`.
@@ -111,24 +155,25 @@ macro_rules! _value {
         $crate::_value!(@map $map [$key] ($crate::_value!({$($mapping)*})) $($rest)*);
     };
 
-    // Next value is an expression followed by comma.
+    // Next value is an ident followed by comma.
     (@map $map:ident ($key:ident) (: $value:expr , $($rest:tt)*) $copy:tt) => {
         $crate::_value!(@map $map [$key] ($crate::_value!($value)) , $($rest)*);
     };
 
-    // Last value is an expression with no trailing comma.
+    // Last value is an ident with no trailing comma.
     (@map $map:ident ($key:ident) (: $value:expr) $copy:tt) => {
         $crate::_value!(@map $map [$key] ($crate::_value!($value)));
     };
 
-    // Missing value for last entry. Trigger a reasonable error message.
+    // Missing value for last entry.
+    // Trigger a reasonable error message.
     (@map $map:ident ($key:ident) (:) $copy:tt) => {
         // "unexpected end of macro invocation"
         $crate::_value!();
     };
 
-    // Missing colon and value for last entry. Trigger a reasonable error
-    // message.
+    // Missing colon and value for last entry.
+    // Trigger a reasonable error message.
     (@map $map:ident ($key:ident) () $copy:tt) => {
         // "unexpected end of macro invocation"
         $crate::_value!();
@@ -140,26 +185,9 @@ macro_rules! _value {
         $crate::_value_unexpected!($colon);
     };
 
-    // Found a comma inside a key. Trigger a reasonable error message.
-    (@map $map:ident ($($key:tt)*) (, $($rest:tt)*) ($comma:tt $($copy:tt)*)) => {
-        // Takes no arguments so "no rules expected the token `,`".
-        $crate::_value_unexpected!($comma);
-    };
-
-    // Key is fully parenthesized. This avoids clippy double_parens false
-    // positives because the parenthesization may be necessary here.
-    (@map $map:ident () (($key:expr) : $($rest:tt)*) $copy:tt) => {
-        $crate::_value!(@map $map ($key) (: $($rest)*) (: $($rest)*));
-    };
-
-    // Refuse to absorb colon token into key expression.
-    (@map $map:ident ($($key:tt)*) (: $($unexpected:tt)+) $copy:tt) => {
-        $crate::_value_expect_expr_comma!($($unexpected)+);
-    };
-
-    // Munch a token into the current key.
-    (@map $map:ident ($($key:tt)*) ($tt:tt $($rest:tt)*) $copy:tt) => {
-        $crate::_value!(@map $map ($($key)* $tt) ($($rest)*) ($($rest)*));
+    // Take an ident for the current key.
+    (@map $map:ident () ($key:ident $($rest:tt)*) $copy:tt) => {
+        $crate::_value!(@map $map ($key) ($($rest)*) ($($rest)*));
     };
 
     //////////////////////////////////////////////////////////////////////////
@@ -180,7 +208,7 @@ macro_rules! _value {
     };
 
     ([]) => {
-        $crate::Value::List($crate::_value_list![])
+        $crate::Value::List($crate::_vec![])
     };
 
     ([ $($tt:tt)+ ]) => {
@@ -199,7 +227,7 @@ macro_rules! _value {
         })
     };
 
-    // Default to `From` implementation.
+    // Default to `Serialize` implementation.
     ($other:expr) => {
         $crate::to_value($other).unwrap()
     };
@@ -210,7 +238,7 @@ macro_rules! _value {
 // Instead invoke vec here outside of local_inner_macros.
 #[macro_export]
 #[doc(hidden)]
-macro_rules! _value_list {
+macro_rules! _vec {
     ($($content:tt)*) => {
         ::std::vec![$($content)*]
     };
@@ -224,63 +252,6 @@ macro_rules! _value_unexpected {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! _value_expect_expr_comma {
-    ($e:expr , $($tt:tt)*) => {};
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
-
-    use crate::Value;
-
-    #[test]
-    fn value_none() {
-        let v = value! { field: None };
-        assert_eq!(v, Value::from([(String::from("field"), Value::None)]));
-    }
-
-    #[test]
-    fn value_string() {
-        let v = value! { field: "testing..." };
-        assert_eq!(
-            v,
-            Value::from([(String::from("field"), Value::from("testing..."))])
-        );
-    }
-
-    #[test]
-    fn value_list() {
-        let v = value! { field: ["testing...", None, {}, []] };
-        assert_eq!(
-            v,
-            Value::from([(
-                String::from("field"),
-                Value::from([
-                    Value::from("testing..."),
-                    Value::None,
-                    Value::Map(BTreeMap::new()),
-                    Value::List(Vec::new()),
-                ])
-            )])
-        )
-    }
-
-    #[test]
-    fn value_map() {
-        let v = value! { field: { x: "hello" } };
-        let exp = Value::from([(String::from("field"), Value::from([("x", "hello")]))]);
-        assert_eq!(v, exp);
-
-        let v = value! { field: { x: "hello", }};
-        let exp = Value::from([(String::from("field"), Value::from([("x", "hello")]))]);
-        assert_eq!(v, exp);
-
-        let v = value! { field: { x: "hello", y: String::from("world!") }};
-        let exp = Value::from([(
-            String::from("field"),
-            Value::from([("x", "hello"), ("y", "world!")]),
-        )]);
-        assert_eq!(v, exp);
-    }
+macro_rules! _value_expect_key_comma {
+    ($key:ident , $($tt:tt)*) => {};
 }

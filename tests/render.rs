@@ -366,7 +366,7 @@ fn render_inline_expr_err_cannot_index_map_with_integer() {
     let err = Engine::new()
         .compile("lorem {{ ipsum.123 }}")
         .unwrap()
-        .render(value! { ipsum: {"test": "ing...", } })
+        .render(value! { ipsum: { test: "ing...", } })
         .unwrap_err();
     assert_err(
         &err,

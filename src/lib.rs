@@ -147,7 +147,7 @@
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub mod filters;
 pub mod fmt;
-#[cfg(docsrs)]
+#[cfg(doc)]
 pub mod syntax;
 
 mod compile;
