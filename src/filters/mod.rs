@@ -101,7 +101,7 @@ pub(crate) fn new<F, R, A>(f: F) -> Box<FilterFn>
 where
     F: Filter<R, A> + Send + Sync + 'static,
     R: FilterReturn,
-    A: for<'a> FilterArgs<'a>,
+    A: FilterArgs,
 {
     Box::new(move |state: FilterState<'_>| -> Result<Value> {
         let args = A::from_state(state)?;
@@ -116,36 +116,36 @@ where
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait Filter<R, A>
 where
-    A: for<'a> FilterArgs<'a>,
+    A: FilterArgs,
 {
     #[doc(hidden)]
-    fn filter(&self, args: <A as FilterArgs<'_>>::Output) -> R;
+    fn filter(&self, args: <A as FilterArgs>::Output<'_>) -> R;
 }
 
 /// The set of arguments to a filter.
 ///
 /// *See the [module][crate::filters] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
-pub trait FilterArgs<'a> {
+pub trait FilterArgs {
     #[doc(hidden)]
-    type Output: 'a;
+    type Output<'a>;
     #[doc(hidden)]
-    fn from_state(state: FilterState<'a>) -> Result<Self::Output>;
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>>;
 }
 
 /// An argument to a filter.
 ///
 /// *See the [module][crate::filters] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
-pub trait FilterArg<'a> {
+pub trait FilterArg {
     #[doc(hidden)]
-    type Output: 'a;
+    type Output<'a>;
     #[doc(hidden)]
-    fn from_value(v: Value) -> args::Result<Self::Output>;
+    fn from_value<'a>(v: Value) -> args::Result<Self::Output<'a>>;
     #[doc(hidden)]
-    fn from_value_ref(v: &'a Value) -> args::Result<Self::Output>;
+    fn from_value_ref(v: &Value) -> args::Result<Self::Output<'_>>;
     #[doc(hidden)]
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> args::Result<Self::Output>;
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> args::Result<Self::Output<'a>>;
 }
 
 /// A return value from a filter.
@@ -181,9 +181,9 @@ where
     Func: Fn(V) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
+    V: for<'a> FilterArg<Output<'a> = V>,
 
-    (V,): for<'a> FilterArgs<'a, Output = (V,)>,
+    (V,): for<'a> FilterArgs<Output<'a> = (V,)>,
 {
     #[doc(hidden)]
     fn filter<'a>(&self, (v,): (V,)) -> R {
@@ -196,10 +196,10 @@ where
     Func: Fn(V, A) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (V, A): for<'a> FilterArgs<'a, Output = (V, A)>,
+    (V, A): for<'a> FilterArgs<Output<'a> = (V, A)>,
 {
     #[doc(hidden)]
     fn filter<'a>(&self, (v, a): (V, A)) -> R {
@@ -212,11 +212,11 @@ where
     Func: Fn(V, A, B) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (V, A, B): for<'a> FilterArgs<'a, Output = (V, A, B)>,
+    (V, A, B): for<'a> FilterArgs<Output<'a> = (V, A, B)>,
 {
     #[doc(hidden)]
     fn filter<'a>(&self, (v, a, b): (V, A, B)) -> R {
@@ -229,12 +229,12 @@ where
     Func: Fn(V, A, B, C) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, A, B, C): for<'a> FilterArgs<'a, Output = (V, A, B, C)>,
+    (V, A, B, C): for<'a> FilterArgs<Output<'a> = (V, A, B, C)>,
 {
     #[doc(hidden)]
     fn filter<'a>(&self, (v, a, b, c): (V, A, B, C)) -> R {
@@ -247,13 +247,13 @@ where
     Func: Fn(V, A, B, C, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, A, B, C, D): for<'a> FilterArgs<'a, Output = (V, A, B, C, D)>,
+    (V, A, B, C, D): for<'a> FilterArgs<Output<'a> = (V, A, B, C, D)>,
 {
     #[doc(hidden)]
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, B, C, D)) -> R {
@@ -265,13 +265,13 @@ where
 // FilterArgs
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<'a, V> FilterArgs<'a> for (V,)
+impl<V> FilterArgs for (V,)
 where
-    V: FilterArg<'a>,
+    V: FilterArg,
 {
-    type Output = (V::Output,);
+    type Output<'a> = (V::Output<'a>,);
 
-    fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 0)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
@@ -279,14 +279,14 @@ where
     }
 }
 
-impl<'a, V, A> FilterArgs<'a> for (V, A)
+impl<V, A> FilterArgs for (V, A)
 where
-    V: FilterArg<'a>,
-    A: FilterArg<'a>,
+    V: FilterArg,
+    A: FilterArg,
 {
-    type Output = (V::Output, A::Output);
+    type Output<'a> = (V::Output<'a>, A::Output<'a>);
 
-    fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 1)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
@@ -295,15 +295,15 @@ where
     }
 }
 
-impl<'a, V, A, B> FilterArgs<'a> for (V, A, B)
+impl<V, A, B> FilterArgs for (V, A, B)
 where
-    V: FilterArg<'a>,
-    A: FilterArg<'a>,
-    B: FilterArg<'a>,
+    V: FilterArg,
+    A: FilterArg,
+    B: FilterArg,
 {
-    type Output = (V::Output, A::Output, B::Output);
+    type Output<'a> = (V::Output<'a>, A::Output<'a>, B::Output<'a>);
 
-    fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 2)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
@@ -313,16 +313,16 @@ where
     }
 }
 
-impl<'a, V, A, B, C> FilterArgs<'a> for (V, A, B, C)
+impl<V, A, B, C> FilterArgs for (V, A, B, C)
 where
-    V: FilterArg<'a>,
-    A: FilterArg<'a>,
-    B: FilterArg<'a>,
-    C: FilterArg<'a>,
+    V: FilterArg,
+    A: FilterArg,
+    B: FilterArg,
+    C: FilterArg,
 {
-    type Output = (V::Output, A::Output, B::Output, C::Output);
+    type Output<'a> = (V::Output<'a>, A::Output<'a>, B::Output<'a>, C::Output<'a>);
 
-    fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 3)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
@@ -333,17 +333,23 @@ where
     }
 }
 
-impl<'a, V, A, B, C, D> FilterArgs<'a> for (V, A, B, C, D)
+impl<V, A, B, C, D> FilterArgs for (V, A, B, C, D)
 where
-    V: FilterArg<'a>,
-    A: FilterArg<'a>,
-    B: FilterArg<'a>,
-    C: FilterArg<'a>,
-    D: FilterArg<'a>,
+    V: FilterArg,
+    A: FilterArg,
+    B: FilterArg,
+    C: FilterArg,
+    D: FilterArg,
 {
-    type Output = (V::Output, A::Output, B::Output, C::Output, D::Output);
+    type Output<'a> = (
+        V::Output<'a>,
+        A::Output<'a>,
+        B::Output<'a>,
+        C::Output<'a>,
+        D::Output<'a>,
+    );
 
-    fn from_state(state: FilterState<'a>) -> Result<Self::Output> {
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 4)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
         let v = V::from_cow_mut(state.value).map_err(err)?;
@@ -372,9 +378,9 @@ fn get_arg<'a, T>(
     stack: &'a Stack<'a>,
     args: &'a [BaseExpr],
     i: usize,
-) -> Result<T::Output>
+) -> Result<T::Output<'a>>
 where
-    T: FilterArg<'a>,
+    T: FilterArg,
 {
     match &args[i] {
         BaseExpr::Var(var) => match stack.lookup_var(source, var)? {

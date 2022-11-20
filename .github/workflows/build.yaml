@@ -83,15 +83,18 @@ jobs:
   msrv:
     runs-on: ubuntu-latest
 
-    env:
-      RUSTFLAGS: --deny warnings
-
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@1.60.0
 
+      - uses: dtolnay/rust-toolchain@1.60
+      - name: Check (no filters)
+        run: cargo check --no-default-features --features serde,unicode
+
+      - uses: dtolnay/rust-toolchain@1.65
       - name: Test
         run: cargo test
+        env:
+          RUSTFLAGS: --deny warnings
 
   # ---------------------------------------------------------------------------
   # Check README

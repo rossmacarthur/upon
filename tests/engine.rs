@@ -59,7 +59,7 @@ fn engine_add_template_owned_source() -> upon::Result<()> {
 
 #[cfg(feature = "filters")]
 #[test]
-fn engine_add_template_nested() {
+fn engine_add_filter_nested() {
     use upon::filters::*;
 
     #[derive(Default)]
@@ -72,7 +72,7 @@ fn engine_add_template_nested() {
         where
             F: Filter<R, A> + Send + Sync + 'static,
             R: FilterReturn,
-            A: for<'a> FilterArgs<'a>,
+            A: FilterArgs,
         {
             self.engine.add_filter(name, f);
         }

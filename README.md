@@ -62,8 +62,9 @@ inspired by template engines like [Liquid] and [Jinja].
 
 ### MSRV
 
-Currently the minimum supported version for `upon` is Rust 1.60. The policy
-of this crate is to only increase the MSRV in a breaking release.
+Currently the minimum supported version for `upon` is Rust 1.65. Disabling
+the **`filters`** feature reduces it to Rust 1.60. This MSRV will only ever
+be increased in a breaking release.
 
 ## Getting started
 
@@ -147,7 +148,6 @@ upon = { version = "...", default-features = false, features = ["serde"] }
 
 [Handlebars]: https://crates.io/crates/handlebars
 [Tera]: https://crates.io/crates/tera
-[TinyTemplate]: https://crates.io/crates/tinytemplate
 [TinyTemplate]: https://crates.io/crates/tinytemplate
 [Liquid]: https://liquidjs.com
 [Jinja]: https://jinja.palletsprojects.com

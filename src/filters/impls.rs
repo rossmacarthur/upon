@@ -14,7 +14,7 @@ where
     Func: Fn(&str) -> R,
     R: FilterReturn,
 
-    (Str,): for<'a> FilterArgs<'a, Output = (&'a str,)>,
+    (Str,): for<'a> FilterArgs<Output<'a> = (&'a str,)>,
 {
     fn filter<'a>(&self, (v,): (&'a str,)) -> R {
         self(v)
@@ -27,7 +27,7 @@ where
     Func: Fn(&[Value]) -> R,
     R: FilterReturn,
 
-    (ListRef,): for<'a> FilterArgs<'a, Output = (&'a [Value],)>,
+    (ListRef,): for<'a> FilterArgs<Output<'a> = (&'a [Value],)>,
 {
     fn filter<'a>(&self, (v,): (&'a [Value],)) -> R {
         self(v)
@@ -40,7 +40,7 @@ where
     Func: Fn(&BTreeMap<String, Value>) -> R,
     R: FilterReturn,
 
-    (MapRef,): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>,)>,
+    (MapRef,): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>,)>,
 {
     fn filter<'a>(&self, (v,): (&'a BTreeMap<String, Value>,)) -> R {
         self(v)
@@ -53,7 +53,7 @@ where
     Func: Fn(&Value) -> R,
     R: FilterReturn,
 
-    (ValueRef,): for<'a> FilterArgs<'a, Output = (&'a Value,)>,
+    (ValueRef,): for<'a> FilterArgs<Output<'a> = (&'a Value,)>,
 {
     fn filter<'a>(&self, (v,): (&'a Value,)) -> R {
         self(v)
@@ -66,9 +66,9 @@ where
     Func: Fn(V, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
+    V: for<'a> FilterArg<Output<'a> = V>,
 
-    (V, Str): for<'a> FilterArgs<'a, Output = (V, &'a str)>,
+    (V, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str)>,
 {
     fn filter<'a>(&self, (v, a): (V, &'a str)) -> R {
         self(v, a)
@@ -81,9 +81,9 @@ where
     Func: Fn(&str, A) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (Str, A): for<'a> FilterArgs<'a, Output = (&'a str, A)>,
+    (Str, A): for<'a> FilterArgs<Output<'a> = (&'a str, A)>,
 {
     fn filter<'a>(&self, (v, a): (&'a str, A)) -> R {
         self(v, a)
@@ -96,7 +96,7 @@ where
     Func: Fn(&str, &str) -> R,
     R: FilterReturn,
 
-    (Str, Str): for<'a> FilterArgs<'a, Output = (&'a str, &'a str)>,
+    (Str, Str): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a): (&'a str, &'a str)) -> R {
         self(v, a)
@@ -109,9 +109,9 @@ where
     Func: Fn(&[Value], A) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (ListRef, A): for<'a> FilterArgs<'a, Output = (&'a [Value], A)>,
+    (ListRef, A): for<'a> FilterArgs<Output<'a> = (&'a [Value], A)>,
 {
     fn filter<'a>(&self, (v, a): (&'a [Value], A)) -> R {
         self(v, a)
@@ -124,7 +124,7 @@ where
     Func: Fn(&[Value], &str) -> R,
     R: FilterReturn,
 
-    (ListRef, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str)>,
+    (ListRef, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str)>,
 {
     fn filter<'a>(&self, (v, a): (&'a [Value], &'a str)) -> R {
         self(v, a)
@@ -137,9 +137,9 @@ where
     Func: Fn(&BTreeMap<String, Value>, A) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (MapRef, A): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A)>,
+    (MapRef, A): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A)>,
 {
     fn filter<'a>(&self, (v, a): (&'a BTreeMap<String, Value>, A)) -> R {
         self(v, a)
@@ -152,7 +152,7 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str) -> R,
     R: FilterReturn,
 
-    (MapRef, Str): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str)>,
+    (MapRef, Str): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str)>,
 {
     fn filter<'a>(&self, (v, a): (&'a BTreeMap<String, Value>, &'a str)) -> R {
         self(v, a)
@@ -165,9 +165,9 @@ where
     Func: Fn(&Value, A) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (ValueRef, A): for<'a> FilterArgs<'a, Output = (&'a Value, A)>,
+    (ValueRef, A): for<'a> FilterArgs<Output<'a> = (&'a Value, A)>,
 {
     fn filter<'a>(&self, (v, a): (&'a Value, A)) -> R {
         self(v, a)
@@ -180,7 +180,7 @@ where
     Func: Fn(&Value, &str) -> R,
     R: FilterReturn,
 
-    (ValueRef, Str): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str)>,
+    (ValueRef, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str)>,
 {
     fn filter<'a>(&self, (v, a): (&'a Value, &'a str)) -> R {
         self(v, a)
@@ -193,10 +193,10 @@ where
     Func: Fn(V, A, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (V, A, Str): for<'a> FilterArgs<'a, Output = (V, A, &'a str)>,
+    (V, A, Str): for<'a> FilterArgs<Output<'a> = (V, A, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (V, A, &'a str)) -> R {
         self(v, a, b)
@@ -209,10 +209,10 @@ where
     Func: Fn(V, &str, B) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (V, Str, B): for<'a> FilterArgs<'a, Output = (V, &'a str, B)>,
+    (V, Str, B): for<'a> FilterArgs<Output<'a> = (V, &'a str, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (V, &'a str, B)) -> R {
         self(v, a, b)
@@ -225,9 +225,9 @@ where
     Func: Fn(V, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
+    V: for<'a> FilterArg<Output<'a> = V>,
 
-    (V, Str, Str): for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str)>,
+    (V, Str, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (V, &'a str, &'a str)) -> R {
         self(v, a, b)
@@ -240,10 +240,10 @@ where
     Func: Fn(&str, A, B) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (Str, A, B): for<'a> FilterArgs<'a, Output = (&'a str, A, B)>,
+    (Str, A, B): for<'a> FilterArgs<Output<'a> = (&'a str, A, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a str, A, B)) -> R {
         self(v, a, b)
@@ -256,9 +256,9 @@ where
     Func: Fn(&str, A, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (Str, A, Str): for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str)>,
+    (Str, A, Str): for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a str, A, &'a str)) -> R {
         self(v, a, b)
@@ -271,9 +271,9 @@ where
     Func: Fn(&str, &str, B) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (Str, Str, B): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B)>,
+    (Str, Str, B): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a str, &'a str, B)) -> R {
         self(v, a, b)
@@ -286,7 +286,7 @@ where
     Func: Fn(&str, &str, &str) -> R,
     R: FilterReturn,
 
-    (Str, Str, Str): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str)>,
+    (Str, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a str, &'a str, &'a str)) -> R {
         self(v, a, b)
@@ -299,10 +299,10 @@ where
     Func: Fn(&[Value], A, B) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ListRef, A, B): for<'a> FilterArgs<'a, Output = (&'a [Value], A, B)>,
+    (ListRef, A, B): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a [Value], A, B)) -> R {
         self(v, a, b)
@@ -315,9 +315,9 @@ where
     Func: Fn(&[Value], A, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (ListRef, A, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str)>,
+    (ListRef, A, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a [Value], A, &'a str)) -> R {
         self(v, a, b)
@@ -330,9 +330,9 @@ where
     Func: Fn(&[Value], &str, B) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ListRef, Str, B): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B)>,
+    (ListRef, Str, B): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a [Value], &'a str, B)) -> R {
         self(v, a, b)
@@ -345,7 +345,7 @@ where
     Func: Fn(&[Value], &str, &str) -> R,
     R: FilterReturn,
 
-    (ListRef, Str, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str)>,
+    (ListRef, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a [Value], &'a str, &'a str)) -> R {
         self(v, a, b)
@@ -358,10 +358,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (MapRef, A, B): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B)>,
+    (MapRef, A, B): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a BTreeMap<String, Value>, A, B)) -> R {
         self(v, a, b)
@@ -374,9 +374,9 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (MapRef, A, Str): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, &'a str)>,
+    (MapRef, A, Str): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a BTreeMap<String, Value>, A, &'a str)) -> R {
         self(v, a, b)
@@ -389,9 +389,9 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (MapRef, Str, B): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, B)>,
+    (MapRef, Str, B): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a BTreeMap<String, Value>, &'a str, B)) -> R {
         self(v, a, b)
@@ -405,7 +405,7 @@ where
     R: FilterReturn,
 
     (MapRef, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a BTreeMap<String, Value>, &'a str, &'a str)) -> R {
         self(v, a, b)
@@ -418,10 +418,10 @@ where
     Func: Fn(&Value, A, B) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ValueRef, A, B): for<'a> FilterArgs<'a, Output = (&'a Value, A, B)>,
+    (ValueRef, A, B): for<'a> FilterArgs<Output<'a> = (&'a Value, A, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a Value, A, B)) -> R {
         self(v, a, b)
@@ -434,9 +434,9 @@ where
     Func: Fn(&Value, A, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (ValueRef, A, Str): for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str)>,
+    (ValueRef, A, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a Value, A, &'a str)) -> R {
         self(v, a, b)
@@ -449,9 +449,9 @@ where
     Func: Fn(&Value, &str, B) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ValueRef, Str, B): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B)>,
+    (ValueRef, Str, B): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a Value, &'a str, B)) -> R {
         self(v, a, b)
@@ -464,7 +464,7 @@ where
     Func: Fn(&Value, &str, &str) -> R,
     R: FilterReturn,
 
-    (ValueRef, Str, Str): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str)>,
+    (ValueRef, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b): (&'a Value, &'a str, &'a str)) -> R {
         self(v, a, b)
@@ -477,11 +477,11 @@ where
     Func: Fn(V, A, B, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (V, A, B, Str): for<'a> FilterArgs<'a, Output = (V, A, B, &'a str)>,
+    (V, A, B, Str): for<'a> FilterArgs<Output<'a> = (V, A, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, A, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -494,11 +494,11 @@ where
     Func: Fn(V, A, &str, C) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, A, Str, C): for<'a> FilterArgs<'a, Output = (V, A, &'a str, C)>,
+    (V, A, Str, C): for<'a> FilterArgs<Output<'a> = (V, A, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, A, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -511,10 +511,10 @@ where
     Func: Fn(V, A, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (V, A, Str, Str): for<'a> FilterArgs<'a, Output = (V, A, &'a str, &'a str)>,
+    (V, A, Str, Str): for<'a> FilterArgs<Output<'a> = (V, A, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, A, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -527,11 +527,11 @@ where
     Func: Fn(V, &str, B, C) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, Str, B, C): for<'a> FilterArgs<'a, Output = (V, &'a str, B, C)>,
+    (V, Str, B, C): for<'a> FilterArgs<Output<'a> = (V, &'a str, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, &'a str, B, C)) -> R {
         self(v, a, b, c)
@@ -544,10 +544,10 @@ where
     Func: Fn(V, &str, B, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (V, Str, B, Str): for<'a> FilterArgs<'a, Output = (V, &'a str, B, &'a str)>,
+    (V, Str, B, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, &'a str, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -560,10 +560,10 @@ where
     Func: Fn(V, &str, &str, C) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, Str, Str, C): for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str, C)>,
+    (V, Str, Str, C): for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, &'a str, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -576,9 +576,9 @@ where
     Func: Fn(V, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
+    V: for<'a> FilterArg<Output<'a> = V>,
 
-    (V, Str, Str, Str): for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str, &'a str)>,
+    (V, Str, Str, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (V, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -591,11 +591,11 @@ where
     Func: Fn(&str, A, B, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, A, B, C): for<'a> FilterArgs<'a, Output = (&'a str, A, B, C)>,
+    (Str, A, B, C): for<'a> FilterArgs<Output<'a> = (&'a str, A, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, A, B, C)) -> R {
         self(v, a, b, c)
@@ -608,10 +608,10 @@ where
     Func: Fn(&str, A, B, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (Str, A, B, Str): for<'a> FilterArgs<'a, Output = (&'a str, A, B, &'a str)>,
+    (Str, A, B, Str): for<'a> FilterArgs<Output<'a> = (&'a str, A, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, A, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -624,10 +624,10 @@ where
     Func: Fn(&str, A, &str, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, A, Str, C): for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str, C)>,
+    (Str, A, Str, C): for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, A, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -640,9 +640,9 @@ where
     Func: Fn(&str, A, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (Str, A, Str, Str): for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str, &'a str)>,
+    (Str, A, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, A, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -655,10 +655,10 @@ where
     Func: Fn(&str, &str, B, C) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, Str, B, C): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B, C)>,
+    (Str, Str, B, C): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, &'a str, B, C)) -> R {
         self(v, a, b, c)
@@ -671,9 +671,9 @@ where
     Func: Fn(&str, &str, B, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (Str, Str, B, Str): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B, &'a str)>,
+    (Str, Str, B, Str): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, &'a str, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -686,9 +686,9 @@ where
     Func: Fn(&str, &str, &str, C) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, Str, Str, C): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str, C)>,
+    (Str, Str, Str, C): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, &'a str, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -701,7 +701,7 @@ where
     Func: Fn(&str, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    (Str, Str, Str, Str): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str, &'a str)>,
+    (Str, Str, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a str, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -714,11 +714,11 @@ where
     Func: Fn(&[Value], A, B, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ListRef, A, B, C): for<'a> FilterArgs<'a, Output = (&'a [Value], A, B, C)>,
+    (ListRef, A, B, C): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], A, B, C)) -> R {
         self(v, a, b, c)
@@ -731,10 +731,10 @@ where
     Func: Fn(&[Value], A, B, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ListRef, A, B, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], A, B, &'a str)>,
+    (ListRef, A, B, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], A, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -747,10 +747,10 @@ where
     Func: Fn(&[Value], A, &str, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ListRef, A, Str, C): for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str, C)>,
+    (ListRef, A, Str, C): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], A, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -763,9 +763,9 @@ where
     Func: Fn(&[Value], A, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (ListRef, A, Str, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str, &'a str)>,
+    (ListRef, A, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], A, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -778,10 +778,10 @@ where
     Func: Fn(&[Value], &str, B, C) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ListRef, Str, B, C): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B, C)>,
+    (ListRef, Str, B, C): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], &'a str, B, C)) -> R {
         self(v, a, b, c)
@@ -794,9 +794,9 @@ where
     Func: Fn(&[Value], &str, B, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ListRef, Str, B, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B, &'a str)>,
+    (ListRef, Str, B, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], &'a str, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -809,9 +809,9 @@ where
     Func: Fn(&[Value], &str, &str, C) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ListRef, Str, Str, C): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str, C)>,
+    (ListRef, Str, Str, C): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], &'a str, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -825,7 +825,7 @@ where
     R: FilterReturn,
 
     (ListRef, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a [Value], &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -838,11 +838,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (MapRef, A, B, C): for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B, C)>,
+    (MapRef, A, B, C): for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, A, B, C)) -> R {
         self(v, a, b, c)
@@ -855,11 +855,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (MapRef, A, B, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, A, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -872,11 +872,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, A, Str, C):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, &'a str, C)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, A, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -889,10 +889,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
     (MapRef, A, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, A, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -905,11 +905,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B, C) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, Str, B, C):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, B, C)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, &'a str, B, C)) -> R {
         self(v, a, b, c)
@@ -922,10 +922,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (MapRef, Str, B, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, B, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, &'a str, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -938,10 +938,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, &str, C) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, Str, Str, C):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, &'a str, C)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a BTreeMap<String, Value>, &'a str, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -955,7 +955,7 @@ where
     R: FilterReturn,
 
     (MapRef, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(
         &self,
@@ -971,11 +971,11 @@ where
     Func: Fn(&Value, A, B, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ValueRef, A, B, C): for<'a> FilterArgs<'a, Output = (&'a Value, A, B, C)>,
+    (ValueRef, A, B, C): for<'a> FilterArgs<Output<'a> = (&'a Value, A, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, A, B, C)) -> R {
         self(v, a, b, c)
@@ -988,10 +988,10 @@ where
     Func: Fn(&Value, A, B, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ValueRef, A, B, Str): for<'a> FilterArgs<'a, Output = (&'a Value, A, B, &'a str)>,
+    (ValueRef, A, B, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, A, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, A, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -1004,10 +1004,10 @@ where
     Func: Fn(&Value, A, &str, C) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ValueRef, A, Str, C): for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str, C)>,
+    (ValueRef, A, Str, C): for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, A, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -1020,9 +1020,9 @@ where
     Func: Fn(&Value, A, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (ValueRef, A, Str, Str): for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str, &'a str)>,
+    (ValueRef, A, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, A, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -1035,10 +1035,10 @@ where
     Func: Fn(&Value, &str, B, C) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ValueRef, Str, B, C): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B, C)>,
+    (ValueRef, Str, B, C): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, &'a str, B, C)) -> R {
         self(v, a, b, c)
@@ -1051,9 +1051,9 @@ where
     Func: Fn(&Value, &str, B, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (ValueRef, Str, B, Str): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B, &'a str)>,
+    (ValueRef, Str, B, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, &'a str, B, &'a str)) -> R {
         self(v, a, b, c)
@@ -1066,9 +1066,9 @@ where
     Func: Fn(&Value, &str, &str, C) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ValueRef, Str, Str, C): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str, C)>,
+    (ValueRef, Str, Str, C): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str, C)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, &'a str, &'a str, C)) -> R {
         self(v, a, b, c)
@@ -1082,7 +1082,7 @@ where
     R: FilterReturn,
 
     (ValueRef, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c): (&'a Value, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c)
@@ -1095,12 +1095,12 @@ where
     Func: Fn(V, A, B, C, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, A, B, C, Str): for<'a> FilterArgs<'a, Output = (V, A, B, C, &'a str)>,
+    (V, A, B, C, Str): for<'a> FilterArgs<Output<'a> = (V, A, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1113,12 +1113,12 @@ where
     Func: Fn(V, A, B, &str, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, A, B, Str, D): for<'a> FilterArgs<'a, Output = (V, A, B, &'a str, D)>,
+    (V, A, B, Str, D): for<'a> FilterArgs<Output<'a> = (V, A, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1131,11 +1131,11 @@ where
     Func: Fn(V, A, B, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (V, A, B, Str, Str): for<'a> FilterArgs<'a, Output = (V, A, B, &'a str, &'a str)>,
+    (V, A, B, Str, Str): for<'a> FilterArgs<Output<'a> = (V, A, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1148,12 +1148,12 @@ where
     Func: Fn(V, A, &str, C, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, A, Str, C, D): for<'a> FilterArgs<'a, Output = (V, A, &'a str, C, D)>,
+    (V, A, Str, C, D): for<'a> FilterArgs<Output<'a> = (V, A, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1166,11 +1166,11 @@ where
     Func: Fn(V, A, &str, C, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, A, Str, C, Str): for<'a> FilterArgs<'a, Output = (V, A, &'a str, C, &'a str)>,
+    (V, A, Str, C, Str): for<'a> FilterArgs<Output<'a> = (V, A, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1183,11 +1183,11 @@ where
     Func: Fn(V, A, &str, &str, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, A, Str, Str, D): for<'a> FilterArgs<'a, Output = (V, A, &'a str, &'a str, D)>,
+    (V, A, Str, Str, D): for<'a> FilterArgs<Output<'a> = (V, A, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1200,10 +1200,10 @@ where
     Func: Fn(V, A, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    A: for<'a> FilterArg<'a, Output = A>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
-    (V, A, Str, Str, Str): for<'a> FilterArgs<'a, Output = (V, A, &'a str, &'a str, &'a str)>,
+    (V, A, Str, Str, Str): for<'a> FilterArgs<Output<'a> = (V, A, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, A, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1216,12 +1216,12 @@ where
     Func: Fn(V, &str, B, C, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, Str, B, C, D): for<'a> FilterArgs<'a, Output = (V, &'a str, B, C, D)>,
+    (V, Str, B, C, D): for<'a> FilterArgs<Output<'a> = (V, &'a str, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1234,11 +1234,11 @@ where
     Func: Fn(V, &str, B, C, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, Str, B, C, Str): for<'a> FilterArgs<'a, Output = (V, &'a str, B, C, &'a str)>,
+    (V, Str, B, C, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1251,11 +1251,11 @@ where
     Func: Fn(V, &str, B, &str, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, Str, B, Str, D): for<'a> FilterArgs<'a, Output = (V, &'a str, B, &'a str, D)>,
+    (V, Str, B, Str, D): for<'a> FilterArgs<Output<'a> = (V, &'a str, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1268,10 +1268,10 @@ where
     Func: Fn(V, &str, B, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (V, Str, B, Str, Str): for<'a> FilterArgs<'a, Output = (V, &'a str, B, &'a str, &'a str)>,
+    (V, Str, B, Str, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1284,11 +1284,11 @@ where
     Func: Fn(V, &str, &str, C, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, Str, Str, C, D): for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str, C, D)>,
+    (V, Str, Str, C, D): for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1301,10 +1301,10 @@ where
     Func: Fn(V, &str, &str, C, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (V, Str, Str, C, Str): for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str, C, &'a str)>,
+    (V, Str, Str, C, Str): for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1317,10 +1317,10 @@ where
     Func: Fn(V, &str, &str, &str, D) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    V: for<'a> FilterArg<Output<'a> = V>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (V, Str, Str, Str, D): for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str, &'a str, D)>,
+    (V, Str, Str, Str, D): for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1333,10 +1333,10 @@ where
     Func: Fn(V, &str, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    V: for<'a> FilterArg<'a, Output = V>,
+    V: for<'a> FilterArg<Output<'a> = V>,
 
     (V, Str, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (V, &'a str, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (V, &'a str, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (V, &'a str, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1349,12 +1349,12 @@ where
     Func: Fn(&str, A, B, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, A, B, C, D): for<'a> FilterArgs<'a, Output = (&'a str, A, B, C, D)>,
+    (Str, A, B, C, D): for<'a> FilterArgs<Output<'a> = (&'a str, A, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1367,11 +1367,11 @@ where
     Func: Fn(&str, A, B, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, A, B, C, Str): for<'a> FilterArgs<'a, Output = (&'a str, A, B, C, &'a str)>,
+    (Str, A, B, C, Str): for<'a> FilterArgs<Output<'a> = (&'a str, A, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1384,11 +1384,11 @@ where
     Func: Fn(&str, A, B, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, A, B, Str, D): for<'a> FilterArgs<'a, Output = (&'a str, A, B, &'a str, D)>,
+    (Str, A, B, Str, D): for<'a> FilterArgs<Output<'a> = (&'a str, A, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1401,10 +1401,10 @@ where
     Func: Fn(&str, A, B, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
-    (Str, A, B, Str, Str): for<'a> FilterArgs<'a, Output = (&'a str, A, B, &'a str, &'a str)>,
+    (Str, A, B, Str, Str): for<'a> FilterArgs<Output<'a> = (&'a str, A, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1417,11 +1417,11 @@ where
     Func: Fn(&str, A, &str, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, A, Str, C, D): for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str, C, D)>,
+    (Str, A, Str, C, D): for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1434,10 +1434,10 @@ where
     Func: Fn(&str, A, &str, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, A, Str, C, Str): for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str, C, &'a str)>,
+    (Str, A, Str, C, Str): for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1450,10 +1450,10 @@ where
     Func: Fn(&str, A, &str, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, A, Str, Str, D): for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str, &'a str, D)>,
+    (Str, A, Str, Str, D): for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1466,10 +1466,10 @@ where
     Func: Fn(&str, A, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
     (Str, A, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a str, A, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a str, A, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, A, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1482,11 +1482,11 @@ where
     Func: Fn(&str, &str, B, C, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, Str, B, C, D): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B, C, D)>,
+    (Str, Str, B, C, D): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1499,10 +1499,10 @@ where
     Func: Fn(&str, &str, B, C, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (Str, Str, B, C, Str): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B, C, &'a str)>,
+    (Str, Str, B, C, Str): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1515,10 +1515,10 @@ where
     Func: Fn(&str, &str, B, &str, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, Str, B, Str, D): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B, &'a str, D)>,
+    (Str, Str, B, Str, D): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1531,10 +1531,10 @@ where
     Func: Fn(&str, &str, B, &str, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (Str, Str, B, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a str, &'a str, B, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1547,10 +1547,10 @@ where
     Func: Fn(&str, &str, &str, C, D) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (Str, Str, Str, C, D): for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str, C, D)>,
+    (Str, Str, Str, C, D): for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1563,10 +1563,10 @@ where
     Func: Fn(&str, &str, &str, C, &str) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (Str, Str, Str, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1579,10 +1579,10 @@ where
     Func: Fn(&str, &str, &str, &str, D) -> R,
     R: FilterReturn,
 
-    D: for<'a> FilterArg<'a, Output = D>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (Str, Str, Str, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1596,7 +1596,7 @@ where
     R: FilterReturn,
 
     (Str, Str, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a str, &'a str, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a str, &'a str, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a str, &'a str, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1609,12 +1609,12 @@ where
     Func: Fn(&[Value], A, B, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ListRef, A, B, C, D): for<'a> FilterArgs<'a, Output = (&'a [Value], A, B, C, D)>,
+    (ListRef, A, B, C, D): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1627,11 +1627,11 @@ where
     Func: Fn(&[Value], A, B, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ListRef, A, B, C, Str): for<'a> FilterArgs<'a, Output = (&'a [Value], A, B, C, &'a str)>,
+    (ListRef, A, B, C, Str): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1644,11 +1644,11 @@ where
     Func: Fn(&[Value], A, B, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ListRef, A, B, Str, D): for<'a> FilterArgs<'a, Output = (&'a [Value], A, B, &'a str, D)>,
+    (ListRef, A, B, Str, D): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1661,11 +1661,11 @@ where
     Func: Fn(&[Value], A, B, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (ListRef, A, B, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], A, B, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], A, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1678,11 +1678,11 @@ where
     Func: Fn(&[Value], A, &str, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ListRef, A, Str, C, D): for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str, C, D)>,
+    (ListRef, A, Str, C, D): for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1695,11 +1695,11 @@ where
     Func: Fn(&[Value], A, &str, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (ListRef, A, Str, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1712,11 +1712,11 @@ where
     Func: Fn(&[Value], A, &str, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ListRef, A, Str, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1729,10 +1729,10 @@ where
     Func: Fn(&[Value], A, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
     (ListRef, A, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], A, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], A, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], A, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1745,11 +1745,11 @@ where
     Func: Fn(&[Value], &str, B, C, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ListRef, Str, B, C, D): for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B, C, D)>,
+    (ListRef, Str, B, C, D): for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1762,11 +1762,11 @@ where
     Func: Fn(&[Value], &str, B, C, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (ListRef, Str, B, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1779,11 +1779,11 @@ where
     Func: Fn(&[Value], &str, B, &str, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ListRef, Str, B, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1796,10 +1796,10 @@ where
     Func: Fn(&[Value], &str, B, &str, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (ListRef, Str, B, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, B, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1812,11 +1812,11 @@ where
     Func: Fn(&[Value], &str, &str, C, D) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ListRef, Str, Str, C, D):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str, C, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1829,10 +1829,10 @@ where
     Func: Fn(&[Value], &str, &str, C, &str) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (ListRef, Str, Str, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1845,10 +1845,10 @@ where
     Func: Fn(&[Value], &str, &str, &str, D) -> R,
     R: FilterReturn,
 
-    D: for<'a> FilterArg<'a, Output = D>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ListRef, Str, Str, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1862,7 +1862,7 @@ where
     R: FilterReturn,
 
     (ListRef, Str, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a [Value], &'a str, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a [Value], &'a str, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a [Value], &'a str, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1875,13 +1875,13 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, A, B, C, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B, C, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a BTreeMap<String, Value>, A, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1894,12 +1894,12 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, A, B, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a BTreeMap<String, Value>, A, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -1912,12 +1912,12 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, A, B, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a BTreeMap<String, Value>, A, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -1930,11 +1930,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, B, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (MapRef, A, B, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, B, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, B, &'a str, &'a str)>,
 {
     fn filter<'a>(
         &self,
@@ -1950,12 +1950,12 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, A, Str, C, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, &'a str, C, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a BTreeMap<String, Value>, A, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -1968,11 +1968,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, A, Str, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, &'a str, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str, C, &'a str)>,
 {
     fn filter<'a>(
         &self,
@@ -1988,11 +1988,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, A, Str, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, A, &'a str, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str, &'a str, D)>,
 {
     fn filter<'a>(
         &self,
@@ -2008,11 +2008,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, A, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
     (MapRef, A, Str, Str, Str): for<'a> FilterArgs<
-        'a,
-        Output = (&'a BTreeMap<String, Value>, A, &'a str, &'a str, &'a str),
+        Output<'a> = (&'a BTreeMap<String, Value>, A, &'a str, &'a str, &'a str),
     >,
 {
     fn filter<'a>(
@@ -2029,12 +2028,12 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B, C, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, Str, B, C, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, B, C, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a BTreeMap<String, Value>, &'a str, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -2047,11 +2046,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B, C, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, Str, B, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, B, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B, C, &'a str)>,
 {
     fn filter<'a>(
         &self,
@@ -2067,11 +2066,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B, &str, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, Str, B, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, B, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B, &'a str, D)>,
 {
     fn filter<'a>(
         &self,
@@ -2087,11 +2086,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, B, &str, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (MapRef, Str, B, Str, Str): for<'a> FilterArgs<
-        'a,
-        Output = (&'a BTreeMap<String, Value>, &'a str, B, &'a str, &'a str),
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a str, B, &'a str, &'a str),
     >,
 {
     fn filter<'a>(
@@ -2108,11 +2106,11 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, &str, C, D) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, Str, Str, C, D):
-        for<'a> FilterArgs<'a, Output = (&'a BTreeMap<String, Value>, &'a str, &'a str, C, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a str, &'a str, C, D)>,
 {
     fn filter<'a>(
         &self,
@@ -2128,11 +2126,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, &str, C, &str) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (MapRef, Str, Str, C, Str): for<'a> FilterArgs<
-        'a,
-        Output = (&'a BTreeMap<String, Value>, &'a str, &'a str, C, &'a str),
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a str, &'a str, C, &'a str),
     >,
 {
     fn filter<'a>(
@@ -2149,11 +2146,10 @@ where
     Func: Fn(&BTreeMap<String, Value>, &str, &str, &str, D) -> R,
     R: FilterReturn,
 
-    D: for<'a> FilterArg<'a, Output = D>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (MapRef, Str, Str, Str, D): for<'a> FilterArgs<
-        'a,
-        Output = (&'a BTreeMap<String, Value>, &'a str, &'a str, &'a str, D),
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a str, &'a str, &'a str, D),
     >,
 {
     fn filter<'a>(
@@ -2171,8 +2167,7 @@ where
     R: FilterReturn,
 
     (MapRef, Str, Str, Str, Str): for<'a> FilterArgs<
-        'a,
-        Output = (
+        Output<'a> = (
             &'a BTreeMap<String, Value>,
             &'a str,
             &'a str,
@@ -2201,12 +2196,12 @@ where
     Func: Fn(&Value, A, B, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ValueRef, A, B, C, D): for<'a> FilterArgs<'a, Output = (&'a Value, A, B, C, D)>,
+    (ValueRef, A, B, C, D): for<'a> FilterArgs<Output<'a> = (&'a Value, A, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -2219,11 +2214,11 @@ where
     Func: Fn(&Value, A, B, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
-    (ValueRef, A, B, C, Str): for<'a> FilterArgs<'a, Output = (&'a Value, A, B, C, &'a str)>,
+    (ValueRef, A, B, C, Str): for<'a> FilterArgs<Output<'a> = (&'a Value, A, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2236,11 +2231,11 @@ where
     Func: Fn(&Value, A, B, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ValueRef, A, B, Str, D): for<'a> FilterArgs<'a, Output = (&'a Value, A, B, &'a str, D)>,
+    (ValueRef, A, B, Str, D): for<'a> FilterArgs<Output<'a> = (&'a Value, A, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -2253,11 +2248,11 @@ where
     Func: Fn(&Value, A, B, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    B: for<'a> FilterArg<'a, Output = B>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (ValueRef, A, B, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, A, B, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, A, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2270,11 +2265,11 @@ where
     Func: Fn(&Value, A, &str, C, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ValueRef, A, Str, C, D): for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str, C, D)>,
+    (ValueRef, A, Str, C, D): for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -2287,11 +2282,11 @@ where
     Func: Fn(&Value, A, &str, C, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (ValueRef, A, Str, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2304,11 +2299,11 @@ where
     Func: Fn(&Value, A, &str, &str, D) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    A: for<'a> FilterArg<Output<'a> = A>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ValueRef, A, Str, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -2321,10 +2316,10 @@ where
     Func: Fn(&Value, A, &str, &str, &str) -> R,
     R: FilterReturn,
 
-    A: for<'a> FilterArg<'a, Output = A>,
+    A: for<'a> FilterArg<Output<'a> = A>,
 
     (ValueRef, A, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, A, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, A, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, A, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2337,11 +2332,11 @@ where
     Func: Fn(&Value, &str, B, C, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
-    (ValueRef, Str, B, C, D): for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B, C, D)>,
+    (ValueRef, Str, B, C, D): for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, B, C, D)) -> R {
         self(v, a, b, c, d)
@@ -2354,11 +2349,11 @@ where
     Func: Fn(&Value, &str, B, C, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    C: for<'a> FilterArg<'a, Output = C>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (ValueRef, Str, B, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, B, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2371,11 +2366,11 @@ where
     Func: Fn(&Value, &str, B, &str, D) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    B: for<'a> FilterArg<Output<'a> = B>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ValueRef, Str, B, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, B, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -2388,10 +2383,10 @@ where
     Func: Fn(&Value, &str, B, &str, &str) -> R,
     R: FilterReturn,
 
-    B: for<'a> FilterArg<'a, Output = B>,
+    B: for<'a> FilterArg<Output<'a> = B>,
 
     (ValueRef, Str, B, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, B, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, B, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, B, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2404,11 +2399,11 @@ where
     Func: Fn(&Value, &str, &str, C, D) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
-    D: for<'a> FilterArg<'a, Output = D>,
+    C: for<'a> FilterArg<Output<'a> = C>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ValueRef, Str, Str, C, D):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str, C, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str, C, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, &'a str, C, D)) -> R {
         self(v, a, b, c, d)
@@ -2421,10 +2416,10 @@ where
     Func: Fn(&Value, &str, &str, C, &str) -> R,
     R: FilterReturn,
 
-    C: for<'a> FilterArg<'a, Output = C>,
+    C: for<'a> FilterArg<Output<'a> = C>,
 
     (ValueRef, Str, Str, C, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str, C, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str, C, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, &'a str, C, &'a str)) -> R {
         self(v, a, b, c, d)
@@ -2437,10 +2432,10 @@ where
     Func: Fn(&Value, &str, &str, &str, D) -> R,
     R: FilterReturn,
 
-    D: for<'a> FilterArg<'a, Output = D>,
+    D: for<'a> FilterArg<Output<'a> = D>,
 
     (ValueRef, Str, Str, Str, D):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str, &'a str, D)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str, &'a str, D)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, &'a str, &'a str, D)) -> R {
         self(v, a, b, c, d)
@@ -2454,7 +2449,7 @@ where
     R: FilterReturn,
 
     (ValueRef, Str, Str, Str, Str):
-        for<'a> FilterArgs<'a, Output = (&'a Value, &'a str, &'a str, &'a str, &'a str)>,
+        for<'a> FilterArgs<Output<'a> = (&'a Value, &'a str, &'a str, &'a str, &'a str)>,
 {
     fn filter<'a>(&self, (v, a, b, c, d): (&'a Value, &'a str, &'a str, &'a str, &'a str)) -> R {
         self(v, a, b, c, d)

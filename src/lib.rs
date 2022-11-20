@@ -47,8 +47,9 @@
 //!
 //! ## MSRV
 //!
-//! Currently the minimum supported version for `upon` is Rust 1.60. The policy
-//! of this crate is to only increase the MSRV in a breaking release.
+//! Currently the minimum supported version for `upon` is Rust 1.65. Disabling
+//! the **`filters`** feature reduces it to Rust 1.60. The MSRV will only ever
+//! be increased in a breaking release.
 //!
 //! # Getting started
 //!
@@ -319,7 +320,7 @@ impl<'engine> Engine<'engine> {
         N: Into<Cow<'engine, str>>,
         F: Filter<R, A> + Send + Sync + 'static,
         R: FilterReturn,
-        A: for<'a> FilterArgs<'a>,
+        A: FilterArgs,
     {
         self.functions
             .insert(name.into(), EngineBoxFn::Filter(filters::new(f)))

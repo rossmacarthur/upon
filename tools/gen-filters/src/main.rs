@@ -151,7 +151,7 @@ where
     R: FilterReturn,
 {wheres}
 
-    ({impl_tuple}): for<'a> FilterArgs<'a, Output = ({fn_args_lt})>,
+    ({impl_tuple}): for<'a> FilterArgs<Output<'a> = ({fn_args_lt})>,
 {{
     fn filter<'a>(&self, ({vars}): ({fn_args_lt})) -> R {{
         self({vars})
@@ -171,7 +171,7 @@ impl Arg {
 
     fn maybe_where(&self) -> Option<String> {
         match self {
-            Arg::Generic(c) => Some(format!("\n    {c}: for<'a> FilterArg<'a, Output = {c}>")),
+            Arg::Generic(c) => Some(format!("\n    {c}: for<'a> FilterArg<Output<'a> = {c}>")),
             Arg::Borrowed { .. } => None,
         }
     }

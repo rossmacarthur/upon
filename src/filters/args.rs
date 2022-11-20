@@ -28,40 +28,40 @@ pub enum Error {
     ),
 }
 
-impl<'a> FilterArg<'a> for () {
-    type Output = ();
+impl FilterArg for () {
+    type Output<'a> = ();
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&v)
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::None => Ok(()),
             v => Err(Error::Type("()", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&*v)
     }
 }
 
-impl<'a> FilterArg<'a> for bool {
-    type Output = bool;
+impl FilterArg for bool {
+    type Output<'a> = bool;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&v)
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::Bool(b) => Ok(*b),
             v => Err(Error::Type("bool", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&*v)
     }
 }
@@ -69,14 +69,14 @@ impl<'a> FilterArg<'a> for bool {
 macro_rules! impl_for_int {
     ($($ty:ty)+) => {
         $(
-            impl<'a> FilterArg<'a> for $ty {
-                type Output = $ty;
+            impl FilterArg for $ty {
+                type Output<'a> =$ty;
 
-                fn from_value(v: Value) -> Result<Self::Output> {
+                fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
                     Self::from_value_ref(&v)
                 }
 
-                fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+                fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
                     match v {
                         Value::Integer(i) => (*i).try_into().map_err(|_| {
                             Error::TryFromInt(stringify!($ty), *i)
@@ -85,7 +85,7 @@ macro_rules! impl_for_int {
                     }
                 }
 
-                fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+                fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
                     Self::from_value_ref(&*v)
                 }
             }
@@ -98,21 +98,21 @@ impl_for_int! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 isize i128 }
 macro_rules! impl_for_float {
     ($($ty:ty)+) => {
         $(
-            impl<'a> FilterArg<'a> for $ty {
-                type Output = $ty;
+            impl FilterArg for $ty {
+                type Output<'a> =$ty;
 
-                fn from_value(v: Value) -> Result<Self::Output> {
+                fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
                     Self::from_value_ref(&v)
                 }
 
-                fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+                fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
                     match v {
                         Value::Float(f) => Ok(*f as $ty),
                         v => Err(Error::Type(stringify!($ty), v.human())),
                     }
                 }
 
-                fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+                fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
                     Self::from_value_ref(&*v)
                 }
             }
@@ -122,21 +122,21 @@ macro_rules! impl_for_float {
 
 impl_for_float! { f32 f64 }
 
-impl<'a> FilterArg<'a> for String {
-    type Output = String;
+impl FilterArg for String {
+    type Output<'a> = String;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&v)
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::String(s) => Ok(s.to_owned()),
             v => Err(Error::Type("string", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         match v.take() {
             Value::String(s) => Ok(s),
             v => Err(Error::Type("string", v.human())),
@@ -146,24 +146,24 @@ impl<'a> FilterArg<'a> for String {
 
 pub struct Str;
 
-impl<'a> FilterArg<'a> for Str {
-    type Output = &'a str;
+impl FilterArg for Str {
+    type Output<'a> = &'a str;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         match v {
             Value::String(_) => Err(Error::Reference("string")),
             v => Err(Error::Type("&str", v.human())),
         }
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::String(s) => Ok(s),
             v => Err(Error::Type("&str", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         let v: &'a Value = &*v;
         match v {
             Value::String(s) => Ok(s),
@@ -172,21 +172,21 @@ impl<'a> FilterArg<'a> for Str {
     }
 }
 
-impl<'a> FilterArg<'a> for Vec<Value> {
-    type Output = Vec<Value>;
+impl FilterArg for Vec<Value> {
+    type Output<'a> = Vec<Value>;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&v)
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::List(l) => Ok(l.clone()),
             v => Err(Error::Type("list", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         match v.take() {
             Value::List(l) => Ok(l),
             v => Err(Error::Type("list", v.human())),
@@ -196,24 +196,24 @@ impl<'a> FilterArg<'a> for Vec<Value> {
 
 pub struct ListRef;
 
-impl<'a> FilterArg<'a> for ListRef {
-    type Output = &'a [Value];
+impl FilterArg for ListRef {
+    type Output<'a> = &'a [Value];
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         match v {
             Value::List(_) => Err(Error::Reference("list")),
             v => Err(Error::Type("list", v.human())),
         }
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::List(l) => Ok(l),
             v => Err(Error::Type("list", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         let v: &'a Value = &*v;
         match v {
             Value::List(l) => Ok(l),
@@ -222,21 +222,21 @@ impl<'a> FilterArg<'a> for ListRef {
     }
 }
 
-impl<'a> FilterArg<'a> for BTreeMap<String, Value> {
-    type Output = BTreeMap<String, Value>;
+impl FilterArg for BTreeMap<String, Value> {
+    type Output<'a> = BTreeMap<String, Value>;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&v)
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::Map(m) => Ok(m.clone()),
             v => Err(Error::Type("map", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         match v.take() {
             Value::Map(m) => Ok(m),
             v => Err(Error::Type("map", v.human())),
@@ -246,24 +246,24 @@ impl<'a> FilterArg<'a> for BTreeMap<String, Value> {
 
 pub struct MapRef;
 
-impl<'a> FilterArg<'a> for MapRef {
-    type Output = &'a BTreeMap<String, Value>;
+impl FilterArg for MapRef {
+    type Output<'a> = &'a BTreeMap<String, Value>;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         match v {
             Value::Map(_) => Err(Error::Reference("map")),
             v => Err(Error::Type("map", v.human())),
         }
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         match v {
             Value::Map(m) => Ok(m),
             v => Err(Error::Type("map", v.human())),
         }
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         let v: &'a Value = &*v;
         match v {
             Value::Map(m) => Ok(m),
@@ -272,36 +272,36 @@ impl<'a> FilterArg<'a> for MapRef {
     }
 }
 
-impl<'a> FilterArg<'a> for Value {
-    type Output = Value;
+impl FilterArg for Value {
+    type Output<'a> = Value;
 
-    fn from_value(v: Value) -> Result<Self::Output> {
+    fn from_value<'a>(v: Value) -> Result<Self::Output<'a>> {
         Self::from_value_ref(&v)
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         Ok(v.to_owned())
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         Ok(v.take())
     }
 }
 
 pub struct ValueRef;
 
-impl<'a> FilterArg<'a> for ValueRef {
-    type Output = &'a Value;
+impl FilterArg for ValueRef {
+    type Output<'a> = &'a Value;
 
-    fn from_value(_: Value) -> Result<Self::Output> {
+    fn from_value<'a>(_: Value) -> Result<Self::Output<'a>> {
         Err(Error::Reference("value"))
     }
 
-    fn from_value_ref(v: &'a Value) -> Result<Self::Output> {
+    fn from_value_ref(v: &Value) -> Result<Self::Output<'_>> {
         Ok(v)
     }
 
-    fn from_cow_mut(v: &'a mut ValueCow<'a>) -> Result<Self::Output> {
+    fn from_cow_mut<'a>(v: &'a mut ValueCow<'a>) -> Result<Self::Output<'a>> {
         Ok(&*v)
     }
 }
