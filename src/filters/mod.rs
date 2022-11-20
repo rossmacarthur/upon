@@ -11,38 +11,23 @@
 //! should defined functions or closures that adhere to the generic
 //! implementation provided.
 //!
-//! ## Argument types
+//! ## Types
 //!
-//! [`Filter`] is implemented for functions and closures that take any of the
-//! following owned types as arguments. See [`FilterArg`].
-//! - [`bool`]
-//! - [`i64`]
-//! - [`f64`]
-//! - [`String`]
-//! - [`Vec<Value>`]
-//! - [`BTreeMap<String, Value>`][std::collections::BTreeMap]
-//! - [`Value`]
+//! [`Filter`] is implemented for functions and closures that take any owned
+//! argument implementing [`FilterArg`] and any return type implementing
+//! [`FilterReturn`].
 //!
-//! **Additionally:**
-//! - The _first_ argument to the filter (i.e. the piped expression) can also be
-//!   specified using the following reference types. This is preferred in most
-//!   cases because the renderer won't have to clone the value before the
-//!   calling the filter.
-//!   - [`&str`][str]
-//!   - [`&[Value]`][slice]
-//!   - [`&BTreeMap<String, Value>`][std::collections::BTreeMap]
-//!   - [`&Value`][Value]
+//! Additionally, the _first_ argument to the filter (i.e. the piped expression)
+//! can also be specified using the following reference types. This is preferred
+//! in most cases because the renderer won't have to clone the value before
+//! passing it to the filter.
+//! - [`&str`][str]
+//! - [`&[Value]`][slice]
+//! - [`&BTreeMap<String, Value>`][std::collections::BTreeMap]
+//! - [`&Value`][Value]
 //!
-//! - Other arguments can also use [`&str`][str] but only if the passed
-//!   parameter is a literal string.
-//!
-//! ## Return types
-//!
-//! [`Filter`] is implemented for functions and closures that return any of the
-//! following types. See [`FilterReturn`].
-//!
-//! - `R` where `R` implements `Into<Value>`
-//! - `Result<R>` where `R` implements `Into<Value>`
+//! Other arguments can also use [`&str`][str] but only if the passed parameter
+//! is always a literal string.
 //!
 //! # Examples
 //!
@@ -125,9 +110,9 @@ where
     })
 }
 
-/// Represents any filter function.
+/// Any filter function.
 ///
-/// See the [module][crate::filters] documentation for more information.
+/// *See the [module][crate::filters] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait Filter<R, A>
 where
@@ -137,9 +122,9 @@ where
     fn filter(&self, args: <A as FilterArgs<'_>>::Output) -> R;
 }
 
-/// Represents *all* the arguments to a filter.
+/// The set of arguments to a filter.
 ///
-/// See the [module][crate::filters] documentation for more information.
+/// *See the [module][crate::filters] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait FilterArgs<'a> {
     #[doc(hidden)]
@@ -148,9 +133,9 @@ pub trait FilterArgs<'a> {
     fn from_state(state: FilterState<'a>) -> Result<Self::Output>;
 }
 
-/// Represents an argument to a filter.
+/// An argument to a filter.
 ///
-/// See the [module][crate::filters] documentation for more information.
+/// *See the [module][crate::filters] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait FilterArg<'a> {
     #[doc(hidden)]
@@ -163,16 +148,25 @@ pub trait FilterArg<'a> {
     fn from_cow_mut(v: &'a mut ValueCow<'a>) -> args::Result<Self::Output>;
 }
 
-/// Represents a return value from a filter.
+/// A return value from a filter.
 ///
-/// See the [module][crate::filters] documentation for more information.
+/// This trait is implemented for many types by utilizing the [`From`]
+/// implementations for [`Value`].
+///
+/// - `R` where `R` implements `Into<Value>`
+/// - `Result<R, E>` where `R` implements `Into<Value>` and `E` implements
+///   [`FilterError`].
+///
+/// *See the [module][crate::filters] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "filters")))]
 pub trait FilterReturn {
     #[doc(hidden)]
     fn to_value(self) -> Result<Value>;
 }
 
-/// Represents an error value from a filter.
+/// A value returned from a filter.
+///
+/// *See the [module][crate::filters] documentation for more information.*
 pub trait FilterError {
     #[doc(hidden)]
     fn to_error(self) -> Error;
@@ -284,6 +278,7 @@ where
         Ok((v,))
     }
 }
+
 impl<'a, V, A> FilterArgs<'a> for (V, A)
 where
     V: FilterArg<'a>,
@@ -407,6 +402,12 @@ fn err_expected_arg(err: args::Error, source: &str, span: Span) -> Error {
                 got
             )
         }
+        args::Error::TryFromInt(want, value) => {
+            format!(
+                "filter expected {} argument, but `{}` is out of range",
+                want, value
+            )
+        }
     };
     Error::render(msg, source, span)
 }
@@ -418,6 +419,12 @@ fn err_expected_val(err: args::Error, source: &str, span: Span) -> Error {
         }
         args::Error::Reference(_) => {
             unreachable!()
+        }
+        args::Error::TryFromInt(want, value) => {
+            format!(
+                "filter expected {} value, but `{}` is out of range",
+                want, value
+            )
         }
     };
     Error::render(msg, source, span)

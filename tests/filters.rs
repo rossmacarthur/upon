@@ -88,6 +88,86 @@ fn render_filter_arity_5() {
 }
 
 #[test]
+fn render_filter_value_types() {
+    let mut engine = Engine::new();
+
+    // unit
+    engine.add_filter("_", |_: ()| ());
+
+    // bool
+    engine.add_filter("_", |_: bool| ());
+
+    // ints
+    engine.add_filter("_", |_: u8| ());
+    engine.add_filter("_", |_: u16| ());
+    engine.add_filter("_", |_: u32| ());
+    engine.add_filter("_", |_: u64| ());
+    engine.add_filter("_", |_: u128| ());
+    engine.add_filter("_", |_: usize| ());
+    engine.add_filter("_", |_: i8| ());
+    engine.add_filter("_", |_: i16| ());
+    engine.add_filter("_", |_: i32| ());
+    engine.add_filter("_", |_: i64| ());
+    engine.add_filter("_", |_: i128| ());
+    engine.add_filter("_", |_: isize| ());
+
+    // floats
+    engine.add_filter("_", |_: f32| ());
+    engine.add_filter("_", |_: f64| ());
+
+    // strings
+    engine.add_filter("_", |_: String| ());
+    engine.add_filter("_", |_: &str| ());
+
+    // list
+    engine.add_filter("_", |_: Vec<Value>| ());
+    engine.add_filter("_", |_: &[Value]| ());
+
+    // map
+    engine.add_filter("_", |_: BTreeMap<String, Value>| ());
+    engine.add_filter("_", |_: &BTreeMap<String, Value>| ());
+}
+
+#[test]
+fn render_filter_arg_types() {
+    let mut engine = Engine::new();
+
+    // unit
+    engine.add_filter("_", |_: Value, _: ()| ());
+
+    // bool
+    engine.add_filter("_", |_: Value, _: bool| ());
+
+    // ints
+    engine.add_filter("_", |_: Value, _: u8| ());
+    engine.add_filter("_", |_: Value, _: u16| ());
+    engine.add_filter("_", |_: Value, _: u32| ());
+    engine.add_filter("_", |_: Value, _: u64| ());
+    engine.add_filter("_", |_: Value, _: u128| ());
+    engine.add_filter("_", |_: Value, _: usize| ());
+    engine.add_filter("_", |_: Value, _: i8| ());
+    engine.add_filter("_", |_: Value, _: i16| ());
+    engine.add_filter("_", |_: Value, _: i32| ());
+    engine.add_filter("_", |_: Value, _: i64| ());
+    engine.add_filter("_", |_: Value, _: i128| ());
+    engine.add_filter("_", |_: Value, _: isize| ());
+
+    // floats
+    engine.add_filter("_", |_: Value, _: f32| ());
+    engine.add_filter("_", |_: Value, _: f64| ());
+
+    // strings
+    engine.add_filter("_", |_: Value, _: String| ());
+    engine.add_filter("_", |_: Value, _: &str| ());
+
+    // list
+    engine.add_filter("_", |_: Value, _: Vec<Value>| ());
+
+    // map
+    engine.add_filter("_", |_: Value, _: BTreeMap<String, Value>| ());
+}
+
+#[test]
 fn render_filter_err_expected_0_args() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: Value| v);
@@ -176,7 +256,7 @@ fn render_filter_borrowed_value_value() {
     let result = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name:"John Smith" })
+        .render(upon::value! { name: "John Smith" })
         .unwrap();
     assert_eq!(result, "John Smith");
 }
@@ -203,7 +283,7 @@ fn render_filter_err_expected_value_type() {
     let err = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name:"John Smith" })
+        .render(upon::value! { name: "John Smith" })
         .unwrap_err();
     assert_err(
         &err,
@@ -226,7 +306,7 @@ fn render_filter_err_expected_arg_type() {
     let err = engine
         .compile("{{ name | test: 123 }}")
         .unwrap()
-        .render(upon::value! { name:"John Smith" })
+        .render(upon::value! { name: "John Smith" })
         .unwrap_err();
     assert_err(
         &err,
@@ -236,6 +316,29 @@ fn render_filter_err_expected_arg_type() {
    |
  1 | {{ name | test: 123 }}
    |                 ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn render_filter_err_expected_value_try_from_int() {
+    let mut engine = Engine::new();
+    engine.add_filter("add", |a: i8, b: i8| a + b);
+    let err = engine
+        .compile("{{ age | add: 3 }}")
+        .unwrap()
+        .render(upon::value! { age: 128 })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "filter expected i8 value, but `128` is out of range",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | {{ age | add: 3 }}
+   |          ^^^
    |
    = reason: REASON
 ",
@@ -274,13 +377,36 @@ fn render_filter_err_expected_arg_reference() {
 }
 
 #[test]
+fn render_filter_err_expected_arg_try_from_int() {
+    let mut engine = Engine::new();
+    engine.add_filter("repeat", |s: &str, i: i8| s.repeat(i as usize));
+    let err = engine
+        .compile("{{ name | repeat: 128 }}")
+        .unwrap()
+        .render(upon::value! { name: "John" })
+        .unwrap_err();
+    assert_err(
+        &err,
+        "filter expected i8 argument, but `128` is out of range",
+        "
+  --> <anonymous>:1:19
+   |
+ 1 | {{ name | repeat: 128 }}
+   |                   ^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn render_filter_err_custom() {
     let mut engine = Engine::new();
     engine.add_filter("test", |_: &Value| Err::<bool, _>("test error"));
     let err = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name:"John Smith" })
+        .render(upon::value! { name: "John Smith" })
         .unwrap_err();
     assert_filter_err(
         &err,
