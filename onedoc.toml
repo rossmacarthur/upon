@@ -1,0 +1,40 @@
+[[ file ]]
+template = "docs/README_TEMPLATE.md"
+input = "src/lib.rs"
+output = "README.md"
+
+[[ file ]]
+template = "docs/SYNTAX_TEMPLATE.md"
+input = "src/syntax.rs"
+output = "SYNTAX.md"
+
+[links]
+# Types
+"Engine" = "https://docs.rs/upon/latest/upon/struct.Engine.html"
+"Value" = "https://docs.rs/upon/latest/upon/enum.Value.html"
+
+# Engine methods
+"set_max_include_depth" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_max_include_depth"
+"add_template" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template"
+"get_template" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.get_template"
+"compile" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile"
+"Engine::add_filter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter"
+"Engine::add_formatter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter"
+
+# TemplateRef methods
+"render" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render"
+"render_from" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from"
+
+# Modules
+"syntax" = "./SYNTAX.md"
+"filters" = "https://docs.rs/upon/latest/upon/filters/index.html"
+"fmt" = "https://docs.rs/upon/latest/upon/fmt/index.html"
+
+# Standard library types
+"String" = "https://doc.rust-lang.org/stable/std/string/struct.String.html"
+"std::io::Write" = "https://doc.rust-lang.org/stable/std/io/trait.Write.html"
+
+# Crates
+"serde" = "https://crates.io/crates/serde"
+"unicode-ident" = "https://crates.io/crates/unicode-ident"
+"unicode-width" = "https://crates.io/crates/unicode-width"
