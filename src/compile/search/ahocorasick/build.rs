@@ -221,7 +221,7 @@ impl Builder {
     }
 
     fn copy_matches(&mut self, src: S, dst: S) {
-        assert!(src != dst, "src {} must not be equal to dst {}", src, dst);
+        assert!(src != dst, "src {src} must not be equal to dst {dst}");
 
         // Simply gets a mutable reference to both states.
         let i = src;

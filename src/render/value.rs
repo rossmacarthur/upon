@@ -7,14 +7,14 @@ impl ValueCow<'_> {
     pub fn as_bool(&self, source: &str, span: Span) -> Result<bool> {
         match &**self {
             Value::Bool(cond) => Ok(*cond),
-            value => Err(Error::render(
-                format!(
-                    "expected bool, but expression evaluated to {}",
-                    value.human()
-                ),
-                source,
-                span,
-            )),
+            value => {
+                let v = value.human();
+                Err(Error::render(
+                    format!("expected bool, but expression evaluated to {v}"),
+                    source,
+                    span,
+                ))
+            }
         }
     }
 }
@@ -97,8 +97,9 @@ pub fn lookup<'a>(source: &str, value: &'a Value, key: &ast::Key) -> Result<&'a 
                 }
             };
             list.get(*i).ok_or_else(|| {
+                let len = list.len();
                 Error::render(
-                    format!("index out of bounds, the length is {}", list.len()),
+                    format!("index out of bounds, the length is {len}"),
                     source,
                     key.span(),
                 )

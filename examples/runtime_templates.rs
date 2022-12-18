@@ -15,7 +15,7 @@ fn main() -> upon::Result<()> {
     // Render the template using the provided data
     let output = template.render(upon::value! { title: "My Webpage!", year: 2022 })?;
 
-    println!("{}", output);
+    println!("{output}");
 
     Ok(())
 }

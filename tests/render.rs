@@ -67,7 +67,7 @@ fn render_inline_expr_literal_roundtrip() {
     let engine = Engine::new();
     for (arg, exp) in tests {
         let result = engine
-            .compile(&format!("{{{{ {} }}}}", arg))
+            .compile(&format!("{{{{ {arg} }}}}"))
             .unwrap()
             .render(Value::None)
             .unwrap();
@@ -613,7 +613,7 @@ fn render_for_statement_loop_fields() {
 fn render_for_statement_loop_map() {
     let mut engine = Engine::new();
     engine.add_formatter("debug", |f, v| {
-        writeln!(f, "{:?}", v)?;
+        writeln!(f, "{v:?}")?;
         Ok(())
     });
     let result = engine
@@ -987,7 +987,7 @@ fn render_to_writer_err_io() {
         .unwrap()
         .render_to_writer(&mut w, value! { ipsum : "test" })
         .unwrap_err();
-    assert_eq!(format!("{:#}", err), "io error");
+    assert_eq!(format!("{err:#}"), "io error");
     assert_eq!(format!("{:#}", err.source().unwrap()), "address in use");
 }
 
@@ -1060,16 +1060,16 @@ impl io::Write for Writer {
 
 #[track_caller]
 fn assert_format_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("format error: {}", reason);
+    let display = format!("format error: {reason}");
     let display_alt = format!("format error\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{:#}", err), display_alt);
+    assert_eq!(format!("{err:#}"), display_alt);
 }
 
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("render error: {}", reason);
+    let display = format!("render error: {reason}");
     let display_alt = format!("render error\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{:#}", err), display_alt);
+    assert_eq!(format!("{err:#}"), display_alt);
 }

@@ -52,7 +52,7 @@ impl<'a> LoopState<'a> {
         let human = iterable.human();
         let err = || {
             Error::render(
-                format!("expected iterable, but expression evaluated to {}", human),
+                format!("expected iterable, but expression evaluated to {human}"),
                 source,
                 span,
             )

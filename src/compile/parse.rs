@@ -332,7 +332,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                     }
                 }
                 (tk, span) => {
-                    panic!("lexer bug: received token `{:?}` at {:?}", tk, span);
+                    panic!("lexer bug: received token `{tk:?}` at {span:?}");
                 }
             };
             scopes.last_mut().unwrap().stmts.push(stmt);
@@ -635,14 +635,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 let x = (d as char).to_digit(radix).ok_or_else(|| {
                     let m = span.m + i + j;
                     Error::syntax(
-                        format!("invalid digit for base {} literal", radix),
+                        format!("invalid digit for base {radix} literal"),
                         self.source(),
                         m..m + 1,
                     )
                 })?;
                 let err = || {
                     Error::syntax(
-                        format!("base {} literal out of range for 64-bit integer", radix),
+                        format!("base {radix} literal out of range for 64-bit integer"),
                         self.source(),
                         span,
                     )
@@ -718,12 +718,10 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn expect_keyword(&mut self, exp: Keyword) -> Result<Span> {
         let (kw, span) = self.parse_keyword()?;
         if kw != exp {
+            let exp = exp.human();
+            let kw = kw.human();
             return Err(Error::syntax(
-                format!(
-                    "expected keyword `{}`, found keyword `{}`",
-                    exp.human(),
-                    kw.human()
-                ),
+                format!("expected keyword `{exp}`, found keyword `{kw}`"),
                 self.source(),
                 span,
             ));
@@ -797,19 +795,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
     fn err_unexpected_eof(&self, exp: impl Display) -> Error {
         let n = self.source().len();
-        Error::syntax(format!("expected {}, found EOF", exp), self.source(), n..n)
+        Error::syntax(format!("expected {exp}, found EOF"), self.source(), n..n)
     }
 
     fn err_unexpected_token(&self, exp: impl Display, got: Token, span: Span) -> Error {
-        Error::syntax(
-            format!("expected {}, found {}", exp, got.human()),
-            self.source(),
-            span,
-        )
+        let got = got.human();
+        Error::syntax(format!("expected {exp}, found {got}"), self.source(), span)
     }
 
     fn err_unexpected_keyword(&self, kw: impl Display, span: Span) -> Error {
-        Error::syntax(format!("unexpected keyword `{}`", kw), self.source(), span)
+        Error::syntax(format!("unexpected keyword `{kw}`"), self.source(), span)
     }
 }
 

@@ -71,7 +71,7 @@ const BASE_EXPRS: &[&str] = &[
 fn compile_inline_expr_literal() {
     let engine = Engine::new();
     for arg in BASE_EXPRS {
-        engine.compile(&format!("{{{{ {} }}}}", arg)).unwrap();
+        engine.compile(&format!("{{{{ {arg} }}}}")).unwrap();
     }
 }
 
@@ -80,7 +80,7 @@ fn compile_inline_expr_filter_arg() {
     let engine = Engine::new();
     for arg in BASE_EXPRS {
         engine
-            .compile(&format!("{{{{ lorem | ipsum: {} }}}}", arg))
+            .compile(&format!("{{{{ lorem | ipsum: {arg} }}}}"))
             .unwrap();
     }
 }
@@ -781,8 +781,8 @@ fn compile_include_with_statement_filters() {
 
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("invalid syntax: {}", reason);
+    let display = format!("invalid syntax: {reason}");
     let display_alt = format!("invalid syntax\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{:#}", err), display_alt);
+    assert_eq!(format!("{err:#}"), display_alt);
 }

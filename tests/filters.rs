@@ -349,7 +349,7 @@ fn render_filter_err_expected_value_try_from_int() {
 fn render_filter_err_expected_arg_reference() {
     let mut engine = Engine::new();
     engine.add_filter("into_owned", |v: Value| v);
-    engine.add_filter("prepend", |s1: &str, s2: &str| format!("{} {}", s2, s1));
+    engine.add_filter("prepend", |s1: &str, s2: &str| format!("{s2} {s1}"));
     let err = engine
         .compile(
             "{% for name in names | into_owned %}\n\
@@ -424,16 +424,16 @@ fn render_filter_err_custom() {
 
 #[track_caller]
 fn assert_filter_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("filter error: {}", reason);
+    let display = format!("filter error: {reason}");
     let display_alt = format!("filter error\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{:#}", err), display_alt);
+    assert_eq!(format!("{err:#}"), display_alt);
 }
 
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("render error: {}", reason);
+    let display = format!("render error: {reason}");
     let display_alt = format!("render error\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{:#}", err), display_alt);
+    assert_eq!(format!("{err:#}"), display_alt);
 }

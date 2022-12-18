@@ -422,15 +422,13 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
     }
 
     fn err_unclosed(&self, begin: Span, end: Token) -> Error {
-        Error::syntax(
-            format!("unclosed {}", end.pair().human()),
-            self.source,
-            begin,
-        )
+        let end = end.pair().human();
+        Error::syntax(format!("unclosed {end}"), self.source, begin)
     }
 
     fn err_unexpected_token(&self, tk: Token, span: impl Into<Span>) -> Error {
-        Error::syntax(format!("unexpected {}", tk.human()), self.source, span)
+        let tk = tk.human();
+        Error::syntax(format!("unexpected {tk}"), self.source, span)
     }
 
     fn err_unexpected_character(&self, span: impl Into<Span>) -> Error {
@@ -538,7 +536,7 @@ fn is_ident(c: char) -> bool {
 }
 
 fn is_index(c: char) -> bool {
-    matches!(c, '0'..='9')
+    c.is_ascii_digit()
 }
 
 fn is_number(c: char) -> bool {

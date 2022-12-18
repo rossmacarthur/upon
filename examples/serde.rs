@@ -21,7 +21,7 @@ fn main() -> upon::Result<()> {
         .compile("Hello {{ user.name }}!")?
         .render(&ctx)?;
 
-    println!("{}", output);
+    println!("{output}");
 
     Ok(())
 }

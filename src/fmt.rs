@@ -139,7 +139,7 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
-            Some(msg) => write!(f, "{}", msg),
+            Some(msg) => write!(f, "{msg}"),
             None => write!(f, "format error"),
         }
     }
@@ -213,10 +213,10 @@ where
 pub fn default(f: &mut Formatter<'_>, value: &Value) -> Result {
     match value {
         Value::None => {}
-        Value::Bool(b) => write!(f, "{}", b)?,
-        Value::Integer(n) => write!(f, "{}", n)?,
-        Value::Float(n) => write!(f, "{}", n)?,
-        Value::String(s) => write!(f, "{}", s)?,
+        Value::Bool(b) => write!(f, "{b}")?,
+        Value::Integer(n) => write!(f, "{n}")?,
+        Value::Float(n) => write!(f, "{n}")?,
+        Value::String(s) => write!(f, "{s}")?,
         value => {
             return Err(Error::from(format!(
                 "expression evaluated to unformattable type {}",

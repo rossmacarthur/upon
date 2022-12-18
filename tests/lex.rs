@@ -258,8 +258,8 @@ fn lex_err_undelimited_string_newline() {
 
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
-    let display = format!("invalid syntax: {}", reason);
+    let display = format!("invalid syntax: {reason}");
     let display_alt = format!("invalid syntax\n{}", pretty.replace("REASON", reason));
     assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{:#}", err), display_alt);
+    assert_eq!(format!("{err:#}"), display_alt);
 }

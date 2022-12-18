@@ -85,7 +85,7 @@ impl Error {
         Self {
             kind: ErrorKind::Render,
             name: None,
-            reason: Some(format!("reached maximum include depth ({})", max)),
+            reason: Some(format!("reached maximum include depth ({max})")),
             pretty: None,
         }
     }
@@ -174,7 +174,7 @@ impl std::error::Error for Error {
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if !f.alternate() {
-            writeln!(f, "{:#}", self)?;
+            writeln!(f, "{self:#}")?;
         }
 
         f.debug_struct("Error")
@@ -201,7 +201,7 @@ impl std::fmt::Display for Error {
         };
         match (&self.reason, &self.pretty) {
             (Some(r), Some(p)) if f.alternate() => {
-                write!(f, "{}", msg)?;
+                write!(f, "{msg}")?;
                 p.fmt_with_reason(f, self.name.as_deref(), r)
             }
             (Some(reason), _) => write!(f, "{msg}: {reason}"),

@@ -366,7 +366,7 @@ fn check_args(state: &FilterState<'_>, exp: usize) -> Result<()> {
         Ok(())
     } else {
         Err(Error::render(
-            format!("filter expected {} arguments", exp),
+            format!("filter expected {exp} arguments"),
             state.source,
             state.filter.span,
         ))
@@ -400,19 +400,13 @@ where
 fn err_expected_arg(err: args::Error, source: &str, span: Span) -> Error {
     let msg = match err {
         args::Error::Type(exp, got) => {
-            format!("filter expected {} argument, found {}", exp, got)
+            format!("filter expected {exp} argument, found {got}")
         }
         args::Error::Reference(got) => {
-            format!(
-                "filter expected reference argument but this {} can only be passed as owned",
-                got
-            )
+            format!("filter expected reference argument but this {got} can only be passed as owned",)
         }
         args::Error::TryFromInt(want, value) => {
-            format!(
-                "filter expected {} argument, but `{}` is out of range",
-                want, value
-            )
+            format!("filter expected {want} argument, but `{value}` is out of range",)
         }
     };
     Error::render(msg, source, span)
@@ -421,16 +415,13 @@ fn err_expected_arg(err: args::Error, source: &str, span: Span) -> Error {
 fn err_expected_val(err: args::Error, source: &str, span: Span) -> Error {
     let msg = match err {
         args::Error::Type(exp, got) => {
-            format!("filter expected {} value, found {}", exp, got)
+            format!("filter expected {exp} value, found {got}")
         }
         args::Error::Reference(_) => {
             unreachable!()
         }
         args::Error::TryFromInt(want, value) => {
-            format!(
-                "filter expected {} value, but `{}` is out of range",
-                want, value
-            )
+            format!("filter expected {want} value, but `{value}` is out of range",)
         }
     };
     Error::render(msg, source, span)

@@ -145,20 +145,20 @@ impl<'a> SyntaxBuilder<'a> {
         if let Some((begin, end)) = self.expr {
             patterns.push((Kind::BeginExpr, begin.into()));
             patterns.push((Kind::EndExpr, end.into()));
-            patterns.push((Kind::BeginExprTrim, format!("{}-", begin)));
-            patterns.push((Kind::EndExprTrim, format!("-{}", end)));
+            patterns.push((Kind::BeginExprTrim, format!("{begin}-")));
+            patterns.push((Kind::EndExprTrim, format!("-{end}")));
         };
         if let Some((begin, end)) = self.block {
             patterns.push((Kind::BeginBlock, begin.into()));
             patterns.push((Kind::EndBlock, end.into()));
-            patterns.push((Kind::BeginBlockTrim, format!("{}-", begin)));
-            patterns.push((Kind::EndBlockTrim, format!("-{}", end)));
+            patterns.push((Kind::BeginBlockTrim, format!("{begin}-")));
+            patterns.push((Kind::EndBlockTrim, format!("-{end}")));
         }
         if let Some((begin, end)) = self.comment {
             patterns.push((Kind::BeginComment, begin.into()));
             patterns.push((Kind::EndComment, end.into()));
-            patterns.push((Kind::BeginCommentTrim, format!("{}-", begin)));
-            patterns.push((Kind::EndCommentTrim, format!("-{}", end)));
+            patterns.push((Kind::BeginCommentTrim, format!("{begin}-")));
+            patterns.push((Kind::EndCommentTrim, format!("-{end}")));
         }
         Syntax {
             patterns,

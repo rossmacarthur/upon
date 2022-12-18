@@ -3,7 +3,7 @@ fn main() -> upon::Result<()> {
         .compile("Hello {{ name }}!")?
         .render(upon::value! { name: "World" })?;
 
-    println!("{}", out);
+    println!("{out}");
 
     Ok(())
 }

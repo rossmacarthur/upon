@@ -22,7 +22,7 @@ Hello <? user.name ?>!
             }
         })?;
 
-    println!("{}", out);
+    println!("{out}");
 
     Ok(())
 }

@@ -60,6 +60,6 @@ fn is_empty(value: &Value) -> Result<bool, String> {
         Value::String(v) => Ok(v.is_empty()),
         Value::List(v) => Ok(v.is_empty()),
         Value::Map(v) => Ok(v.is_empty()),
-        v => Err(format!("unsupported type {:?}", v)),
+        v => Err(format!("unsupported type {v:?}")),
     }
 }

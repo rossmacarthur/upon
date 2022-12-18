@@ -205,7 +205,7 @@ where
 {
     let mut s = String::new();
     for item in iter {
-        write!(s, "{},", item).unwrap();
+        write!(s, "{item},").unwrap();
     }
     s
 }
