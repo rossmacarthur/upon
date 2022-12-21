@@ -1,12 +1,12 @@
-[[ file ]]
-template = "docs/README_TEMPLATE.md"
+[[doc]]
 input = "src/lib.rs"
 output = "README.md"
+template = "docs/README_TEMPLATE.md"
 
-[[ file ]]
-template = "docs/SYNTAX_TEMPLATE.md"
+[[doc]]
 input = "src/syntax.rs"
 output = "SYNTAX.md"
+template = "docs/SYNTAX_TEMPLATE.md"
 
 [links]
 # Types
