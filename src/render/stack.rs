@@ -6,13 +6,13 @@ use crate::{Error, Result, ValueFn, ValueKey};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Stack<'a> {
+    /// A function for fetching values.
+    value_fn: Option<&'a ValueFn<'a>>,
+    /// The variable stack.
     stack: Vec<State<'a>>,
 }
 
 pub enum State<'a> {
-    /// A function for fetching values.
-    ValueFn(&'a ValueFn<'a>),
-
     /// An entire scope of variables, always a map
     Scope(ValueCow<'a>),
 
@@ -30,7 +30,6 @@ pub enum State<'a> {
 impl std::fmt::Debug for State<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ValueFn(_) => f.debug_tuple("ValueFn").field(&(..)).finish(),
             Self::Scope(scope) => f.debug_tuple("Scope").field(scope).finish(),
             Self::Var(ident, value) => f.debug_tuple("Var").field(ident).field(value).finish(),
             Self::Loop(state) => f.debug_tuple("Loop").field(state).finish(),
@@ -42,46 +41,62 @@ impl std::fmt::Debug for State<'_> {
 impl<'a> Stack<'a> {
     pub fn new(globals: ValueCow<'a>) -> Self {
         Self {
+            value_fn: None,
             stack: vec![State::Scope(globals)],
         }
     }
 
     pub fn with_value_fn(f: &'a ValueFn<'a>) -> Self {
         Self {
-            stack: vec![State::ValueFn(f)],
+            value_fn: Some(f),
+            stack: vec![],
         }
     }
 
+    /// Resolves a path to a variable on the stack, falling back to a value fn
+    /// if it is not found.
+    pub fn lookup_var_or_call_value_fn(&self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
+        if let Some(v) = self.lookup_var(source, &v)? {
+            return Ok(v);
+        }
+
+        if let Some(f) = self.value_fn {
+            let path: Vec<_> = v
+                .path
+                .iter()
+                .map(|key| match key {
+                    ast::Key::List(k) => ValueKey::List(k.value),
+                    ast::Key::Map(k) => ValueKey::Map(&source[k.span]),
+                })
+                .collect();
+            return f(&path)
+                .map(ValueCow::Owned)
+                .map_err(|reason| Error::render(reason, source, v.span()));
+        }
+
+        Err(Error::render(
+            "not found in this scope",
+            source,
+            v.first().span(),
+        ))
+    }
+
     /// Resolves a path to a variable on the stack.
-    pub fn lookup_var(&self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
+    pub fn lookup_var(&self, source: &str, v: &ast::Var) -> Result<Option<ValueCow<'a>>> {
         for state in self.stack.iter().rev() {
             match state {
-                State::ValueFn(f) => {
-                    let path: Vec<_> = v
-                        .path
-                        .iter()
-                        .map(|key| match key {
-                            ast::Key::List(k) => ValueKey::List(k.value),
-                            ast::Key::Map(k) => ValueKey::Map(&source[k.span]),
-                        })
-                        .collect();
-                    return f(&path)
-                        .map(ValueCow::Owned)
-                        .map_err(|reason| Error::render(reason, source, v.span()));
-                }
-
                 State::Scope(scope) => match lookup_path_maybe(source, scope, v)? {
-                    Some(value) => return Ok(value),
+                    Some(value) => return Ok(Some(value)),
                     None => continue,
                 },
 
                 State::Var(name, var) if source[v.first().span()] == source[name.span] => {
-                    return lookup_path(source, var, v.rest());
+                    return lookup_path(source, var, v.rest()).map(Some);
                 }
 
                 State::Loop(loop_state) => {
                     if let Some(value) = loop_state.lookup_var(source, v)? {
-                        return Ok(value);
+                        return Ok(Some(value));
                     }
                 }
 
@@ -93,11 +108,8 @@ impl<'a> Stack<'a> {
                 _ => {}
             }
         }
-        Err(Error::render(
-            "not found in this scope",
-            source,
-            v.first().span(),
-        ))
+
+        Ok(None)
     }
 
     pub fn push(&mut self, state: State<'a>) {

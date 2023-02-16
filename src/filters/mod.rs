@@ -176,6 +176,19 @@ pub trait FilterError {
 // Filter
 ////////////////////////////////////////////////////////////////////////////////
 
+impl<Func, R> Filter<R, ()> for Func
+where
+    Func: Fn() -> R,
+    R: FilterReturn,
+
+    (): for<'a> FilterArgs<Output<'a> = ()>,
+{
+    #[doc(hidden)]
+    fn filter<'a>(&self, (): ()) -> R {
+        self()
+    }
+}
+
 impl<Func, R, V> Filter<R, (V,)> for Func
 where
     Func: Fn(V) -> R,
@@ -265,6 +278,16 @@ where
 // FilterArgs
 ////////////////////////////////////////////////////////////////////////////////
 
+impl FilterArgs for () {
+    type Output<'a> = ();
+
+    fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
+        check_args(&state, 0)?;
+        assert!(state.value.is_none());
+        Ok(())
+    }
+}
+
 impl<V> FilterArgs for (V,)
 where
     V: FilterArg,
@@ -274,7 +297,7 @@ where
     fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 0)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
-        let v = V::from_cow_mut(state.value).map_err(err)?;
+        let v = V::from_cow_mut(state.value.unwrap()).map_err(err)?;
         Ok((v,))
     }
 }
@@ -289,7 +312,7 @@ where
     fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 1)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
-        let v = V::from_cow_mut(state.value).map_err(err)?;
+        let v = V::from_cow_mut(state.value.unwrap()).map_err(err)?;
         let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
         Ok((v, a))
     }
@@ -306,7 +329,7 @@ where
     fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 2)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
-        let v = V::from_cow_mut(state.value).map_err(err)?;
+        let v = V::from_cow_mut(state.value.unwrap()).map_err(err)?;
         let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
         let b = get_arg::<B>(state.source, state.stack, state.args, 1)?;
         Ok((v, a, b))
@@ -325,7 +348,7 @@ where
     fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 3)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
-        let v = V::from_cow_mut(state.value).map_err(err)?;
+        let v = V::from_cow_mut(state.value.unwrap()).map_err(err)?;
         let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
         let b = get_arg::<B>(state.source, state.stack, state.args, 1)?;
         let c = get_arg::<C>(state.source, state.stack, state.args, 2)?;
@@ -352,7 +375,7 @@ where
     fn from_state(state: FilterState<'_>) -> Result<Self::Output<'_>> {
         check_args(&state, 4)?;
         let err = |e| err_expected_val(e, state.source, state.filter.span);
-        let v = V::from_cow_mut(state.value).map_err(err)?;
+        let v = V::from_cow_mut(state.value.unwrap()).map_err(err)?;
         let a = get_arg::<A>(state.source, state.stack, state.args, 0)?;
         let b = get_arg::<B>(state.source, state.stack, state.args, 1)?;
         let c = get_arg::<C>(state.source, state.stack, state.args, 2)?;
@@ -383,7 +406,7 @@ where
     T: FilterArg,
 {
     match &args[i] {
-        BaseExpr::Var(var) => match stack.lookup_var(source, var)? {
+        BaseExpr::Var(var) => match stack.lookup_var_or_call_value_fn(source, var)? {
             ValueCow::Borrowed(v) => {
                 T::from_value_ref(v).map_err(|e| err_expected_arg(e, source, var.span()))
             }

@@ -6,6 +6,18 @@ use std::collections::BTreeMap;
 use upon::{value, Engine, Error, Value};
 
 #[test]
+fn render_filter_arity_0() {
+    let mut engine = Engine::new();
+    engine.add_filter("name", || String::from("John"));
+    let result = engine
+        .compile("{{ name }}")
+        .unwrap()
+        .render(value! {})
+        .unwrap();
+    assert_eq!(result, "John");
+}
+
+#[test]
 fn render_filter_arity_1() {
     let mut engine = Engine::new();
     engine.add_filter("lower", |v: String| v.to_lowercase());

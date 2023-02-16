@@ -27,7 +27,7 @@ pub struct FilterState<'a> {
     pub stack: &'a Stack<'a>,
     pub source: &'a str,
     pub filter: &'a ast::Ident,
-    pub value: &'a mut ValueCow<'a>,
+    pub value: Option<&'a mut ValueCow<'a>>,
     pub args: &'a [ast::BaseExpr],
 }
 
@@ -168,7 +168,7 @@ impl<'a> Renderer<'a> {
                                 stack: &self.stack,
                                 source: &t.source,
                                 filter: name,
-                                value: &mut value,
+                                value: Some(&mut value),
                                 args: &[],
                             })
                             .map_err(|err| err.enrich(&t.source, name.span))?;
@@ -256,7 +256,7 @@ impl<'a> Renderer<'a> {
                                 stack: &self.stack,
                                 source: &t.source,
                                 filter: name,
-                                value: &mut value,
+                                value: Some(&mut value),
                                 args,
                             })
                             .map_err(|e| e.enrich(&t.source, name.span))?;

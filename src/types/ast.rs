@@ -172,6 +172,10 @@ impl Var {
     pub fn rest(&self) -> &[Key] {
         &self.path[1..]
     }
+
+    pub fn len(&self) -> usize {
+        self.path.len()
+    }
 }
 
 impl Key {
