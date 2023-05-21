@@ -128,15 +128,15 @@ impl<'a> Renderer<'a> {
                     continue;
                 }
 
-                Instr::JumpIfTrue(j, span) => {
-                    if expr.take().unwrap().as_bool(&t.source, *span)? {
+                Instr::JumpIfTrue(j) => {
+                    if expr.take().unwrap().as_bool() {
                         *pc = *j;
                         continue;
                     }
                 }
 
-                Instr::JumpIfFalse(j, span) => {
-                    if !expr.take().unwrap().as_bool(&t.source, *span)? {
+                Instr::JumpIfFalse(j) => {
+                    if !expr.take().unwrap().as_bool() {
                         *pc = *j;
                         continue;
                     }

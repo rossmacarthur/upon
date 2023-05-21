@@ -21,10 +21,10 @@ pub enum Instr {
     Jump(usize),
 
     /// Jump to the instruction if the current expression is true
-    JumpIfTrue(usize, Span),
+    JumpIfTrue(usize),
 
     /// Jump to the instruction if the current expression is false
-    JumpIfFalse(usize, Span),
+    JumpIfFalse(usize),
 
     /// Emit the current expression
     Emit(Span),
