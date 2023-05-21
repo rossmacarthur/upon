@@ -85,8 +85,10 @@
 //! block. It can also have zero or more optional `else if` clauses and an
 //! optional `else` clause. A conditional renders the contents of the block
 //! based on the specified condition which can be any
-//! [**expression**](#expressions) but it must resolve to a boolean value.  A
-//! boolean expression can be negated by applying the prefix `not`.
+//! [**expression**](#expressions). None, `false`, zero floats and integers, as
+//! well as empty strings, maps, and lists are considered falsy. Everything else
+//! is considered truthy. A boolean expression can be negated by applying the
+//! prefix `not`.
 //!
 //! Consider the following template. If the nested field `user.is_enabled` is
 //! returns `false` then the first paragraph would be rendered. Otherwise if
