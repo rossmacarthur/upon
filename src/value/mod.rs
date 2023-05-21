@@ -5,6 +5,7 @@ mod from;
 #[cfg(feature = "serde")]
 mod ser;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 pub(crate) use crate::value::cow::ValueCow;
@@ -27,5 +28,21 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Self::None
+    }
+}
+
+pub trait IntoValue<'a> {
+    fn into_value(self) -> Cow<'a, Value>;
+}
+
+impl<'a, T: Into<Value> + 'a> IntoValue<'a> for T {
+    fn into_value(self) -> Cow<'a, Value> {
+        Cow::Owned(self.into())
+    }
+}
+
+impl<'a> IntoValue<'a> for &'a Value {
+    fn into_value(self) -> Cow<'a, Value> {
+        Cow::Borrowed(self)
     }
 }

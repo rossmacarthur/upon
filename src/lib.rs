@@ -168,7 +168,7 @@ pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub use crate::value::to_value;
-pub use crate::value::Value;
+pub use crate::value::{IntoValue, Value};
 
 use crate::compile::Searcher;
 #[cfg(feature = "filters")]
@@ -471,21 +471,21 @@ impl<'engine, 'source> Template<'engine, 'source> {
 
     /// Render the template to a string using the provided value.
     #[inline]
-    pub fn render_from<V>(&self, ctx: V) -> Result<String>
+    pub fn render_from<'a, V>(&self, ctx: V) -> Result<String>
     where
-        V: Into<Value>,
+        V: IntoValue<'a>,
     {
-        Renderer::new(self.engine, &self.template, &ctx.into()).render()
+        Renderer::new(self.engine, &self.template, &ctx.into_value()).render()
     }
 
     /// Render the template to a writer using the provided value.
     #[inline]
-    pub fn render_to_writer_from<W, V>(&self, writer: W, ctx: V) -> Result<()>
+    pub fn render_to_writer_from<'a, W, V>(&self, writer: W, ctx: V) -> Result<()>
     where
         W: io::Write,
-        V: Into<Value>,
+        V: IntoValue<'a>,
     {
-        Renderer::new(self.engine, &self.template, &ctx.into()).render_to_writer(writer)
+        Renderer::new(self.engine, &self.template, &ctx.into_value()).render_to_writer(writer)
     }
 
     /// Render the template to a string using the provided value function.
@@ -553,23 +553,23 @@ impl<'engine> TemplateRef<'engine> {
 
     /// Render the template to a string using the provided value.
     #[inline]
-    pub fn render_from<V>(&self, ctx: V) -> Result<String>
+    pub fn render_from<'a, V>(&self, ctx: V) -> Result<String>
     where
-        V: Into<Value>,
+        V: IntoValue<'a>,
     {
-        Renderer::new(self.engine, self.template, &ctx.into())
+        Renderer::new(self.engine, self.template, &ctx.into_value())
             .render()
             .map_err(|e| e.with_template_name(self.name))
     }
 
     /// Render the template to a writer using the provided value.
     #[inline]
-    pub fn render_to_writer_from<W, V>(&self, writer: W, ctx: V) -> Result<()>
+    pub fn render_to_writer_from<'a, W, V>(&self, writer: W, ctx: V) -> Result<()>
     where
         W: io::Write,
-        V: Into<Value>,
+        V: IntoValue<'a>,
     {
-        Renderer::new(self.engine, self.template, &ctx.into())
+        Renderer::new(self.engine, self.template, &ctx.into_value())
             .render_to_writer(writer)
             .map_err(|e| e.with_template_name(self.name))
     }
