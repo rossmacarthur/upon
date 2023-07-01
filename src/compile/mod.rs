@@ -81,14 +81,13 @@ impl Compiler {
                 then_branch,
                 else_branch,
             }) => {
-                let span = cond.span();
                 self.compile_expr(cond);
 
                 // then branch
                 let instr = if not {
-                    Instr::JumpIfTrue(FIXME, span)
+                    Instr::JumpIfTrue(FIXME)
                 } else {
-                    Instr::JumpIfFalse(FIXME, span)
+                    Instr::JumpIfFalse(FIXME)
                 };
                 let j = self.push(instr);
                 self.compile_scope(then_branch);
@@ -176,10 +175,7 @@ impl Compiler {
     fn update_jump(&mut self, i: usize) {
         let n = self.instrs.len();
         let j = match &mut self.instrs[i] {
-            Instr::Jump(j)
-            | Instr::JumpIfTrue(j, _)
-            | Instr::JumpIfFalse(j, _)
-            | Instr::LoopNext(j) => j,
+            Instr::Jump(j) | Instr::JumpIfTrue(j) | Instr::JumpIfFalse(j) | Instr::LoopNext(j) => j,
             _ => panic!("not a jump instr"),
         };
         *j = n;

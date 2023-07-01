@@ -1,20 +1,16 @@
 use crate::types::ast;
-use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
 impl ValueCow<'_> {
-    pub fn as_bool(&self, source: &str, span: Span) -> Result<bool> {
+    pub fn as_bool(&self) -> bool {
         match &**self {
-            Value::Bool(cond) => Ok(*cond),
-            value => {
-                let v = value.human();
-                Err(Error::render(
-                    format!("expected bool, but expression evaluated to {v}"),
-                    source,
-                    span,
-                ))
-            }
+            Value::None | Value::Bool(false) | Value::Integer(0) => false,
+            Value::Float(n) if *n == 0.0 => false,
+            Value::String(s) if s.is_empty() => false,
+            Value::List(l) if l.is_empty() => false,
+            Value::Map(m) if m.is_empty() => false,
+            _ => true,
         }
     }
 }

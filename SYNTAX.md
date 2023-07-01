@@ -103,8 +103,18 @@ Conditionals are marked using an opening `if` block and a closing `endif`
 block. It can also have zero or more optional `else if` clauses and an
 optional `else` clause. A conditional renders the contents of the block
 based on the specified condition which can be any
-[**expression**](#expressions) but it must resolve to a boolean value.  A
-boolean expression can be negated by applying the prefix `not`.
+[**expression**](#expressions). An expression can be negated by applying the
+prefix `not`. The conditional evaluates the expression based on it’s
+truthiness. The following values are considered falsy, every other value is
+truthy and will pass the condition:
+
+- `None`
+- Boolean `false`
+- An integer with value `0`
+- A float with value `0.0`
+- An empty string
+- An empty list
+- An empty map
 
 Consider the following template. If the nested field `user.is_enabled` is
 returns `false` then the first paragraph would be rendered. Otherwise if
