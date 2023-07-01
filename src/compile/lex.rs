@@ -90,7 +90,9 @@ pub enum Token {
     /// End block tag, e.g. `#}`
     EndComment,
     /// `.`
-    Period,
+    Dot,
+    /// `?.`
+    QuestionDot,
     /// `|`
     Pipe,
     /// `,`
@@ -261,7 +263,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
 
                 match c {
                     // Single character to token mappings.
-                    '.' => (Token::Period, i + 1),
+                    '.' => (Token::Dot, i + 1),
                     '|' => (Token::Pipe, i + 1),
                     ',' => (Token::Comma, i + 1),
                     ':' => (Token::Colon, i + 1),
@@ -269,6 +271,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     '-' => (Token::Minus, i + 1),
 
                     // Multi-character tokens with a distinct start character.
+                    '?' => self.lex_question_dot(iter, i)?,
                     '"' => self.lex_string(iter, i)?,
                     c if c.is_ascii_digit() => match block_state {
                         BlockState::Path => self.lex_index(iter),
@@ -346,6 +349,17 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                 self.cursor = j;
                 Ok(Some((Token::Raw, Span::from(i..j))))
             }
+        }
+    }
+
+    fn lex_question_dot<I>(&mut self, mut iter: I, i: usize) -> Result<(Token, usize)>
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        match iter.next() {
+            Some((_, '.')) => Ok((Token::QuestionDot, i + 2)),
+            Some((j, c)) => Err(self.err_unexpected_character(i..j + c.len_utf8())),
+            None => Err(self.err_unexpected_character(i..self.source.len())),
         }
     }
 
@@ -450,7 +464,8 @@ impl Token {
             Self::EndBlock => "end block",
             Self::BeginComment => "begin comment",
             Self::EndComment => "end comment",
-            Self::Period => "period",
+            Self::Dot => "member access operator",
+            Self::QuestionDot => "optional member access operator",
             Self::Pipe => "pipe",
             Self::Comma => "comma",
             Self::Colon => "colon",
@@ -641,16 +656,20 @@ mod tests {
     #[cfg(feature = "unicode")]
     #[test]
     fn lex_expr() {
-        let tokens =
-            lex("lorem ipsum {{ .|\t _aZ_0 привіт :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet")
-                .unwrap();
+        let tokens = lex(
+            "lorem ipsum {{ . ?. |\t _aZ_0 привіт :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet",
+        )
+        .unwrap();
         assert_eq!(
             tokens,
             [
                 (Token::Raw, "lorem ipsum "),
                 (Token::BeginExpr, "{{"),
                 (Token::Whitespace, " "),
-                (Token::Period, "."),
+                (Token::Dot, "."),
+                (Token::Whitespace, " "),
+                (Token::QuestionDot, "?."),
+                (Token::Whitespace, " "),
                 (Token::Pipe, "|"),
                 (Token::Whitespace, "\t "),
                 (Token::Ident, "_aZ_0"),
@@ -672,7 +691,7 @@ mod tests {
 
     #[test]
     fn lex_expr_path_with_index() {
-        let tokens = lex("lorem {{ ipsum.123.dolor }} sit amet").unwrap();
+        let tokens = lex("lorem {{ ipsum.123?.dolor }} sit amet").unwrap();
         assert_eq!(
             tokens,
             [
@@ -680,9 +699,9 @@ mod tests {
                 (Token::BeginExpr, "{{"),
                 (Token::Whitespace, " "),
                 (Token::Ident, "ipsum"),
-                (Token::Period, "."),
+                (Token::Dot, "."),
                 (Token::Index, "123"),
-                (Token::Period, "."),
+                (Token::QuestionDot, "?."),
                 (Token::Ident, "dolor"),
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),
@@ -700,7 +719,7 @@ mod tests {
                 (Token::Raw, "lorem ipsum"),
                 (Token::BeginExpr, "{{-"),
                 (Token::Whitespace, " "),
-                (Token::Period, "."),
+                (Token::Dot, "."),
                 (Token::Pipe, "|"),
                 (Token::Whitespace, "\t "),
                 (Token::Ident, "aZ_0"),
@@ -751,7 +770,7 @@ mod tests {
                 (Token::BeginExpr, "{{"),
                 (Token::Whitespace, " "),
                 (Token::Ident, "path"),
-                (Token::Period, "."),
+                (Token::Dot, "."),
                 (Token::Ident, "segment"),
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),

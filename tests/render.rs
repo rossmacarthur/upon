@@ -311,12 +311,12 @@ fn render_inline_expr_err_cannot_index_into_none() {
         .unwrap_err();
     assert_err(
         &err,
-        "cannot index into none",
+        "none does not support key-based access",
         "
-  --> <anonymous>:1:16
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^
+   |               ^^^^^^
    |
    = reason: REASON
 ",
@@ -332,12 +332,12 @@ fn render_inline_expr_err_cannot_index_into_string() {
         .unwrap_err();
     assert_err(
         &err,
-        "cannot index into string",
+        "string does not support key-based access",
         "
-  --> <anonymous>:1:16
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^
+   |               ^^^^^^
    |
    = reason: REASON
 ",
@@ -353,12 +353,12 @@ fn render_inline_expr_err_cannot_index_list_with_string() {
         .unwrap_err();
     assert_err(
         &err,
-        "cannot index list with string",
+        "list does not support key-based access",
         "
-  --> <anonymous>:1:16
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^
+   |               ^^^^^^
    |
    = reason: REASON
 ",
@@ -374,12 +374,12 @@ fn render_inline_expr_err_cannot_index_map_with_integer() {
         .unwrap_err();
     assert_err(
         &err,
-        "cannot index map with integer",
+        "map does not support integer-based access",
         "
-  --> <anonymous>:1:16
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum.123 }}
-   |                ^^^
+   |               ^^^^
    |
    = reason: REASON
 ",
@@ -397,10 +397,10 @@ fn render_inline_expr_err_index_out_of_bounds() {
         &err,
         "index out of bounds, the length is 2",
         "
-  --> <anonymous>:1:16
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum.123 }}
-   |                ^^^
+   |               ^^^^
    |
    = reason: REASON
 ",
@@ -418,10 +418,10 @@ fn render_inline_expr_err_not_found_in_map() {
         &err,
         "not found in map",
         "
-  --> <anonymous>:1:16
+  --> <anonymous>:1:15
    |
  1 | lorem {{ ipsum.dolor }}
-   |                ^^^^^
+   |               ^^^^^^
    |
    = reason: REASON
 ",
@@ -641,10 +641,10 @@ fn render_for_statement_err_not_found_in_map() {
         &err,
         "not found in map",
         "
-  --> <anonymous>:1:40
+  --> <anonymous>:1:39
    |
  1 | lorem {% for ipsum in dolor %} {{ loop.xxx }} {% endfor %}
-   |                                        ^^^
+   |                                       ^^^^
    |
    = reason: REASON
 ",
@@ -662,10 +662,10 @@ fn render_for_statement_err_cannot_index_into_map() {
         &err,
         "cannot index into map with integer",
         "
-  --> <anonymous>:1:40
+  --> <anonymous>:1:39
    |
  1 | lorem {% for ipsum in dolor %} {{ loop.123 }} {% endfor %}
-   |                                        ^^^
+   |                                       ^^^^
    |
    = reason: REASON
 ",
@@ -683,10 +683,10 @@ fn render_for_statement_err_cannot_index_into_string() {
         &err,
         "cannot index into string",
         "
-  --> <anonymous>:1:46
+  --> <anonymous>:1:45
    |
  1 | lorem {% for ipsum, dolor in sit %} {{ ipsum.xxx }} {% endfor %}
-   |                                              ^^^
+   |                                             ^^^^
    |
    = reason: REASON
 ",
@@ -704,10 +704,10 @@ fn render_for_statement_err_cannot_index_into_loop_field() {
         &err,
         "cannot index into bool",
         "
-  --> <anonymous>:1:46
+  --> <anonymous>:1:45
    |
  1 | lorem {% for ipsum in dolor %} {{ loop.first.xxx }} {% endfor %}
-   |                                              ^^^
+   |                                             ^^^^
    |
    = reason: REASON
 ",

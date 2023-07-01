@@ -2,7 +2,7 @@ use crate::render::iter::LoopState;
 use crate::render::value::{lookup_path, lookup_path_maybe};
 use crate::types::ast;
 use crate::value::ValueCow;
-use crate::{Error, Result, ValueFn, ValueKey};
+use crate::{Error, Result, ValueAccess, ValueAccessOp, ValueFn, ValueMember};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Stack<'a> {
@@ -56,16 +56,23 @@ impl<'a> Stack<'a> {
     pub fn lookup_var(&self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
         for state in self.stack.iter().rev() {
             match state {
-                State::ValueFn(f) => {
+                State::ValueFn(value_fn) => {
                     let path: Vec<_> = v
                         .path
                         .iter()
-                        .map(|key| match key {
-                            ast::Key::List(k) => ValueKey::List(k.value),
-                            ast::Key::Map(k) => ValueKey::Map(&source[k.span]),
+                        .map(|member| {
+                            let op = match member.op {
+                                ast::AccessOp::Direct => ValueAccessOp::Direct,
+                                ast::AccessOp::Optional => ValueAccessOp::Optional,
+                            };
+                            let access = match member.access {
+                                ast::Access::Index(a) => ValueAccess::Index(a.value),
+                                ast::Access::Key(a) => ValueAccess::Key(&source[a.span]),
+                            };
+                            ValueMember { op, access }
                         })
                         .collect();
-                    return f(&path)
+                    return value_fn(&path)
                         .map(ValueCow::Owned)
                         .map_err(|reason| Error::render(reason, source, v.span()));
                 }
@@ -75,7 +82,7 @@ impl<'a> Stack<'a> {
                     None => continue,
                 },
 
-                State::Var(name, var) if source[v.first().span()] == source[name.span] => {
+                State::Var(name, var) if source[v.first().access.span()] == source[name.span] => {
                     return lookup_path(source, var, v.rest());
                 }
 
@@ -96,7 +103,7 @@ impl<'a> Stack<'a> {
         Err(Error::render(
             "not found in this scope",
             source,
-            v.first().span(),
+            v.first().span,
         ))
     }
 

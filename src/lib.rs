@@ -207,19 +207,36 @@ enum EngineBoxFn {
     Filter(Box<FilterFn>),
 }
 
-type ValueFn<'a> = dyn Fn(&[ValueKey]) -> std::result::Result<Value, String> + 'a;
+type ValueFn<'a> = dyn Fn(&[ValueMember]) -> std::result::Result<Value, String> + 'a;
 
-/// A key in a value path.
+/// A member in a value path.
 ///
 /// Passed to custom value function in
 /// [`*_with_value_fn`][Template::render_with_value_fn] render functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ValueKey<'a> {
-    /// An index into a list like `2` in `user.names.2`.
-    List(usize),
+pub struct ValueMember<'a> {
+    pub op: ValueAccessOp,
+    pub access: ValueAccess<'a>,
+}
 
-    /// A string key into a map like `name` in `user.name`.
-    Map(&'a str),
+/// A key in a value path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ValueAccess<'a> {
+    /// An index into an array like `2` in `user.names.2`.
+    Index(usize),
+
+    /// A key lookup from a map or member access like `name` in `user.name`.
+    Key(&'a str),
+}
+
+/// The type of member access.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ValueAccessOp {
+    /// A member access like `.` in `user.name`.
+    Direct,
+
+    /// A member access like `?.` in `user?.name`.
+    Optional,
 }
 
 /// A compiled template.
@@ -492,7 +509,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     #[inline]
     pub fn render_with_value_fn<F>(&self, value_fn: F) -> Result<String>
     where
-        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
     {
         Renderer::with_value_fn(self.engine, &self.template, &value_fn).render()
     }
@@ -502,7 +519,7 @@ impl<'engine, 'source> Template<'engine, 'source> {
     pub fn render_to_writer_with_value_fn<W, F>(&self, writer: W, value_fn: F) -> Result<()>
     where
         W: io::Write,
-        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
     {
         Renderer::with_value_fn(self.engine, &self.template, &value_fn).render_to_writer(writer)
     }
@@ -578,7 +595,7 @@ impl<'engine> TemplateRef<'engine> {
     #[inline]
     pub fn render_with_value_fn<F>(&self, value_fn: F) -> Result<String>
     where
-        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
     {
         Renderer::with_value_fn(self.engine, self.template, &value_fn)
             .render()
@@ -590,7 +607,7 @@ impl<'engine> TemplateRef<'engine> {
     pub fn render_to_writer_with_value_fn<W, F>(&self, writer: W, value_fn: F) -> Result<()>
     where
         W: io::Write,
-        F: Fn(&[ValueKey<'_>]) -> std::result::Result<Value, String>,
+        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
     {
         Renderer::with_value_fn(self.engine, self.template, &value_fn)
             .render_to_writer(writer)

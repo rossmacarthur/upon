@@ -1,6 +1,6 @@
 mod helpers;
 
-use upon::{Engine, Value, ValueKey};
+use upon::{Engine, Value, ValueAccess, ValueAccessOp, ValueMember};
 
 use crate::helpers::Writer;
 
@@ -48,39 +48,46 @@ fn render_to_writer_from() {
 
 #[test]
 fn render_with_value_fn() {
-    let value_fn = |path: &[ValueKey<'_>]| match path {
-        [ValueKey::Map("ipsum"), ValueKey::Map("dolor")] => Ok(Value::String(String::from("test"))),
-        _ => Err(String::from("not found")),
-    };
-
     let result = Engine::new()
         .compile(r#"lorem {{ ipsum.dolor }}"#)
         .unwrap()
-        .render_with_value_fn(value_fn)
+        .render_with_value_fn(test_value_fn)
         .unwrap();
     assert_eq!(result, "lorem test");
 
     let err = Engine::new()
         .compile(r#"lorem {{ ipsum }}"#)
         .unwrap()
-        .render_with_value_fn(value_fn)
+        .render_with_value_fn(test_value_fn)
         .unwrap_err();
 
     assert_eq!(err.to_string(), "render error: not found");
 }
 
 #[test]
-fn render_to_writer_with_value_fn() {
-    let value_fn = |path: &[ValueKey<'_>]| match path {
-        [ValueKey::Map("ipsum"), ValueKey::Map("dolor")] => Ok(Value::String(String::from("test"))),
-        _ => Err(String::from("not found")),
-    };
+fn render_with_value_fn_optional_access() {
+    let result = Engine::new()
+        .compile(r#"lorem {{ ipsum?.dolor }}"#)
+        .unwrap()
+        .render_with_value_fn(test_value_fn)
+        .unwrap();
+    assert_eq!(result, "lorem test");
 
+    let result = Engine::new()
+        .compile(r#"lorem {{ ipsum?.sit }}"#)
+        .unwrap()
+        .render_with_value_fn(test_value_fn)
+        .unwrap();
+    assert_eq!(result, "lorem ");
+}
+
+#[test]
+fn render_to_writer_with_value_fn() {
     let mut w = Writer::new();
     Engine::new()
         .compile(r#"lorem {{ ipsum.dolor }}"#)
         .unwrap()
-        .render_to_writer_with_value_fn(&mut w, value_fn)
+        .render_to_writer_with_value_fn(&mut w, test_value_fn)
         .unwrap();
     assert_eq!(w.into_string(), "lorem test");
 
@@ -88,8 +95,28 @@ fn render_to_writer_with_value_fn() {
     let err = Engine::new()
         .compile(r#"lorem {{ ipsum }}"#)
         .unwrap()
-        .render_to_writer_with_value_fn(&mut w, value_fn)
+        .render_to_writer_with_value_fn(&mut w, test_value_fn)
         .unwrap_err();
 
     assert_eq!(err.to_string(), "render error: not found");
+}
+
+// a test value function that returns "test" for `ipsum.dolor`
+fn test_value_fn(path: &[ValueMember<'_>]) -> Result<Value, String> {
+    let mut prev_access_op = ValueAccessOp::Direct;
+    for (i, s) in ["ipsum", "dolor"].iter().enumerate() {
+        let member = match path.get(i) {
+            Some(m) => m,
+            _ if prev_access_op == ValueAccessOp::Optional => return Ok(Value::None),
+            _ => return Err(String::from("not found")),
+        };
+
+        match (member.op, member.access) {
+            (_, ValueAccess::Key(k)) if k == *s => {}
+            (ValueAccessOp::Direct, _) => return Err(String::from("not found")),
+            (ValueAccessOp::Optional, _) => return Ok(Value::None),
+        }
+        prev_access_op = member.op;
+    }
+    Ok(Value::String(String::from("test")))
 }

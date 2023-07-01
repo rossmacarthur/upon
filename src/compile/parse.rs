@@ -508,13 +508,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
 
             (Token::Ident, span) => {
-                let first = ast::Key::Map(ast::Ident { span });
-                let mut path = vec![first];
-                while self.is_next(Token::Period)? {
-                    self.expect(Token::Period)?;
-                    path.push(self.parse_key()?);
-                }
-                ast::BaseExpr::Var(ast::Var { path })
+                let first = ast::Member {
+                    op: ast::AccessOp::Direct,
+                    access: ast::Access::Key(ast::Ident { span }),
+                    span,
+                };
+                let var = self.parse_var(first)?;
+                ast::BaseExpr::Var(var)
             }
             (tk, span) => {
                 return Err(self.err_unexpected_token("expression", tk, span));
@@ -523,9 +523,46 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(expr)
     }
 
-    /// Parses a key.
+    /// Parses a variable specification.
     ///
-    /// This is a path segment which is either an identifier or an index.
+    ///    user
+    ///
+    ///    user.names.0
+    ///
+    ///    user?.age
+    ///
+    fn parse_var(&mut self, first: ast::Member) -> Result<ast::Var> {
+        let mut path = vec![first];
+        loop {
+            match self.peek()? {
+                Some((Token::Dot, sp)) => {
+                    self.expect(Token::Dot)?;
+                    let access = self.parse_access()?;
+                    path.push(ast::Member {
+                        op: ast::AccessOp::Direct,
+                        access,
+                        span: sp.combine(access.span()),
+                    });
+                }
+                Some((Token::QuestionDot, sp)) => {
+                    self.expect(Token::QuestionDot)?;
+                    let access = self.parse_access()?;
+                    path.push(ast::Member {
+                        op: ast::AccessOp::Optional,
+                        access,
+                        span: sp.combine(access.span()),
+                    });
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast::Var { path })
+    }
+
+    /// Parses a type of member access.
+    ///
+    /// This is a path segment which is either an index or an identifier.
     ///
     ///   users
     ///
@@ -533,13 +570,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///   name
     ///
-    fn parse_key(&mut self) -> Result<ast::Key> {
+    fn parse_access(&mut self) -> Result<ast::Access> {
         match self.parse()? {
             (Token::Index, span) => {
                 let value = self.source()[span].parse().unwrap();
-                Ok(ast::Key::List(ast::Index { value, span }))
+                Ok(ast::Access::Index(ast::Index { value, span }))
             }
-            (Token::Ident, span) => Ok(ast::Key::Map(ast::Ident { span })),
+            (Token::Ident, span) => Ok(ast::Access::Key(ast::Ident { span })),
             (tk, span) => Err(self.err_unexpected_token("identifier or index", tk, span)),
         }
     }

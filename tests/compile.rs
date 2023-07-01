@@ -281,18 +281,37 @@ fn compile_inline_expr_err_unexpected_pipe_token() {
 }
 
 #[test]
-fn compile_inline_expr_err_unexpected_period_token() {
+fn compile_inline_expr_err_unexpected_dot_token() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | . }} dolor")
         .unwrap_err();
     assert_err(
         &err,
-        "expected identifier, found period",
+        "expected identifier, found member access operator",
         "
   --> <anonymous>:1:18
    |
  1 | lorem {{ ipsum | . }} dolor
    |                  ^--
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_unexpected_question_dot_token() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | ?. }} dolor")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "expected identifier, found optional member access operator",
+        "
+  --> <anonymous>:1:18
+   |
+ 1 | lorem {{ ipsum | ?. }} dolor
+   |                  ^^-
    |
    = reason: REASON
 ",

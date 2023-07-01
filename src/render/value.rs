@@ -33,7 +33,7 @@ impl Value {
 pub fn lookup_path<'a>(
     source: &str,
     value: &ValueCow<'a>,
-    path: &[ast::Key],
+    path: &[ast::Member],
 ) -> Result<ValueCow<'a>> {
     match value {
         &ValueCow::Borrowed(v) => {
@@ -78,49 +78,43 @@ pub fn lookup_path_maybe<'a>(
     Ok(Some(value))
 }
 
-/// Index into the value with the given path segment.
-pub fn lookup<'a>(source: &str, value: &'a Value, key: &ast::Key) -> Result<&'a Value> {
-    match value {
-        Value::List(list) => {
-            let i = match key {
-                ast::Key::List(ast::Index { value, .. }) => value,
-                _ => {
-                    return Err(Error::render(
-                        "cannot index list with string",
+/// Access the given member from the value.
+pub fn lookup<'a>(source: &str, value: &'a Value, member: &ast::Member) -> Result<&'a Value> {
+    match (value, &member.access) {
+        (Value::List(list), ast::Access::Index(index)) => {
+            let ast::Index { value: i, .. } = index;
+            match (&member.op, list.get(*i)) {
+                (_, Some(value)) => Ok(value),
+                (ast::AccessOp::Optional, _) => Ok(&Value::None),
+                (ast::AccessOp::Direct, _) => {
+                    let len = list.len();
+                    Err(Error::render(
+                        format!("index out of bounds, the length is {len}"),
                         source,
-                        key.span(),
-                    ));
+                        member.span,
+                    ))
                 }
-            };
-            list.get(*i).ok_or_else(|| {
-                let len = list.len();
-                Error::render(
-                    format!("index out of bounds, the length is {len}"),
-                    source,
-                    key.span(),
-                )
-            })
-        }
-        Value::Map(map) => {
-            let raw = match key {
-                ast::Key::Map(ast::Ident { span }) => &source[*span],
-                _ => {
-                    return Err(Error::render(
-                        "cannot index map with integer",
-                        source,
-                        key.span(),
-                    ));
-                }
-            };
-            match map.get(raw) {
-                Some(value) => Ok(value),
-                None => Err(Error::render("not found in map", source, key.span())),
             }
         }
-        value => Err(Error::render(
-            format!("cannot index into {}", value.human()),
+        (Value::Map(map), ast::Access::Key(ident)) => {
+            let ast::Ident { span } = ident;
+            match (&member.op, map.get(&source[*span])) {
+                (_, Some(value)) => Ok(value),
+                (ast::AccessOp::Optional, _) => Ok(&Value::None),
+                (ast::AccessOp::Direct, _) => {
+                    Err(Error::render("not found in map", source, member.span))
+                }
+            }
+        }
+        (value, ast::Access::Index(_)) => Err(Error::render(
+            format!("{} does not support integer-based access", value.human()),
             source,
-            key.span(),
+            member.span,
+        )),
+        (value, ast::Access::Key(_)) => Err(Error::render(
+            format!("{} does not support key-based access", value.human()),
+            source,
+            member.span,
         )),
     }
 }

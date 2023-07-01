@@ -103,14 +103,27 @@ pub enum BaseExpr {
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Var {
-    pub path: Vec<Key>,
+    pub path: Vec<Member>,
+}
+
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct Member {
+    pub op: AccessOp,
+    pub access: Access,
+    pub span: Span,
+}
+
+#[cfg_attr(internal_debug, derive(Debug))]
+pub enum AccessOp {
+    Direct,
+    Optional,
 }
 
 #[derive(Clone, Copy)]
 #[cfg_attr(internal_debug, derive(Debug))]
-pub enum Key {
-    List(Index),
-    Map(Ident),
+pub enum Access {
+    Index(Index),
+    Key(Ident),
 }
 
 #[derive(Clone, Copy)]
@@ -158,27 +171,27 @@ impl BaseExpr {
 
 impl Var {
     pub fn span(&self) -> Span {
-        self.first().span().combine(self.last().span())
+        self.first().span.combine(self.last().span)
     }
 
-    pub fn first(&self) -> &Key {
+    pub fn first(&self) -> &Member {
         self.path.first().unwrap()
     }
 
-    pub fn last(&self) -> &Key {
+    pub fn last(&self) -> &Member {
         self.path.last().unwrap()
     }
 
-    pub fn rest(&self) -> &[Key] {
+    pub fn rest(&self) -> &[Member] {
         &self.path[1..]
     }
 }
 
-impl Key {
+impl Access {
     pub const fn span(&self) -> Span {
         match self {
-            Key::List(key) => key.span,
-            Key::Map(key) => key.span,
+            Access::Index(key) => key.span,
+            Access::Key(key) => key.span,
         }
     }
 }

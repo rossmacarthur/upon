@@ -52,6 +52,16 @@
 //! And also hello {{ users.2.name }}!
 //! ```
 //!
+//! The dotted path syntax will raise an error when the field or index is not
+//! found. If you want to try lookup a field and return [`Value::None`] when it
+//! is not found then you can use the optional dotted path syntax. The following
+//! would try lookup the field "surname" from "user" and return [`Value::None`]
+//! if it is not found.
+//!
+//! ```text
+//! Hello {{ user.name }} {{ user?.surname }}!
+//! ```
+//!
 //! ## Filters
 //!
 //! Filters can be applied to existing expressions using the `|` (pipe)
