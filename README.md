@@ -2,9 +2,9 @@
 
 # upon
 
-[![Crates.io Version](https://img.shields.io/crates/v/upon.svg)](https://crates.io/crates/upon)
-[![Docs.rs Latest](https://img.shields.io/badge/docs.rs-latest-blue.svg)](https://docs.rs/upon)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/rossmacarthur/upon/build.yaml?branch=trunk)](https://github.com/rossmacarthur/upon/actions/workflows/build.yaml)
+[![Crates.io Version](https://badgers.space/crates/version/upon)](https://crates.io/crates/upon)
+[![Docs.rs Latest](https://badgers.space/badge/docs.rs/latest/orange)](https://docs.rs/upon)
+[![Build Status](https://badgers.space/github/checks/rossmacarthur/upon?label=build)](https://github.com/rossmacarthur/upon/actions/workflows/build.yaml?query=branch%3Atrunk)
 
 A lightweight and powerful template engine for Rust.
 
