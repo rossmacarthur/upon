@@ -19,7 +19,7 @@ fn main() -> upon::Result<()> {
 
     let output = upon::Engine::new()
         .compile("Hello {{ user.name }}!")?
-        .render(&ctx)?;
+        .render(ctx)?;
 
     println!("{output}");
 
