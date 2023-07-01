@@ -5,6 +5,7 @@ mod helpers;
 use std::collections::BTreeMap;
 use std::error::Error as _;
 use std::fmt::Write;
+use std::iter::zip;
 
 use upon::fmt;
 use upon::{value, Engine, Error, Value};
@@ -427,64 +428,101 @@ fn render_inline_expr_err_not_found_in_map() {
     );
 }
 
+fn falsy() -> Vec<Value> {
+    vec![
+        Value::None,
+        Value::Bool(false),
+        Value::Integer(0),
+        Value::Float(0.0),
+        Value::String(String::new()),
+        Value::List(vec![]),
+        Value::Map(BTreeMap::new()),
+    ]
+}
+
+fn truthy() -> Vec<Value> {
+    vec![
+        Value::Bool(true),
+        Value::Integer(1337),
+        Value::Float(13.37),
+        Value::String("testing".into()),
+        Value::from([1, 2, 3]),
+        Value::from([("a", 1i64), ("b", 2i64)]),
+    ]
+}
+
 #[test]
 fn render_if_statement_cond_true() {
-    let result = Engine::new()
-        .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
-        .unwrap()
-        .render(value! { ipsum: { dolor: true }, sit: "consectetur" })
-        .unwrap();
-    assert_eq!(result, "lorem consectetur")
+    for value in truthy() {
+        let result = Engine::new()
+            .compile("lorem {% if ipsum %}{{ sit }}{% else %}{{ amet }}{% endif %}")
+            .unwrap()
+            .render(value! { ipsum: value.clone(), sit: "consectetur" })
+            .unwrap();
+        assert_eq!(result, "lorem consectetur");
+    }
 }
 
 #[test]
 fn render_if_statement_cond_false() {
-    let result = Engine::new()
-        .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
-        .unwrap()
-        .render(value! { ipsum: { dolor: false }, amet: "consectetur" })
-        .unwrap();
-    assert_eq!(result, "lorem consectetur")
+    for value in falsy() {
+        let result = Engine::new()
+            .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
+            .unwrap()
+            .render(value! { ipsum: { dolor: value.clone() }, amet: "consectetur" })
+            .unwrap();
+        assert_eq!(result, "lorem consectetur");
+    }
 }
 
 #[test]
 fn render_if_statement_cond_not() {
-    let result = Engine::new()
-        .compile("lorem {% if not ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
-        .unwrap()
-        .render(value! { ipsum: { dolor: false }, sit: "consectetur" })
-        .unwrap();
-    assert_eq!(result, "lorem consectetur")
+    for value in falsy() {
+        let result = Engine::new()
+            .compile("lorem {% if not ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
+            .unwrap()
+            .render(value! { ipsum: {dolor: value.clone()}, sit: "consectetur" })
+            .unwrap();
+        assert_eq!(result, "lorem consectetur");
+    }
 }
 
 #[test]
 fn render_if_statement_else_if_cond_false() {
-    let result = Engine::new()
-        .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
-        .unwrap()
-        .render(value! { ipsum: false, sit: false })
-        .unwrap();
-    assert_eq!(result, "lorem , consectetur");
+    for value in falsy() {
+        let result = Engine::new()
+            .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
+            .unwrap()
+            .render(value! { ipsum: value.clone(), sit: value.clone() })
+            .unwrap();
+        assert_eq!(result, "lorem , consectetur");
+    }
 }
 
 #[test]
 fn render_if_statement_else_if_cond_true() {
-    let result = Engine::new()
-        .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
-        .unwrap()
-        .render(value! { ipsum: false, sit: true })
-        .unwrap();
-    assert_eq!(result, "lorem  amet , consectetur");
+    for (t, f) in zip(truthy(), falsy()) {
+        let result = Engine::new()
+            .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
+            .unwrap()
+            .render(value! { ipsum: f, sit: t })
+            .unwrap();
+        assert_eq!(result, "lorem  amet , consectetur");
+    }
 }
 
 #[test]
 fn render_if_statement_else_if_cond_not() {
-    let result = Engine::new()
-        .compile("lorem {% if ipsum %} dolor {% else if not sit %} amet {% endif %}, consectetur")
-        .unwrap()
-        .render(value! { ipsum: false, sit: false })
-        .unwrap();
-    assert_eq!(result, "lorem  amet , consectetur");
+    for falsy in falsy() {
+        let result = Engine::new()
+            .compile(
+                "lorem {% if ipsum %} dolor {% else if not sit %} amet {% endif %}, consectetur",
+            )
+            .unwrap()
+            .render(value! { ipsum: falsy.clone(), sit: falsy })
+            .unwrap();
+        assert_eq!(result, "lorem  amet , consectetur");
+    }
 }
 
 #[test]
@@ -519,48 +557,6 @@ fn render_if_statement_multi() {
         assert_eq!(result, var);
         map.insert(var, false);
     }
-}
-
-#[test]
-fn render_if_statement_err_cond_not_bool() {
-    let err = Engine::new()
-        .compile("lorem {% if ipsum.dolor %}{{ sit }}{% endif %}")
-        .unwrap()
-        .render(value! { ipsum: { dolor: { } } })
-        .unwrap_err();
-    assert_err(
-        &err,
-        "expected bool, but expression evaluated to map",
-        "
-  --> <anonymous>:1:13
-   |
- 1 | lorem {% if ipsum.dolor %}{{ sit }}{% endif %}
-   |             ^^^^^^^^^^^
-   |
-   = reason: REASON
-",
-    );
-}
-
-#[test]
-fn render_if_statement_err_cond_not_not_bool() {
-    let err = Engine::new()
-        .compile("lorem {% if not ipsum.dolor %}{{ sit }}{% endif %}")
-        .unwrap()
-        .render(value! { ipsum: { dolor: { } } })
-        .unwrap_err();
-    assert_err(
-        &err,
-        "expected bool, but expression evaluated to map",
-        "
-  --> <anonymous>:1:17
-   |
- 1 | lorem {% if not ipsum.dolor %}{{ sit }}{% endif %}
-   |                 ^^^^^^^^^^^
-   |
-   = reason: REASON
-",
-    );
 }
 
 #[test]

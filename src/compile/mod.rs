@@ -175,10 +175,7 @@ impl Compiler {
     fn update_jump(&mut self, i: usize) {
         let n = self.instrs.len();
         let j = match &mut self.instrs[i] {
-            Instr::Jump(j)
-            | Instr::JumpIfTrue(j)
-            | Instr::JumpIfFalse(j)
-            | Instr::LoopNext(j) => j,
+            Instr::Jump(j) | Instr::JumpIfTrue(j) | Instr::JumpIfFalse(j) | Instr::LoopNext(j) => j,
             _ => panic!("not a jump instr"),
         };
         *j = n;
