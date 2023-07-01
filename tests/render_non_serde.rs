@@ -18,6 +18,21 @@ fn render_from() {
 }
 
 #[test]
+#[allow(clippy::needless_borrow)]
+fn render_from_ref() {
+    let ctx = Value::from([(
+        "ipsum",
+        Value::from([("dolor", Value::String(String::from("test")))]),
+    )]);
+    let result = Engine::new()
+        .compile(r#"lorem {{ ipsum.dolor }}"#)
+        .unwrap()
+        .render_from(&ctx)
+        .unwrap();
+    assert_eq!(result, "lorem test");
+}
+
+#[test]
 fn render_to_writer_from() {
     let mut w = Writer::new();
     Engine::new()

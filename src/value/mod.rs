@@ -29,3 +29,9 @@ impl Default for Value {
         Self::None
     }
 }
+
+impl AsRef<Value> for Value {
+    fn as_ref(&self) -> &Value {
+        self
+    }
+}

@@ -473,9 +473,9 @@ impl<'engine, 'source> Template<'engine, 'source> {
     #[inline]
     pub fn render_from<V>(&self, ctx: V) -> Result<String>
     where
-        V: Into<Value>,
+        V: AsRef<Value>,
     {
-        Renderer::new(self.engine, &self.template, &ctx.into()).render()
+        Renderer::new(self.engine, &self.template, ctx.as_ref()).render()
     }
 
     /// Render the template to a writer using the provided value.
@@ -555,9 +555,9 @@ impl<'engine> TemplateRef<'engine> {
     #[inline]
     pub fn render_from<V>(&self, ctx: V) -> Result<String>
     where
-        V: Into<Value>,
+        V: AsRef<Value>,
     {
-        Renderer::new(self.engine, self.template, &ctx.into())
+        Renderer::new(self.engine, self.template, ctx.as_ref())
             .render()
             .map_err(|e| e.with_template_name(self.name))
     }
