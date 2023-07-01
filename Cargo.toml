@@ -24,11 +24,14 @@ unicode-width = { version = "0.1.9", optional = true }
 serde = { version = "1.0.137", features = ["derive"] }
 
 [features]
-default = ["filters", "serde", "unicode"]
+default = ["builtins", "filters", "serde", "unicode"]
 
 # Enables support for filters in templates. This does not affect value
 # formatters. Disabling this will improve compile times.
 filters = []
+
+# Enables the set of builtin filters provided by this library.
+builtins = ["filters"]
 
 # Enables all serde support and pulls in the `serde` crate as a dependency. If
 # disabled then you can use `.render_from()` to render templates and construct

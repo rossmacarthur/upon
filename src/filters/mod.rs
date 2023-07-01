@@ -87,6 +87,8 @@
 //! ```
 
 mod args;
+#[cfg(feature = "builtins")]
+mod builtins;
 mod impls;
 
 use crate::render::{FilterState, Stack};
@@ -94,6 +96,9 @@ use crate::types::ast::BaseExpr;
 use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
+
+#[cfg(feature = "builtins")]
+pub use crate::filters::builtins::*;
 
 pub(crate) type FilterFn = dyn Fn(FilterState<'_>) -> Result<Value> + Send + Sync + 'static;
 

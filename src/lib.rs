@@ -120,6 +120,9 @@
 //!   formatters (see [`Engine::add_formatter`]). Disabling this will improve
 //!   compile times.
 //!
+//! - **`builtins`** _(enabled by default)_ — Enables support for builtin
+//!   filters provided by this library..
+//!
 //! - **`serde`** _(enabled by default)_ — Enables all serde support and pulls
 //!   in the [`serde`] crate as a dependency. If disabled then you can use
 //!   [`render_from`][TemplateRef::render_from] to render templates and
@@ -262,13 +265,35 @@ impl<'engine> Engine<'engine> {
     /// ```
     #[inline]
     pub fn with_syntax(syntax: Syntax<'engine>) -> Self {
-        Self {
+        let mut engine = Engine {
             searcher: Searcher::new(syntax),
             default_formatter: &fmt::default,
             functions: BTreeMap::new(),
             templates: BTreeMap::new(),
             max_include_depth: 64,
+        };
+
+        #[cfg(feature = "builtins")]
+        {
+            // strings
+            engine.add_filter("lower", filters::lower);
+            engine.add_filter("upper", filters::upper);
+            engine.add_filter("replace", filters::replace);
+
+            // lists
+            engine.add_filter("first", filters::first);
+            engine.add_filter("last", filters::last);
+
+            // maps
+            engine.add_filter("keys", filters::keys);
+            engine.add_filter("values", filters::values);
+
+            // general
+            engine.add_filter("len", filters::len);
+            engine.add_filter("get", filters::get);
         }
+
+        engine
     }
 
     /// Set the maximum length of the template render stack.
@@ -355,6 +380,12 @@ impl<'engine> Engine<'engine> {
         self.functions.remove(name).map(|f| f.discriminant())
     }
 
+    /// Remove all added formatters and filters.
+    #[inline]
+    pub fn clear_functions(&mut self) {
+        self.functions.clear()
+    }
+
     /// Add a template to the engine.
     ///
     /// The template will be compiled and stored under the given name.
@@ -395,6 +426,12 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn remove_template(&mut self, name: &str) -> bool {
         self.templates.remove(name).is_some()
+    }
+
+    /// Remove all added templates.
+    #[inline]
+    pub fn clear_templates(&mut self) {
+        self.templates.clear()
     }
 
     /// Compile a template.
