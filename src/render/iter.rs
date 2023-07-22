@@ -153,7 +153,10 @@ impl<'a> LoopState<'a> {
             ($v:expr) => {{
                 let mut v = $v;
                 for m in var.rest() {
-                    v = lookup(source, v, m)?;
+                    v = match lookup(source, v, m)? {
+                        Some(v) => v,
+                        None => return Ok(None),
+                    };
                 }
                 v
             }};

@@ -29,63 +29,80 @@ impl Value {
     }
 }
 
-/// Index the value with the given path.
+/// Lookup the given path.
 pub fn lookup_path<'a>(
     source: &str,
     value: &ValueCow<'a>,
     path: &[ast::Member],
 ) -> Result<ValueCow<'a>> {
     match value {
-        &ValueCow::Borrowed(v) => {
-            let v = path.iter().try_fold(v, |v, p| lookup(source, v, p))?;
-            Ok(ValueCow::Borrowed(v))
+        ValueCow::Borrowed(mut value) => {
+            for p in path {
+                match lookup(source, value, p)? {
+                    Some(v) => value = v,
+                    None => return Ok(ValueCow::Borrowed(&Value::None)),
+                }
+            }
+            Ok(ValueCow::Borrowed(value))
         }
-        ValueCow::Owned(v) => {
-            let v = path.iter().try_fold(v, |v, p| lookup(source, v, p))?;
-            Ok(ValueCow::Owned(v.clone()))
+        ValueCow::Owned(value) => {
+            let mut value: &Value = value;
+            for p in path {
+                match lookup(source, value, p)? {
+                    Some(v) => value = v,
+                    None => return Ok(ValueCow::Borrowed(&Value::None)),
+                }
+            }
+            Ok(ValueCow::Owned(value.clone()))
         }
     }
 }
 
-/// Index the value with the given path.
+/// Lookup the given path, return None if the first segment is not found.
 pub fn lookup_path_maybe<'a>(
     source: &str,
     value: &ValueCow<'a>,
-    var: &ast::Var,
+    path: &[ast::Member],
 ) -> Result<Option<ValueCow<'a>>> {
-    let value = match value {
-        // If the value is borrowed we can lookup the value and return a
-        // reference with lifetime a
-        &ValueCow::Borrowed(v) => {
-            let v = match lookup(source, v, var.first()) {
-                Ok(v) => v,
-                Err(_) => return Ok(None),
-            };
-            let v = var.rest().iter().try_fold(v, |v, p| lookup(source, v, p))?;
-            ValueCow::Borrowed(v)
+    match value {
+        ValueCow::Borrowed(mut value) => {
+            for (i, p) in path.iter().enumerate() {
+                match lookup(source, value, p) {
+                    Ok(Some(v)) => value = v,
+                    Ok(None) | Err(_) if i == 0 => return Ok(None),
+                    Ok(None) => return Ok(Some(ValueCow::Borrowed(&Value::None))),
+                    Err(err) => return Err(err),
+                };
+            }
+            Ok(Some(ValueCow::Borrowed(value)))
         }
-        // If the value is owned then make sure to only clone the edge value
-        // that we lookup.
-        ValueCow::Owned(v) => {
-            let v = match lookup(source, v, var.first()) {
-                Ok(v) => v,
-                Err(_) => return Ok(None),
-            };
-            let v = var.rest().iter().try_fold(v, |v, p| lookup(source, v, p))?;
-            ValueCow::Owned(v.clone())
+        ValueCow::Owned(value) => {
+            let mut value: &Value = value;
+            for (i, p) in path.iter().enumerate() {
+                match lookup(source, value, p) {
+                    Ok(Some(v)) => value = v,
+                    Ok(None) | Err(_) if i == 0 => return Ok(None),
+                    Ok(None) => return Ok(Some(ValueCow::Borrowed(&Value::None))),
+                    Err(err) => return Err(err),
+                };
+            }
+            Ok(Some(ValueCow::Owned(value.clone())))
         }
-    };
-    Ok(Some(value))
+    }
 }
 
 /// Access the given member from the value.
-pub fn lookup<'a>(source: &str, value: &'a Value, member: &ast::Member) -> Result<&'a Value> {
+pub fn lookup<'a>(
+    source: &str,
+    value: &'a Value,
+    member: &ast::Member,
+) -> Result<Option<&'a Value>> {
     match (value, &member.access) {
         (Value::List(list), ast::Access::Index(index)) => {
             let ast::Index { value: i, .. } = index;
             match (&member.op, list.get(*i)) {
-                (_, Some(value)) => Ok(value),
-                (ast::AccessOp::Optional, _) => Ok(&Value::None),
+                (_, Some(value)) => Ok(Some(value)),
+                (ast::AccessOp::Optional, _) => Ok(None),
                 (ast::AccessOp::Direct, _) => {
                     let len = list.len();
                     Err(Error::render(
@@ -99,8 +116,8 @@ pub fn lookup<'a>(source: &str, value: &'a Value, member: &ast::Member) -> Resul
         (Value::Map(map), ast::Access::Key(ident)) => {
             let ast::Ident { span } = ident;
             match (&member.op, map.get(&source[*span])) {
-                (_, Some(value)) => Ok(value),
-                (ast::AccessOp::Optional, _) => Ok(&Value::None),
+                (_, Some(value)) => Ok(Some(value)),
+                (ast::AccessOp::Optional, _) => Ok(None),
                 (ast::AccessOp::Direct, _) => {
                     Err(Error::render("not found in map", source, member.span))
                 }

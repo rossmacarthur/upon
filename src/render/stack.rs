@@ -77,7 +77,7 @@ impl<'a> Stack<'a> {
                         .map_err(|reason| Error::render(reason, source, v.span()));
                 }
 
-                State::Scope(scope) => match lookup_path_maybe(source, scope, v)? {
+                State::Scope(scope) => match lookup_path_maybe(source, scope, &v.path)? {
                     Some(value) => return Ok(value),
                     None => continue,
                 },

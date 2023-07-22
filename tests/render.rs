@@ -118,7 +118,7 @@ fn render_inline_expr_literal_with_filter() {
 }
 
 #[test]
-fn render_inline_expr_map_index() {
+fn render_inline_expr_map_key() {
     let result = Engine::new()
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
@@ -126,6 +126,39 @@ fn render_inline_expr_map_index() {
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem sit");
+}
+
+#[test]
+fn render_inline_expr_map_optional_key() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum?.dolor }}")
+        .unwrap()
+        .render(value! { ipsum: { dolor: "sit"} })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem sit");
+}
+
+#[test]
+fn render_inline_expr_map_optional_key_chain() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum?.dolor.sit }}")
+        .unwrap()
+        .render(value! { ipsum: { } })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem ");
+}
+
+#[test]
+fn render_inline_expr_map_optional_key_chain_long() {
+    let result = Engine::new()
+        .compile("lorem {{ ipsum.dolor?.sit.amet }}")
+        .unwrap()
+        .render(value! { ipsum: { dolor: {} } })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem ");
 }
 
 #[cfg(feature = "unicode")]
@@ -635,6 +668,17 @@ fn render_for_statement_loop_fields() {
         result,
         "lorem 0,true,false,t  1,false,false,e  2,false,false,s  3,false,true,t  "
     );
+}
+
+#[test]
+fn render_for_statement_loop_optional_access() {
+    let result = Engine::new()
+        .compile("lorem {% for ipsum in dolor %}{{ loop?.notindex }}{{ ipsum }}{% endfor %}")
+        .unwrap()
+        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem test");
 }
 
 #[test]
