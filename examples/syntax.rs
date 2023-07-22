@@ -20,7 +20,8 @@ Hello <? user.name ?>!
                 is_enabled: true,
                 name: "John Smith",
             }
-        })?;
+        })
+        .to_string()?;
 
     println!("{out}");
 

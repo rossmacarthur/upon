@@ -37,17 +37,19 @@ fn main() -> upon::Result<()> {
 
     println!(
         "# case 1\n{}",
-        t.render(upon::value! { user: { name: "" } })?
+        t.render(upon::value! { user: { name: "" } }).to_string()?
     );
 
     println!(
         "# case 2\n{}",
-        t.render(upon::value! { user: { name: "John Smith" } })?
+        t.render(upon::value! { user: { name: "John Smith" } })
+            .to_string()?
     );
 
     println!(
         "# case 3\n{}",
-        t.render(upon::value! { user: { name: "Jane Doe" } })?
+        t.render(upon::value! { user: { name: "Jane Doe" } })
+            .to_string()?
     );
 
     Ok(())

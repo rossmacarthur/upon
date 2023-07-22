@@ -13,6 +13,7 @@ fn render_filter_arity_1() {
         .compile("{{ name | lower }}")
         .unwrap()
         .render(value! { name: "JOHN" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "john");
 }
@@ -28,6 +29,7 @@ fn render_filter_arity_2() {
         .compile(r#"{{ name | append: " Smith" }}"#)
         .unwrap()
         .render(value! { name: "John" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John Smith");
 }
@@ -42,6 +44,7 @@ fn render_filter_arity_3() {
         .compile(r#"{{ name | replace: "Smith", "Newton" }}"#)
         .unwrap()
         .render(value! { name: "John Smith" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John Newton");
 }
@@ -62,6 +65,7 @@ fn render_filter_arity_4() {
         .compile(r#"{{ name | append: " Smith", "!", "!" }}"#)
         .unwrap()
         .render(value! { name: "John" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John Smith!!");
 }
@@ -83,6 +87,7 @@ fn render_filter_arity_5() {
         .compile(r#"{{ name | append: " Smith", "!", "!", "!" }}"#)
         .unwrap()
         .render(value! { name: "John" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John Smith!!!");
 }
@@ -175,6 +180,7 @@ fn render_filter_err_expected_0_args() {
         .compile("{{ name | test: 123 }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -198,6 +204,7 @@ fn render_filter_err_expected_n_args() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -221,6 +228,7 @@ fn render_filter_borrowed_value_str() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John Smith");
 }
@@ -233,6 +241,7 @@ fn render_filter_borrowed_value_list() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: ["John", "Smith"] })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John");
 }
@@ -245,6 +254,7 @@ fn render_filter_borrowed_value_map() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: { john: "Smith" } })
+        .to_string()
         .unwrap();
     assert_eq!(result, "Smith");
 }
@@ -257,6 +267,7 @@ fn render_filter_borrowed_value_value() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap();
     assert_eq!(result, "John Smith");
 }
@@ -272,6 +283,7 @@ fn render_filter_borrowed_arg_str() {
         .compile("{{ user.name | concat: user.surname }}")
         .unwrap()
         .render(upon::value! { user: { name: "John", surname: "Smith" }})
+        .to_string()
         .unwrap();
     assert_eq!(result, "JohnSmith");
 }
@@ -284,6 +296,7 @@ fn render_filter_err_expected_value_type() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -307,6 +320,7 @@ fn render_filter_err_expected_arg_type() {
         .compile("{{ name | test: 123 }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -330,6 +344,7 @@ fn render_filter_err_expected_value_try_from_int() {
         .compile("{{ age | add: 3 }}")
         .unwrap()
         .render(upon::value! { age: 128 })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -361,6 +376,7 @@ fn render_filter_err_expected_arg_reference() {
             names: ["John", "James", "Jimothy"],
             surname: "Smith"
         })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -384,6 +400,7 @@ fn render_filter_err_expected_arg_try_from_int() {
         .compile("{{ name | repeat: 128 }}")
         .unwrap()
         .render(upon::value! { name: "John" })
+        .to_string()
         .unwrap_err();
     assert_err(
         &err,
@@ -407,6 +424,7 @@ fn render_filter_err_custom() {
         .compile("{{ name | test }}")
         .unwrap()
         .render(upon::value! { name: "John Smith" })
+        .to_string()
         .unwrap_err();
     assert_filter_err(
         &err,

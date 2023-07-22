@@ -26,7 +26,7 @@ Unescaped: {{ value | unescape }}
         value: "'<this>' & \"<that>\"",
     };
 
-    println!("{}", template.render(ctx)?);
+    println!("{}", template.render(ctx).to_string()?);
     Ok(())
 }
 

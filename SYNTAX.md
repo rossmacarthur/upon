@@ -71,9 +71,9 @@ And also hello {{ users.2.name }}!
 ```
 
 The dotted path syntax will raise an error when the field or index is not
-found. If you want to try lookup a field and return `Value::None` when it
+found. If you want to try lookup a field and return [`Value::None`] when it
 is not found then you can use the optional dotted path syntax. The following
-would try lookup the field “surname” from “user” and return `Value::None`
+would try lookup the field “surname” from “user” and return [`Value::None`]
 if it is not found.
 
 ```text
@@ -270,6 +270,8 @@ Now it will be rendered without the newlines or extra spaces.
 ```text
 Hello, and welcome, John!
 ```
+
+[`Value::None`]: crate::Value::None
 
 
 [filters]: https://docs.rs/upon/latest/upon/filters/index.html

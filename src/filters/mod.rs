@@ -8,7 +8,7 @@
 //! up to four more arguments. The renderer will check the number of arguments
 //! and the type of arguments when the filter is used. Generally you should not
 //! try to implement any of the traits in this module yourself, instead you
-//! should defined functions or closures that adhere to the generic
+//! should define functions or closures that adhere to the generic
 //! implementation provided.
 //!
 //! ## Types

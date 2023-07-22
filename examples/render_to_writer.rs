@@ -7,7 +7,8 @@ fn main() -> upon::Result<()> {
 
     upon::Engine::new()
         .compile("Hello {{ user.name }}!\n")?
-        .render_to_writer(&mut stdout, ctx)?;
+        .render(ctx)
+        .to_writer(&mut stdout)?;
 
     Ok(())
 }

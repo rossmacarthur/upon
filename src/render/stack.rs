@@ -2,7 +2,7 @@ use crate::render::iter::LoopState;
 use crate::render::value::{lookup_path, lookup_path_maybe};
 use crate::types::ast;
 use crate::value::ValueCow;
-use crate::{Error, Result, ValueAccess, ValueAccessOp, ValueFn, ValueMember};
+use crate::{Error, Result, Value, ValueAccess, ValueAccessOp, ValueFn, ValueMember};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Stack<'a> {
@@ -40,9 +40,9 @@ impl std::fmt::Debug for State<'_> {
 }
 
 impl<'a> Stack<'a> {
-    pub fn new(globals: ValueCow<'a>) -> Self {
+    pub fn new(globals: &'a Value) -> Self {
         Self {
-            stack: vec![State::Scope(globals)],
+            stack: vec![State::Scope(ValueCow::Borrowed(globals))],
         }
     }
 

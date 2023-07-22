@@ -95,7 +95,7 @@ Finally, the template is rendered by fetching it using
 
 ```rust
 let template = engine.get_template("hello").unwrap();
-let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
 assert_eq!(result, "Hello John Smith!");
 ```
 
@@ -105,7 +105,7 @@ or you don’t need to store the compiled template then you can also use the
 
 ```rust
 let template = engine.compile("Hello {{ user.name }}!")?;
-let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
 assert_eq!(result, "Hello John Smith!");
 ```
 

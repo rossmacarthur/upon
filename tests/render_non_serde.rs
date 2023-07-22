@@ -9,10 +9,11 @@ fn render_from() {
     let result = Engine::new()
         .compile(r#"lorem {{ ipsum.dolor }}"#)
         .unwrap()
-        .render_from(Value::from([(
+        .render_from(&Value::from([(
             "ipsum",
             Value::from([("dolor", Value::String(String::from("test")))]),
         )]))
+        .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
 }
@@ -28,6 +29,7 @@ fn render_from_ref() {
         .compile(r#"lorem {{ ipsum.dolor }}"#)
         .unwrap()
         .render_from(&ctx)
+        .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
 }
@@ -38,10 +40,11 @@ fn render_to_writer_from() {
     Engine::new()
         .compile(r#"lorem {{ ipsum }}"#)
         .unwrap()
-        .render_to_writer_from(
-            &mut w,
-            Value::from([("ipsum", Value::String(String::from("test")))]),
-        )
+        .render_from(&Value::from([(
+            "ipsum",
+            Value::String(String::from("test")),
+        )]))
+        .to_writer(&mut w)
         .unwrap();
     assert_eq!(w.into_string(), "lorem test");
 }
@@ -51,14 +54,16 @@ fn render_with_value_fn() {
     let result = Engine::new()
         .compile(r#"lorem {{ ipsum.dolor }}"#)
         .unwrap()
-        .render_with_value_fn(test_value_fn)
+        .render_from_fn(test_value_fn)
+        .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
 
     let err = Engine::new()
         .compile(r#"lorem {{ ipsum }}"#)
         .unwrap()
-        .render_with_value_fn(test_value_fn)
+        .render_from_fn(test_value_fn)
+        .to_string()
         .unwrap_err();
 
     assert_eq!(err.to_string(), "render error: not found");
@@ -69,14 +74,16 @@ fn render_with_value_fn_optional_access() {
     let result = Engine::new()
         .compile(r#"lorem {{ ipsum?.dolor }}"#)
         .unwrap()
-        .render_with_value_fn(test_value_fn)
+        .render_from_fn(test_value_fn)
+        .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
 
     let result = Engine::new()
         .compile(r#"lorem {{ ipsum?.sit }}"#)
         .unwrap()
-        .render_with_value_fn(test_value_fn)
+        .render_from_fn(test_value_fn)
+        .to_string()
         .unwrap();
     assert_eq!(result, "lorem ");
 }
@@ -87,7 +94,8 @@ fn render_to_writer_with_value_fn() {
     Engine::new()
         .compile(r#"lorem {{ ipsum.dolor }}"#)
         .unwrap()
-        .render_to_writer_with_value_fn(&mut w, test_value_fn)
+        .render_from_fn(test_value_fn)
+        .to_writer(&mut w)
         .unwrap();
     assert_eq!(w.into_string(), "lorem test");
 
@@ -95,7 +103,8 @@ fn render_to_writer_with_value_fn() {
     let err = Engine::new()
         .compile(r#"lorem {{ ipsum }}"#)
         .unwrap()
-        .render_to_writer_with_value_fn(&mut w, test_value_fn)
+        .render_from_fn(test_value_fn)
+        .to_writer(&mut w)
         .unwrap_err();
 
     assert_eq!(err.to_string(), "render error: not found");

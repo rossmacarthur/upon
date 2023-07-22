@@ -8,7 +8,9 @@ fn main() -> upon::Result<()> {
     let template = engine.get_template("index").unwrap();
 
     // Render the template using the provided data
-    let output = template.render(upon::value! { title: "My Webpage!", year: 2022 })?;
+    let output = template
+        .render(upon::value! { title: "My Webpage!", year: 2022 })
+        .to_string()?;
 
     println!("{output}");
 

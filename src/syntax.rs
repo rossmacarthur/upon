@@ -62,6 +62,8 @@
 //! Hello {{ user.name }} {{ user?.surname }}!
 //! ```
 //!
+//! [`Value::None`]: crate::Value::None
+//!
 //! ## Filters
 //!
 //! Filters can be applied to existing expressions using the `|` (pipe)

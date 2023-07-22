@@ -17,6 +17,7 @@ fn engine_send_and_sync() {
             .compile("{{ lorem }}")
             .unwrap()
             .render(value! { lorem: "ipsum" })
+            .to_string()
             .unwrap();
         assert_eq!(result, "ipsum");
     });
@@ -26,7 +27,10 @@ fn engine_send_and_sync() {
 fn engine_compile_borrowed_source_non_static() -> upon::Result<()> {
     let engine = Engine::new();
     let source = String::from("{{ lorem }}");
-    let result = engine.compile(&source)?.render(value! { lorem: "ipsum" })?;
+    let result = engine
+        .compile(&source)?
+        .render(value! { lorem: "ipsum" })
+        .to_string()?;
     assert_eq!(result, "ipsum");
     Ok(())
 }
@@ -39,7 +43,8 @@ fn engine_add_template_borrowed_source_non_static() -> upon::Result<()> {
     let result = engine
         .get_template("test")
         .unwrap()
-        .render(value! { lorem: "ipsum" })?;
+        .render(value! { lorem: "ipsum" })
+        .to_string()?;
     assert_eq!(result, "ipsum");
     Ok(())
 }
@@ -52,7 +57,8 @@ fn engine_add_template_owned_source() -> upon::Result<()> {
     let result = engine
         .get_template("test")
         .unwrap()
-        .render(value! { lorem: "ipsum" })?;
+        .render(value! { lorem: "ipsum" })
+        .to_string()?;
     assert_eq!(result, "ipsum");
     Ok(())
 }

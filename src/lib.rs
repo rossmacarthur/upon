@@ -84,7 +84,7 @@
 //! # let mut engine = upon::Engine::new();
 //! # engine.add_template("hello", "Hello {{ user.name }}!")?;
 //! let template = engine.get_template("hello").unwrap();
-//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+//! let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -96,7 +96,7 @@
 //! ```
 //! # let engine = upon::Engine::new();
 //! let template = engine.compile("Hello {{ user.name }}!")?;
-//! let result = template.render(upon::value!{ user: { name: "John Smith" }})?;
+//! let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -161,9 +161,9 @@ mod value;
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::io;
 
 pub use crate::error::Error;
+pub use crate::render::Renderer;
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -174,7 +174,6 @@ use crate::compile::Searcher;
 #[cfg(feature = "filters")]
 use crate::filters::{Filter, FilterArgs, FilterFn, FilterReturn};
 use crate::fmt::FormatFn;
-use crate::render::Renderer;
 use crate::types::program;
 
 /// A type alias for results in this crate.
@@ -211,8 +210,8 @@ type ValueFn<'a> = dyn Fn(&[ValueMember]) -> std::result::Result<Value, String> 
 
 /// A member in a value path.
 ///
-/// Passed to custom value function in
-/// [`*_with_value_fn`][Template::render_with_value_fn] render functions.
+/// Passed to custom value function when using
+/// [`render_from_fn`][Template::render_from_fn].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ValueMember<'a> {
     pub op: ValueAccessOp,
@@ -239,7 +238,7 @@ pub enum ValueAccessOp {
     Optional,
 }
 
-/// A compiled template.
+/// A compiled template created using [`Engine::compile`].
 pub struct Template<'engine, 'source> {
     engine: &'engine Engine<'engine>,
     template: program::Template<'source>,
@@ -462,66 +461,43 @@ impl std::fmt::Debug for EngineBoxFn {
     }
 }
 
-impl<'engine, 'source> Template<'engine, 'source> {
-    /// Render the template to a string using the provided value.
+impl<'render> Template<'render, 'render> {
+    /// Render the template using the provided [`serde`] value.
+    ///
+    /// The returned struct must be consumed using
+    /// [`.to_string()`][crate::Renderer::to_string] or
+    /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[cfg(feature = "serde")]
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
-    pub fn render<S>(&self, ctx: S) -> Result<String>
+    pub fn render<S>(&self, ctx: S) -> Renderer<'_, S>
     where
         S: serde::Serialize,
     {
-        Renderer::new(self.engine, &self.template, &to_value(ctx)?).render()
+        Renderer::with_serde(self.engine, &self.template, ctx)
     }
 
-    /// Render the template to a writer using the provided value.
-    #[cfg(feature = "serde")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// Render the template using the provided value.
+    ///
+    /// The returned struct must be consumed using
+    /// [`.to_string()`][crate::Renderer::to_string] or
+    /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
-    pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
-    where
-        W: io::Write,
-        S: serde::Serialize,
-    {
-        Renderer::new(self.engine, &self.template, &to_value(ctx)?).render_to_writer(writer)
+    pub fn render_from(&self, ctx: &'render Value) -> Renderer<'_> {
+        Renderer::with_value(self.engine, &self.template, ctx)
     }
 
-    /// Render the template to a string using the provided value.
+    /// Render the using the provided value function.
+    ///
+    /// The returned struct must be consumed using
+    /// [`.to_string()`][crate::Renderer::to_string] or
+    /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
-    pub fn render_from<V>(&self, ctx: V) -> Result<String>
+    pub fn render_from_fn<F>(&self, value_fn: F) -> Renderer<'_>
     where
-        V: AsRef<Value>,
+        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
     {
-        Renderer::new(self.engine, &self.template, ctx.as_ref()).render()
-    }
-
-    /// Render the template to a writer using the provided value.
-    #[inline]
-    pub fn render_to_writer_from<W, V>(&self, writer: W, ctx: V) -> Result<()>
-    where
-        W: io::Write,
-        V: Into<Value>,
-    {
-        Renderer::new(self.engine, &self.template, &ctx.into()).render_to_writer(writer)
-    }
-
-    /// Render the template to a string using the provided value function.
-    #[inline]
-    pub fn render_with_value_fn<F>(&self, value_fn: F) -> Result<String>
-    where
-        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
-    {
-        Renderer::with_value_fn(self.engine, &self.template, &value_fn).render()
-    }
-
-    /// Render the template to a writer using the provided value function.
-    #[inline]
-    pub fn render_to_writer_with_value_fn<W, F>(&self, writer: W, value_fn: F) -> Result<()>
-    where
-        W: io::Write,
-        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
-    {
-        Renderer::with_value_fn(self.engine, &self.template, &value_fn).render_to_writer(writer)
+        Renderer::with_value_fn(self.engine, &self.template, Box::new(value_fn))
     }
 
     /// Returns the original template source.
@@ -540,83 +516,48 @@ impl std::fmt::Debug for Template<'_, '_> {
     }
 }
 
-impl<'engine> TemplateRef<'engine> {
-    /// Render the template to a string using the provided value.
+impl<'render> TemplateRef<'render> {
+    /// Render the template using the provided [`serde`] value.
+    ///
+    /// The returned struct must be consumed using
+    /// [`.to_string()`][crate::Renderer::to_string] or
+    /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[cfg(feature = "serde")]
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
-    pub fn render<S>(&self, ctx: S) -> Result<String>
+    pub fn render<S>(&self, ctx: S) -> Renderer<'_, S>
     where
         S: serde::Serialize,
     {
-        Renderer::new(self.engine, self.template, &to_value(ctx)?)
-            .render()
-            .map_err(|e| e.with_template_name(self.name))
+        Renderer::with_serde(self.engine, self.template, ctx)
     }
 
-    /// Render the template to a writer using the provided value.
-    #[cfg(feature = "serde")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// Render the template using the provided value.
+    ///
+    /// The returned struct must be consumed using
+    /// [`.to_string()`][crate::Renderer::to_string] or
+    /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
-    pub fn render_to_writer<W, S>(&self, writer: W, ctx: S) -> Result<()>
-    where
-        W: io::Write,
-        S: serde::Serialize,
-    {
-        Renderer::new(self.engine, self.template, &to_value(ctx)?)
-            .render_to_writer(writer)
-            .map_err(|e| e.with_template_name(self.name))
+    pub fn render_from(&self, ctx: &'render Value) -> Renderer<'render> {
+        Renderer::with_value(self.engine, self.template, ctx)
     }
 
-    /// Render the template to a string using the provided value.
+    /// Render the using the provided value function.
+    ///
+    /// The returned struct must be consumed using
+    /// [`.to_string()`][crate::Renderer::to_string] or
+    /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
-    pub fn render_from<V>(&self, ctx: V) -> Result<String>
+    pub fn render_from_fn<F>(&self, value_fn: F) -> Renderer<'render>
     where
-        V: AsRef<Value>,
+        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
     {
-        Renderer::new(self.engine, self.template, ctx.as_ref())
-            .render()
-            .map_err(|e| e.with_template_name(self.name))
-    }
-
-    /// Render the template to a writer using the provided value.
-    #[inline]
-    pub fn render_to_writer_from<W, V>(&self, writer: W, ctx: V) -> Result<()>
-    where
-        W: io::Write,
-        V: Into<Value>,
-    {
-        Renderer::new(self.engine, self.template, &ctx.into())
-            .render_to_writer(writer)
-            .map_err(|e| e.with_template_name(self.name))
-    }
-
-    /// Render the template to a string using the provided value function.
-    #[inline]
-    pub fn render_with_value_fn<F>(&self, value_fn: F) -> Result<String>
-    where
-        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
-    {
-        Renderer::with_value_fn(self.engine, self.template, &value_fn)
-            .render()
-            .map_err(|e| e.with_template_name(self.name))
-    }
-
-    /// Render the template to a writer using the provided value function.
-    #[inline]
-    pub fn render_to_writer_with_value_fn<W, F>(&self, writer: W, value_fn: F) -> Result<()>
-    where
-        W: io::Write,
-        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String>,
-    {
-        Renderer::with_value_fn(self.engine, self.template, &value_fn)
-            .render_to_writer(writer)
-            .map_err(|e| e.with_template_name(self.name))
+        Renderer::with_value_fn(self.engine, self.template, Box::new(value_fn))
     }
 
     /// Returns the original template source.
     #[inline]
-    pub fn source(&self) -> &'engine str {
+    pub fn source(&self) -> &'render str {
         &self.template.source
     }
 }
