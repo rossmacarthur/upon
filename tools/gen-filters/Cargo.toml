@@ -5,5 +5,5 @@ edition = "2021"
 publish = false
 
 [dependencies]
-either = "1.6.1"
-itertools = "0.10.3"
+either = "1.9.0"
+itertools = "0.10.5"
