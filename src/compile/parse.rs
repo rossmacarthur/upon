@@ -573,7 +573,19 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse_access(&mut self) -> Result<ast::Access> {
         match self.parse()? {
             (Token::Index, span) => {
-                let value = self.source()[span].parse().unwrap();
+                let value = match self.source()[span].parse() {
+                    Ok(value) => value,
+                    Err(_) => {
+                        return Err(Error::syntax(
+                            format!(
+                                "base 10 literal out of range for unsigned {}-bit integer",
+                                usize::BITS
+                            ),
+                            self.source(),
+                            span,
+                        ));
+                    }
+                };
                 Ok(ast::Access::Index(ast::Index { value, span }))
             }
             (Token::Ident, span) => Ok(ast::Access::Key(ast::Ident { span })),

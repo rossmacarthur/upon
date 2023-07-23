@@ -167,6 +167,25 @@ fn compile_inline_expr_err_integer_invalid_digit() {
 }
 
 #[test]
+fn compile_inline_expr_err_index_overflow() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum.99999999999999999999 }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "base 10 literal out of range for unsigned 64-bit integer",
+        "
+  --> <anonymous>:1:16
+   |
+ 1 | lorem {{ ipsum.99999999999999999999 }}
+   |                ^^^^^^^^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    )
+}
+
+#[test]
 fn compile_inline_expr_err_integer_overflow() {
     let err = Engine::new()
         .compile("lorem {{ ipsum | dolor: 0xffffffffffffffff }}")
