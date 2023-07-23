@@ -6,7 +6,8 @@
 [![Docs.rs Latest](https://badgers.space/badge/docs.rs/latest/orange)](https://docs.rs/upon)
 [![Build Status](https://badgers.space/github/checks/rossmacarthur/upon?label=build)](https://github.com/rossmacarthur/upon/actions/workflows/build.yaml?query=branch%3Atrunk)
 
-A lightweight and powerful template engine for Rust.
+A simple, powerful template engine with minimal dependencies and
+configurable delimiters.
 
 ## Table of Contents
 
@@ -157,17 +158,18 @@ upon = { version = "...", default-features = false, features = ["serde"] }
 `upon` was benchmarked against several popular template rendering engines in the
 Rust ecosystem. Obviously, each of these engines has a completely different
 feature set so the benchmark just compares the performance of some of the
-features that they share. Handlebars is so slow that it is excluded from the
-compile violin plot.
+features that they share.
 
-- [handlebars](https://crates.io/crates/handlebars)
-- [liquid](https://crates.io/crates/liquid)
-- [minijinja](https://crates.io/crates/minijinja)
-- [tera](https://crates.io/crates/tera)
-- [tinytemplate](https://crates.io/crates/tinytemplate)
+- [handlebars](https://crates.io/crates/handlebars) v4.3.7
+- [liquid](https://crates.io/crates/liquid) v0.26.4
+- [minijinja](https://crates.io/crates/minijinja) v1.0.5
+- [tera](https://crates.io/crates/tera) v1.19.0
+- [tinytemplate](https://crates.io/crates/tinytemplate) v1.2.1
+- upon v0.7.0
 
 ![Violin plot of compile results](./benches/results/compile.svg)
 ![Violin plot of render results](./benches/results/render.svg)
+![Violin plot of render with filters results](./benches/results/filters.svg)
 
 Benchmarking was done using [criterion](https://crates.io/crates/criterion) on
 a quiet cloud machine.
@@ -177,8 +179,8 @@ a quiet cloud machine.
 - Vultr.com
 - 4 CPU
 - 8192 MB RAM
-- Ubuntu 20.04
-- Rust 1.64.0
+- Ubuntu 22.04
+- Rust 1.71.0
 
 ## License
 

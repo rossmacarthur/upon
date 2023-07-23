@@ -7,23 +7,23 @@ Average time (ms)
 </text>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="106,37 106,180 "/>
 <text x="97" y="166" dy="0.5ex" text-anchor="end" font-family="sans-serif" font-size="10" opacity="1" fill="#dd00ff">
-compile/upon
+upon
 </text>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="101,166 106,166 "/>
 <text x="97" y="138" dy="0.5ex" text-anchor="end" font-family="sans-serif" font-size="10" opacity="1" fill="#000000">
-compile/tinytemplate
+tinytemplate
 </text>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="101,138 106,138 "/>
 <text x="97" y="109" dy="0.5ex" text-anchor="end" font-family="sans-serif" font-size="10" opacity="1" fill="#000000">
-compile/tera
+tera
 </text>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="101,109 106,109 "/>
 <text x="97" y="80" dy="0.5ex" text-anchor="end" font-family="sans-serif" font-size="10" opacity="1" fill="#000000">
-compile/minijinja
+minijinja
 </text>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="101,80 106,80 "/>
 <text x="97" y="52" dy="0.5ex" text-anchor="end" font-family="sans-serif" font-size="10" opacity="1" fill="#000000">
-compile/liquid
+liquid
 </text>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="101,52 106,52 "/>
 <polyline fill="none" opacity="1" stroke="#000000" stroke-width="1" points="107,181 948,181 "/>

@@ -1,4 +1,5 @@
-//! A lightweight and powerful template engine for Rust.
+//! A simple, powerful template engine with minimal dependencies and
+//! configurable delimiters.
 //!
 //! # Overview
 //!
