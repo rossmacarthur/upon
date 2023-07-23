@@ -245,10 +245,6 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
     where
         S: serde::Serialize,
     {
-        self.get_template(name)
-            .unwrap()
-            .render(ctx)
-            .to_string()
-            .unwrap()
+        self.template(name).render(ctx).to_string().unwrap()
     }
 }

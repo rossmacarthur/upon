@@ -33,22 +33,27 @@ fn main() -> upon::Result<()> {
 "#,
     )?;
 
-    let t = engine.get_template("example").unwrap();
-
     println!(
         "# case 1\n{}",
-        t.render(upon::value! { user: { name: "" } }).to_string()?
+        engine
+            .template("example")
+            .render(upon::value! { user: { name: "" } })
+            .to_string()?
     );
 
     println!(
         "# case 2\n{}",
-        t.render(upon::value! { user: { name: "John Smith" } })
+        engine
+            .template("example")
+            .render(upon::value! { user: { name: "John Smith" } })
             .to_string()?
     );
 
     println!(
         "# case 3\n{}",
-        t.render(upon::value! { user: { name: "Jane Doe" } })
+        engine
+            .template("example")
+            .render(upon::value! { user: { name: "Jane Doe" } })
             .to_string()?
     );
 

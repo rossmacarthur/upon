@@ -4,11 +4,9 @@ fn main() -> upon::Result<()> {
     engine.add_template("header", include_str!("templates/header.html"))?;
     engine.add_template("footer", include_str!("templates/footer.html"))?;
 
-    // Fetch the template with name "index"
-    let template = engine.get_template("index").unwrap();
-
     // Render the template using the provided data
-    let output = template
+    let output = engine
+        .template("index")
         .render(upon::value! { title: "My Webpage!", year: 2022 })
         .to_string()?;
 

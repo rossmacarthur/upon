@@ -26,5 +26,5 @@ fuzz_target!(|data: (&str, Vec<(&str, &str)>, Value)| {
     for (name, data) in includes {
         let _ = engine.add_template(name, data);
     }
-    let _ = engine.get_template("fuzz").unwrap().render(value);
+    let _ = engine.template("fuzz").render(value);
 });

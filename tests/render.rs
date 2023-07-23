@@ -1035,8 +1035,7 @@ fn render_include_statement_err_maximum_depth() {
         .add_template("cycle", r#"{% include "cycle" %}"#)
         .unwrap();
     let err = engine
-        .get_template("cycle")
-        .unwrap()
+        .template("cycle")
         .render(Value::None)
         .to_string()
         .unwrap_err();

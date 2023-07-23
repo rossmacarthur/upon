@@ -394,6 +394,21 @@ impl<'engine> Engine<'engine> {
     }
 
     /// Lookup a template by name.
+    ///
+    /// # Panics
+    ///
+    /// If the template with the given name does not exist.
+    ///
+    #[inline]
+    #[track_caller]
+    pub fn template(&self, name: &str) -> TemplateRef<'_> {
+        match self.get_template(name) {
+            Some(template) => template,
+            None => panic!("template with name '{}' does not exist in engine", name),
+        }
+    }
+
+    /// Lookup a template by name, returning `None` if it does not exist.
     #[inline]
     pub fn get_template(&self, name: &str) -> Option<TemplateRef<'_>> {
         self.templates

@@ -41,8 +41,7 @@ fn engine_add_template_borrowed_source_non_static() -> upon::Result<()> {
     let source = String::from("{{ lorem }}");
     engine.add_template("test", &source)?;
     let result = engine
-        .get_template("test")
-        .unwrap()
+        .template("test")
         .render(value! { lorem: "ipsum" })
         .to_string()?;
     assert_eq!(result, "ipsum");
@@ -55,8 +54,7 @@ fn engine_add_template_owned_source() -> upon::Result<()> {
     let source = String::from("{{ lorem }}");
     engine.add_template("test", source)?;
     let result = engine
-        .get_template("test")
-        .unwrap()
+        .template("test")
         .render(value! { lorem: "ipsum" })
         .to_string()?;
     assert_eq!(result, "ipsum");

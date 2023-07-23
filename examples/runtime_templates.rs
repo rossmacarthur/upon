@@ -9,11 +9,9 @@ fn main() -> upon::Result<()> {
     let mut engine = upon::Engine::new();
     add_templates(&mut engine, &template_dir)?;
 
-    // Fetch the template with name "index"
-    let template = engine.get_template("index").unwrap();
-
     // Render the template using the provided data
-    let output = template
+    let output = engine
+        .template("index")
         .render(upon::value! { title: "My Webpage!", year: 2022 })
         .to_string()?;
 
