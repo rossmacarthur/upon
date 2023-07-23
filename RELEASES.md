@@ -1,22 +1,41 @@
-## 0.7.0
+# Releases
 
-*Unreleased*
+## 0.7.1
+
+*July 23rd, 2023*
 
 ### Features
 
-- [Redesign the render API.][51d011b] This improvement allows us to add more
+- [Add `.template(name)` function to engine][240edee8] This function is a
+  shorthand for `get_template` that panics if the template does not exist.
+
+### Fixes
+
+- [Fix integer overflow when parsing index access][e2ed68f4]
+
+[e2ed68f4]: https://github.com/rossmacarthur/upon/commit/e2ed68f4aa93ff0769d23acf690bd4edef48130a
+[240edee8]: https://github.com/rossmacarthur/upon/commit/240edee8592a2a6ff503013f66b325d889aec00b
+
+## 0.7.0
+
+*July 23rd, 2023*
+
+### Features
+
+- [Redesign the render API][51d011b] This improvement allows us to add more
   configuration to the rendering process in the future. It also prevents the
   need for a proliferation of rendering functions. The new public `Renderer`
   struct is created using one of the three functions: `render`, `render_from`,
   or `render_from_fn`. And then the renderer can be consumed using
   `.to_string()` or `.to_writer(..)`.
-- [Support `?.` optional chaining operator.][5f4f345]
-- [Allow values to be fetched lazily.][fb2a904] This allows you to provide
-  the global context from an outside source during rendering.
-- [Replace ValueCow::as_bool with truthiness function.][a4d3c59] This change
+- [Support `?.` optional chaining operator][5f4f345]
+- [Allow values to be fetched lazily][fb2a904] This allows you to provide the
+  global context from an outside source during rendering.
+- [Replace ValueCow::as_bool with truthiness function][a4d3c59] This change
   implements a truthiness function for evaluating conditionals. `None`, `false`,
   `0` integer and `0.0` float, empty string, list, and map as falsy. Everything
   else is truthy.
+
   *Contributed by [**@lunabunn**](https://github.com/lunabunn)*
 
 [51d011b]: https://github.com/rossmacarthur/upon/commit/51d011b49e70817e9cf2c42b907a0661bd65700b
