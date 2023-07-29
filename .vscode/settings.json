@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.server.extraEnv": {
+        "RUSTFLAGS": "--cfg internal_debug"
+    },
+}
