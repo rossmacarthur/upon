@@ -57,24 +57,22 @@ where
 /// - [`Template{,Ref}::render`][crate::Template::render]
 /// - [`Template{,Ref}::render_from`][crate::Template::render_from]
 /// - [`Template{,Ref}::render_from_fn`][crate::Template::render_from_fn]
-#[cfg(feature = "serde")]
 #[must_use = "must call `.to_string()` or `.to_writer(..)` on the renderer"]
-pub struct Renderer<'render, S = ()> {
+pub struct Renderer<'render> {
     engine: &'render Engine<'render>,
     template: &'render Template<'render>,
-    globals: Globals<'render, S>,
+    globals: Globals<'render>,
 }
 
-#[cfg(feature = "serde")]
-enum Globals<'render, S = ()> {
-    Serde(S),
+enum Globals<'render> {
+    Owned(Result<Value>),
     Borrowed(&'render Value),
     Fn(Box<ValueFn<'render>>),
 }
 
-#[cfg(feature = "serde")]
-impl<'render, S> Renderer<'render, S> {
-    pub(crate) fn with_serde(
+impl<'render> Renderer<'render> {
+    #[cfg(feature = "serde")]
+    pub(crate) fn with_serde<S>(
         engine: &'render Engine<'render>,
         template: &'render Template<'render>,
         globals: S,
@@ -85,102 +83,10 @@ impl<'render, S> Renderer<'render, S> {
         Self {
             engine,
             template,
-            globals: Globals::Serde(globals),
+            globals: Globals::Owned(crate::to_value(globals)),
         }
     }
 
-    pub(crate) fn with_value(
-        engine: &'render Engine<'render>,
-        template: &'render Template<'render>,
-        globals: &'render Value,
-    ) -> Self {
-        Self {
-            engine,
-            template,
-            globals: Globals::Borrowed(globals),
-        }
-    }
-
-    pub(crate) fn with_value_fn(
-        engine: &'render Engine<'render>,
-        template: &'render Template<'render>,
-        value_fn: Box<ValueFn<'render>>,
-    ) -> Self {
-        Self {
-            engine,
-            template,
-            globals: Globals::Fn(value_fn),
-        }
-    }
-
-    /// Render the template to a string.
-    pub fn to_string(self) -> Result<String>
-    where
-        S: ::serde::Serialize,
-    {
-        match self.globals {
-            Globals::Serde(ctx) => {
-                let value = crate::to_value(ctx)?;
-                let stack = Stack::new(&value);
-                to_string(self.engine, self.template, stack)
-            }
-            Globals::Borrowed(value) => {
-                let stack = Stack::new(value);
-                to_string(self.engine, self.template, stack)
-            }
-            Globals::Fn(value_fn) => {
-                let stack = Stack::with_value_fn(&value_fn);
-                to_string(self.engine, self.template, stack)
-            }
-        }
-    }
-
-    /// Render the template to the given writer.
-    pub fn to_writer<W>(self, w: W) -> Result<()>
-    where
-        W: io::Write,
-        S: ::serde::Serialize,
-    {
-        match self.globals {
-            Globals::Serde(ctx) => {
-                let value = crate::to_value(ctx)?;
-                let stack = Stack::new(&value);
-                to_writer(self.engine, self.template, stack, w)
-            }
-            Globals::Borrowed(value) => {
-                let stack = Stack::new(value);
-                to_writer(self.engine, self.template, stack, w)
-            }
-            Globals::Fn(value_fn) => {
-                let stack = Stack::with_value_fn(&value_fn);
-                to_writer(self.engine, self.template, stack, w)
-            }
-        }
-    }
-}
-
-/// A renderer that interprets a compiled [`Template`][crate::Template].
-///
-/// This struct is created by one of the following functions:
-/// - [`Template{,Ref}::render`][crate::Template::render]
-/// - [`Template{,Ref}::render_from`][crate::Template::render_from]
-/// - [`Template{,Ref}::render_from_fn`][crate::Template::render_from_fn]
-#[cfg(not(feature = "serde"))]
-#[must_use = "must call `.to_string()` or `.to_writer(..)` on the renderer"]
-pub struct Renderer<'render> {
-    engine: &'render Engine<'render>,
-    template: &'render Template<'render>,
-    globals: Globals<'render>,
-}
-
-#[cfg(not(feature = "serde"))]
-enum Globals<'render> {
-    Borrowed(&'render Value),
-    Fn(Box<ValueFn<'render>>),
-}
-
-#[cfg(not(feature = "serde"))]
-impl<'render> Renderer<'render> {
     pub(crate) fn with_value(
         engine: &'render Engine<'render>,
         template: &'render Template<'render>,
@@ -208,6 +114,11 @@ impl<'render> Renderer<'render> {
     /// Render the template to a string.
     pub fn to_string(self) -> Result<String> {
         match self.globals {
+            Globals::Owned(result) => {
+                let value = result?;
+                let stack = Stack::new(&value);
+                to_string(self.engine, self.template, stack)
+            }
             Globals::Borrowed(value) => {
                 let stack = Stack::new(value);
                 to_string(self.engine, self.template, stack)
@@ -225,6 +136,11 @@ impl<'render> Renderer<'render> {
         W: io::Write,
     {
         match self.globals {
+            Globals::Owned(result) => {
+                let value = result?;
+                let stack = Stack::new(&value);
+                to_writer(self.engine, self.template, stack, w)
+            }
             Globals::Borrowed(value) => {
                 let stack = Stack::new(value);
                 to_writer(self.engine, self.template, stack, w)

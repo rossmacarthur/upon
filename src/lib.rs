@@ -486,7 +486,7 @@ impl<'render> Template<'render, 'render> {
     #[cfg(feature = "serde")]
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
-    pub fn render<S>(&self, ctx: S) -> Renderer<'_, S>
+    pub fn render<S>(&self, ctx: S) -> Renderer<'_>
     where
         S: serde::Serialize,
     {
@@ -541,7 +541,7 @@ impl<'render> TemplateRef<'render> {
     #[cfg(feature = "serde")]
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
-    pub fn render<S>(&self, ctx: S) -> Renderer<'_, S>
+    pub fn render<S>(&self, ctx: S) -> Renderer<'_>
     where
         S: serde::Serialize,
     {
