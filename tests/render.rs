@@ -1029,7 +1029,7 @@ fn render_include_statement_err_unknown_template() {
 }
 
 #[test]
-fn render_include_statement_err_maximum_depth() {
+fn render_include_statement_err_max_include_depth() {
     let mut engine = Engine::new();
     engine
         .add_template("cycle", r#"{% include "cycle" %}"#)
@@ -1042,6 +1042,25 @@ fn render_include_statement_err_maximum_depth() {
     assert_eq!(
         err.to_string(),
         "render error: reached maximum include depth (64)"
+    );
+}
+
+#[test]
+fn render_include_statement_err_max_include_depth_renderer() {
+    let mut engine = Engine::new();
+    engine.set_max_include_depth(128);
+    engine
+        .add_template("cycle", r#"{% include "cycle" %}"#)
+        .unwrap();
+    let err = engine
+        .template("cycle")
+        .render(Value::None)
+        .with_max_include_depth(4)
+        .to_string()
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "render error: reached maximum include depth (4)"
     );
 }
 

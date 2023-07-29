@@ -19,6 +19,7 @@ fn to_string<'a>(
     engine: &'a Engine<'a>,
     template: &'a Template<'a>,
     stack: Stack<'a>,
+    settings: &RenderSettings,
 ) -> Result<String> {
     let mut s = String::with_capacity(template.source.len());
     let mut f = Formatter::with_string(&mut s);
@@ -27,7 +28,7 @@ fn to_string<'a>(
         template,
         stack,
     }
-    .render(&mut f)?;
+    .render(&mut f, settings)?;
     Ok(s)
 }
 
@@ -36,6 +37,7 @@ fn to_writer<'a, W>(
     template: &'a Template<'a>,
     stack: Stack<'a>,
     writer: W,
+    settings: &RenderSettings,
 ) -> Result<()>
 where
     W: io::Write,
@@ -47,7 +49,7 @@ where
         template,
         stack,
     }
-    .render(&mut f)
+    .render(&mut f, settings)
     .map_err(|err| w.take_err().map(Error::from).unwrap_or(err))
 }
 
@@ -62,6 +64,7 @@ pub struct Renderer<'render> {
     engine: &'render Engine<'render>,
     template: &'render Template<'render>,
     globals: Globals<'render>,
+    max_include_depth: Option<usize>,
 }
 
 enum Globals<'render> {
@@ -70,7 +73,24 @@ enum Globals<'render> {
     Fn(Box<ValueFn<'render>>),
 }
 
+pub(crate) struct RenderSettings {
+    max_include_depth: usize,
+}
+
 impl<'render> Renderer<'render> {
+    fn new(
+        engine: &'render Engine<'render>,
+        template: &'render Template<'render>,
+        globals: Globals<'render>,
+    ) -> Self {
+        Self {
+            engine,
+            template,
+            globals,
+            max_include_depth: None,
+        }
+    }
+
     #[cfg(feature = "serde")]
     pub(crate) fn with_serde<S>(
         engine: &'render Engine<'render>,
@@ -80,11 +100,7 @@ impl<'render> Renderer<'render> {
     where
         S: ::serde::Serialize,
     {
-        Self {
-            engine,
-            template,
-            globals: Globals::Owned(crate::to_value(globals)),
-        }
+        Self::new(engine, template, Globals::Owned(crate::to_value(globals)))
     }
 
     pub(crate) fn with_value(
@@ -92,11 +108,7 @@ impl<'render> Renderer<'render> {
         template: &'render Template<'render>,
         globals: &'render Value,
     ) -> Self {
-        Self {
-            engine,
-            template,
-            globals: Globals::Borrowed(globals),
-        }
+        Self::new(engine, template, Globals::Borrowed(globals))
     }
 
     pub(crate) fn with_value_fn(
@@ -104,28 +116,36 @@ impl<'render> Renderer<'render> {
         template: &'render Template<'render>,
         value_fn: Box<ValueFn<'render>>,
     ) -> Self {
-        Self {
-            engine,
-            template,
-            globals: Globals::Fn(value_fn),
-        }
+        Self::new(engine, template, Globals::Fn(value_fn))
+    }
+
+    /// Set the maximum length of the template render stack.
+    ///
+    /// This is the maximum number of nested `{% include ... %}` statements that
+    /// are allowed during rendering, as counted from the root template.
+    ///
+    /// Defaults to the engine setting.
+    pub fn with_max_include_depth(mut self, depth: usize) -> Self {
+        self.max_include_depth = Some(depth);
+        self
     }
 
     /// Render the template to a string.
     pub fn to_string(self) -> Result<String> {
+        let settings = get_settings(&self);
         match self.globals {
             Globals::Owned(result) => {
                 let value = result?;
                 let stack = Stack::new(&value);
-                to_string(self.engine, self.template, stack)
+                to_string(self.engine, self.template, stack, &settings)
             }
             Globals::Borrowed(value) => {
                 let stack = Stack::new(value);
-                to_string(self.engine, self.template, stack)
+                to_string(self.engine, self.template, stack, &settings)
             }
             Globals::Fn(value_fn) => {
                 let stack = Stack::with_value_fn(&value_fn);
-                to_string(self.engine, self.template, stack)
+                to_string(self.engine, self.template, stack, &settings)
             }
         }
     }
@@ -135,20 +155,29 @@ impl<'render> Renderer<'render> {
     where
         W: io::Write,
     {
+        let settings = get_settings(&self);
         match self.globals {
             Globals::Owned(result) => {
                 let value = result?;
                 let stack = Stack::new(&value);
-                to_writer(self.engine, self.template, stack, w)
+                to_writer(self.engine, self.template, stack, w, &settings)
             }
             Globals::Borrowed(value) => {
                 let stack = Stack::new(value);
-                to_writer(self.engine, self.template, stack, w)
+                to_writer(self.engine, self.template, stack, w, &settings)
             }
             Globals::Fn(value_fn) => {
                 let stack = Stack::with_value_fn(&value_fn);
-                to_writer(self.engine, self.template, stack, w)
+                to_writer(self.engine, self.template, stack, w, &settings)
             }
         }
+    }
+}
+
+fn get_settings(renderer: &Renderer) -> RenderSettings {
+    RenderSettings {
+        max_include_depth: renderer
+            .max_include_depth
+            .unwrap_or(renderer.engine.max_include_depth),
     }
 }

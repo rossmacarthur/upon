@@ -3,6 +3,7 @@ use std::fmt::Write;
 use crate::fmt::Formatter;
 use crate::render::iter::LoopState;
 use crate::render::stack::{Stack, State};
+use crate::render::RenderSettings;
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
 use crate::value::ValueCow;
@@ -39,7 +40,7 @@ enum RenderState<'a> {
 }
 
 impl<'a> RendererImpl<'a> {
-    pub fn render(mut self, f: &mut Formatter<'_>) -> Result<()> {
+    pub(crate) fn render(mut self, f: &mut Formatter<'_>, settings: &RenderSettings) -> Result<()> {
         let mut templates = vec![(self.template, 0, false)];
 
         while let Some((t, pc, has_scope)) = templates.last_mut() {
@@ -60,8 +61,8 @@ impl<'a> RendererImpl<'a> {
                     templates.push((template, 0, true));
                 }
             }
-            if templates.len() > self.engine.max_include_depth {
-                return Err(Error::max_include_depth(self.engine.max_include_depth));
+            if templates.len() > settings.max_include_depth {
+                return Err(Error::max_include_depth(settings.max_include_depth));
             }
         }
 
