@@ -1,7 +1,9 @@
 fn main() -> upon::Result<()> {
-    let out = upon::Engine::new()
+    let engine = upon::Engine::new();
+
+    let out = engine
         .compile("Hello {{ name }}!")?
-        .render(upon::value! { name: "World" })
+        .render(&engine, upon::value! { name: "World" })
         .to_string()?;
 
     println!("{out}");

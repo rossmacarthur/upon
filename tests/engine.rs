@@ -16,7 +16,7 @@ fn engine_send_and_sync() {
         let result = engine
             .compile("{{ lorem }}")
             .unwrap()
-            .render(value! { lorem: "ipsum" })
+            .render(&engine, value! { lorem: "ipsum" })
             .to_string()
             .unwrap();
         assert_eq!(result, "ipsum");
@@ -29,7 +29,7 @@ fn engine_compile_borrowed_source_non_static() -> upon::Result<()> {
     let source = String::from("{{ lorem }}");
     let result = engine
         .compile(&source)?
-        .render(value! { lorem: "ipsum" })
+        .render(&engine, value! { lorem: "ipsum" })
         .to_string()?;
     assert_eq!(result, "ipsum");
     Ok(())

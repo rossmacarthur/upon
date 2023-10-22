@@ -12,7 +12,7 @@ fn render_filter_arity_1() {
     let result = engine
         .compile("{{ name | lower }}")
         .unwrap()
-        .render(value! { name: "JOHN" })
+        .render(&engine, value! { name: "JOHN" })
         .to_string()
         .unwrap();
     assert_eq!(result, "john");
@@ -28,7 +28,7 @@ fn render_filter_arity_2() {
     let result = engine
         .compile(r#"{{ name | append: " Smith" }}"#)
         .unwrap()
-        .render(value! { name: "John" })
+        .render(&engine, value! { name: "John" })
         .to_string()
         .unwrap();
     assert_eq!(result, "John Smith");
@@ -43,7 +43,7 @@ fn render_filter_arity_3() {
     let result = engine
         .compile(r#"{{ name | replace: "Smith", "Newton" }}"#)
         .unwrap()
-        .render(value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap();
     assert_eq!(result, "John Newton");
@@ -64,7 +64,7 @@ fn render_filter_arity_4() {
     let result = engine
         .compile(r#"{{ name | append: " Smith", "!", "!" }}"#)
         .unwrap()
-        .render(value! { name: "John" })
+        .render(&engine, value! { name: "John" })
         .to_string()
         .unwrap();
     assert_eq!(result, "John Smith!!");
@@ -86,7 +86,7 @@ fn render_filter_arity_5() {
     let result = engine
         .compile(r#"{{ name | append: " Smith", "!", "!", "!" }}"#)
         .unwrap()
-        .render(value! { name: "John" })
+        .render(&engine, value! { name: "John" })
         .to_string()
         .unwrap();
     assert_eq!(result, "John Smith!!!");
@@ -179,7 +179,7 @@ fn render_filter_err_expected_0_args() {
     let err = engine
         .compile("{{ name | test: 123 }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -203,7 +203,7 @@ fn render_filter_err_expected_n_args() {
     let err = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -227,7 +227,7 @@ fn render_filter_borrowed_value_str() {
     let result = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap();
     assert_eq!(result, "John Smith");
@@ -240,7 +240,7 @@ fn render_filter_borrowed_value_list() {
     let result = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: ["John", "Smith"] })
+        .render(&engine, value! { name: ["John", "Smith"] })
         .to_string()
         .unwrap();
     assert_eq!(result, "John");
@@ -253,7 +253,7 @@ fn render_filter_borrowed_value_map() {
     let result = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: { john: "Smith" } })
+        .render(&engine, value! { name: { john: "Smith" } })
         .to_string()
         .unwrap();
     assert_eq!(result, "Smith");
@@ -266,7 +266,7 @@ fn render_filter_borrowed_value_value() {
     let result = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap();
     assert_eq!(result, "John Smith");
@@ -282,7 +282,7 @@ fn render_filter_borrowed_arg_str() {
     let result = engine
         .compile("{{ user.name | concat: user.surname }}")
         .unwrap()
-        .render(upon::value! { user: { name: "John", surname: "Smith" }})
+        .render(&engine, value! { user: { name: "John", surname: "Smith" }})
         .to_string()
         .unwrap();
     assert_eq!(result, "JohnSmith");
@@ -295,7 +295,7 @@ fn render_filter_err_expected_value_type() {
     let err = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -319,7 +319,7 @@ fn render_filter_err_expected_arg_type() {
     let err = engine
         .compile("{{ name | test: 123 }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, value! { name: "John Smith" })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -343,7 +343,7 @@ fn render_filter_err_expected_value_try_from_int() {
     let err = engine
         .compile("{{ age | add: 3 }}")
         .unwrap()
-        .render(upon::value! { age: 128 })
+        .render(&engine, value! { age: 128 })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -372,10 +372,13 @@ fn render_filter_err_expected_arg_reference() {
              {% endfor %}",
         )
         .unwrap()
-        .render(upon::value! {
-            names: ["John", "James", "Jimothy"],
-            surname: "Smith"
-        })
+        .render(
+            &engine,
+            value! {
+                names: ["John", "James", "Jimothy"],
+                surname: "Smith"
+            },
+        )
         .to_string()
         .unwrap_err();
     assert_err(
@@ -399,7 +402,7 @@ fn render_filter_err_expected_arg_try_from_int() {
     let err = engine
         .compile("{{ name | repeat: 128 }}")
         .unwrap()
-        .render(upon::value! { name: "John" })
+        .render(&engine, value! { name: "John" })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -423,7 +426,7 @@ fn render_filter_err_custom() {
     let err = engine
         .compile("{{ name | test }}")
         .unwrap()
-        .render(upon::value! { name: "John Smith" })
+        .render(&engine, upon::value! { name: "John Smith" })
         .to_string()
         .unwrap_err();
     assert_filter_err(

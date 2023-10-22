@@ -91,8 +91,8 @@ impl Error {
     }
 
     /// Attaches a template name to the error, if it is not already set.
-    pub(crate) fn with_template_name(mut self, name: &str) -> Self {
-        self.name.get_or_insert(name.into());
+    pub(crate) fn with_template_name(mut self, name: String) -> Self {
+        self.name.get_or_insert(name);
         self
     }
 

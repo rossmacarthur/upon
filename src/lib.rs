@@ -97,7 +97,7 @@
 //! ```
 //! # let engine = upon::Engine::new();
 //! let template = engine.compile("Hello {{ user.name }}!")?;
-//! let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
+//! let result = template.render(&engine, upon::value!{ user: { name: "John Smith" }}).to_string()?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -240,8 +240,12 @@ pub enum ValueAccessOp {
 }
 
 /// A compiled template created using [`Engine::compile`].
-pub struct Template<'engine, 'source> {
-    engine: &'engine Engine<'engine>,
+///
+/// For convenience this struct's lifetime is not tied to the lifetime of the
+/// engine. However, it is considered a logic error to attempt to render this
+/// template using a different engine than the one that created it. If that
+/// happens the render call may panic or produce incorrect output.
+pub struct Template<'source> {
     template: program::Template<'source>,
 }
 
@@ -386,11 +390,13 @@ impl<'engine> Engine<'engine> {
         N: Into<Cow<'engine, str>>,
         S: Into<Cow<'engine, str>>,
     {
-        let name = name.into();
-        let source = source.into();
-        let template = compile::template(self, source).map_err(|e| e.with_template_name(&name))?;
-        self.templates.insert(name, template);
-        Ok(())
+        match compile::template(self, source.into()) {
+            Ok(template) => {
+                self.templates.insert(name.into(), template);
+                Ok(())
+            }
+            Err(err) => Err(err.with_template_name(name.into().into())),
+        }
     }
 
     /// Lookup a template by name.
@@ -435,12 +441,12 @@ impl<'engine> Engine<'engine> {
     /// [`.add_template(..)`][Engine::add_template] here is that if the template
     /// source is borrowed, it does not need to outlive the engine.
     #[inline]
-    pub fn compile<'source>(&self, source: &'source str) -> Result<Template<'_, 'source>> {
-        let template = compile::template(self, Cow::Borrowed(source))?;
-        Ok(Template {
-            engine: self,
-            template,
-        })
+    pub fn compile<'source, S>(&self, source: S) -> Result<Template<'source>>
+    where
+        S: Into<Cow<'source, str>>,
+    {
+        let template = compile::template(self, source.into())?;
+        Ok(Template { template })
     }
 }
 
@@ -477,7 +483,7 @@ impl std::fmt::Debug for EngineBoxFn {
     }
 }
 
-impl<'render> Template<'render, 'render> {
+impl<'render> Template<'render> {
     /// Render the template using the provided [`serde`] value.
     ///
     /// The returned struct must be consumed using
@@ -486,11 +492,11 @@ impl<'render> Template<'render, 'render> {
     #[cfg(feature = "serde")]
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     #[inline]
-    pub fn render<S>(&self, ctx: S) -> Renderer<'_>
+    pub fn render<S>(&self, engine: &'render Engine<'render>, ctx: S) -> Renderer<'_>
     where
         S: serde::Serialize,
     {
-        Renderer::with_serde(self.engine, &self.template, ctx)
+        Renderer::with_serde(engine, &self.template, None, ctx)
     }
 
     /// Render the template using the provided value.
@@ -499,8 +505,12 @@ impl<'render> Template<'render, 'render> {
     /// [`.to_string()`][crate::Renderer::to_string] or
     /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
-    pub fn render_from(&self, ctx: &'render Value) -> Renderer<'_> {
-        Renderer::with_value(self.engine, &self.template, ctx)
+    pub fn render_from(
+        &self,
+        engine: &'render Engine<'render>,
+        ctx: &'render Value,
+    ) -> Renderer<'_> {
+        Renderer::with_value(engine, &self.template, None, ctx)
     }
 
     /// Render the using the provided value function.
@@ -509,11 +519,11 @@ impl<'render> Template<'render, 'render> {
     /// [`.to_string()`][crate::Renderer::to_string] or
     /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
-    pub fn render_from_fn<F>(&self, value_fn: F) -> Renderer<'_>
+    pub fn render_from_fn<F>(&self, engine: &'render Engine<'render>, value_fn: F) -> Renderer<'_>
     where
         F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
     {
-        Renderer::with_value_fn(self.engine, &self.template, Box::new(value_fn))
+        Renderer::with_value_fn(engine, &self.template, None, Box::new(value_fn))
     }
 
     /// Returns the original template source.
@@ -523,7 +533,7 @@ impl<'render> Template<'render, 'render> {
     }
 }
 
-impl std::fmt::Debug for Template<'_, '_> {
+impl std::fmt::Debug for Template<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Template")
             .field("engine", &(..))
@@ -545,7 +555,7 @@ impl<'render> TemplateRef<'render> {
     where
         S: serde::Serialize,
     {
-        Renderer::with_serde(self.engine, self.template, ctx)
+        Renderer::with_serde(self.engine, self.template, Some(self.name), ctx)
     }
 
     /// Render the template using the provided value.
@@ -555,7 +565,7 @@ impl<'render> TemplateRef<'render> {
     /// [`.to_writer(..)`][crate::Renderer::to_writer].
     #[inline]
     pub fn render_from(&self, ctx: &'render Value) -> Renderer<'render> {
-        Renderer::with_value(self.engine, self.template, ctx)
+        Renderer::with_value(self.engine, self.template, Some(self.name), ctx)
     }
 
     /// Render the using the provided value function.
@@ -568,7 +578,12 @@ impl<'render> TemplateRef<'render> {
     where
         F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
     {
-        Renderer::with_value_fn(self.engine, self.template, Box::new(value_fn))
+        Renderer::with_value_fn(
+            self.engine,
+            self.template,
+            Some(self.name),
+            Box::new(value_fn),
+        )
     }
 
     /// Returns the original template source.

@@ -3,11 +3,13 @@ use std::io;
 fn main() -> upon::Result<()> {
     let mut stdout = io::BufWriter::new(io::stdout());
 
+    let engine = upon::Engine::new();
+
     let ctx = upon::value! { user: { name: "John Smith" } };
 
-    upon::Engine::new()
+    engine
         .compile("Hello {{ user.name }}!\n")?
-        .render(ctx)
+        .render(&engine, ctx)
         .to_writer(&mut stdout)?;
 
     Ok(())

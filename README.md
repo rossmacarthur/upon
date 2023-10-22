@@ -106,7 +106,7 @@ or you don’t need to store the compiled template then you can also use the
 
 ```rust
 let template = engine.compile("Hello {{ user.name }}!")?;
-let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
+let result = template.render(&engine, upon::value!{ user: { name: "John Smith" }}).to_string()?;
 assert_eq!(result, "Hello John Smith!");
 ```
 

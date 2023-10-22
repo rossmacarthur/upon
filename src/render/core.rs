@@ -3,18 +3,17 @@ use std::fmt::Write;
 use crate::fmt::Formatter;
 use crate::render::iter::LoopState;
 use crate::render::stack::{Stack, State};
-use crate::render::RenderSettings;
+use crate::render::RendererInner;
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
 use crate::value::ValueCow;
-use crate::{Engine, EngineBoxFn, Error, Result};
+use crate::{EngineBoxFn, Error, Result};
 
 /// A renderer that interprets a compiled [`Template`].
 #[cfg_attr(internal_debug, derive(Debug))]
-pub struct RendererImpl<'a> {
-    pub engine: &'a Engine<'a>,
-    pub template: &'a Template<'a>,
-    pub stack: Stack<'a>,
+pub struct RendererImpl<'render, 'stack> {
+    pub(crate) inner: RendererInner<'render>,
+    pub(crate) stack: Stack<'stack>,
 }
 
 #[cfg(feature = "filters")]
@@ -28,23 +27,35 @@ pub struct FilterState<'a> {
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
-enum RenderState<'a> {
+enum RenderState<'render, 'stack> {
     Done,
     Include {
-        template: &'a Template<'a>,
+        template_name: &'render ast::String,
     },
     IncludeWith {
-        template: &'a Template<'a>,
-        globals: ValueCow<'a>,
+        template_name: &'render ast::String,
+        globals: ValueCow<'stack>,
     },
 }
 
-impl<'a> RendererImpl<'a> {
-    pub(crate) fn render(mut self, f: &mut Formatter<'_>, settings: &RenderSettings) -> Result<()> {
-        let mut templates = vec![(self.template, 0, false)];
+impl<'render, 'stack> RendererImpl<'render, 'stack>
+where
+    'render: 'stack,
+{
+    pub(crate) fn render(mut self, f: &mut Formatter<'_>) -> Result<()> {
+        let mut templates = vec![(self.inner.template, self.inner.template_name, 0, false)];
 
-        while let Some((t, pc, has_scope)) = templates.last_mut() {
-            match self.render_one(f, t, pc)? {
+        let max_include_depth = self
+            .inner
+            .max_include_depth
+            .unwrap_or(self.inner.engine.max_include_depth);
+
+        while let Some((t, tname, pc, has_scope)) = templates.last_mut() {
+            let state = self.render_one(f, t, pc).map_err(|e| match tname {
+                Some(s) => e.with_template_name(s.to_owned()),
+                None => e,
+            })?;
+            match state {
                 RenderState::Done => {
                     if *has_scope {
                         self.stack.pop_scope();
@@ -52,17 +63,32 @@ impl<'a> RendererImpl<'a> {
                     }
                     templates.pop();
                 }
-                RenderState::Include { template } => {
-                    templates.push((template, 0, false));
+                RenderState::Include { template_name } => {
+                    let template =
+                        self.get_template(&t.source, template_name)
+                            .map_err(|e| match tname {
+                                Some(s) => e.with_template_name(s.to_owned()),
+                                None => e,
+                            })?;
+                    templates.push((template, Some(template_name.as_str()), 0, false));
                 }
-                RenderState::IncludeWith { template, globals } => {
+                RenderState::IncludeWith {
+                    template_name,
+                    globals,
+                } => {
+                    let template =
+                        self.get_template(&t.source, template_name)
+                            .map_err(|e| match tname {
+                                Some(s) => e.with_template_name(s.to_owned()),
+                                None => e,
+                            })?;
                     self.stack.push(State::Boundary);
                     self.stack.push(State::Scope(globals));
-                    templates.push((template, 0, true));
+                    templates.push((template, Some(template_name.as_str()), 0, true));
                 }
             }
-            if templates.len() > settings.max_include_depth {
-                return Err(Error::max_include_depth(settings.max_include_depth));
+            if templates.len() > max_include_depth {
+                return Err(Error::max_include_depth(max_include_depth));
             }
         }
 
@@ -72,11 +98,11 @@ impl<'a> RendererImpl<'a> {
     fn render_one(
         &mut self,
         f: &mut Formatter<'_>,
-        t: &'a Template<'a>,
+        t: &'render Template<'render>,
         pc: &mut usize,
-    ) -> Result<RenderState<'a>> {
+    ) -> Result<RenderState<'render, 'stack>> {
         // An expression that we are building
-        let mut expr: Option<ValueCow<'a>> = None;
+        let mut expr: Option<ValueCow<'stack>> = None;
 
         while let Some(instr) = t.instrs.get(*pc) {
             match instr {
@@ -101,7 +127,7 @@ impl<'a> RendererImpl<'a> {
 
                 Instr::Emit(span) => {
                     let value = expr.take().unwrap();
-                    (self.engine.default_formatter)(f, &value)
+                    (self.inner.engine.default_formatter)(f, &value)
                         .map_err(|err| Error::format(err, &t.source, *span))?;
                 }
 
@@ -114,7 +140,7 @@ impl<'a> RendererImpl<'a> {
 
                 Instr::EmitWith(name, _span) => {
                     let name_raw = &t.source[name.span];
-                    match self.engine.functions.get(name_raw) {
+                    match self.inner.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply
                         // it and then emit the value using the default
                         // formatter.
@@ -129,7 +155,7 @@ impl<'a> RendererImpl<'a> {
                                 args: &[],
                             })
                             .map_err(|err| err.enrich(&t.source, name.span))?;
-                            (self.engine.default_formatter)(f, &result)
+                            (self.inner.engine.default_formatter)(f, &result)
                                 .map_err(|err| Error::format(err, &t.source, *_span))?;
                         }
                         // The referenced function is a formatter so we simply
@@ -174,17 +200,18 @@ impl<'a> RendererImpl<'a> {
                     self.stack.pop_var();
                 }
 
-                Instr::Include(name) => {
+                Instr::Include(template_name) => {
                     *pc += 1;
-                    let template = self.get_template(&t.source, name)?;
-                    return Ok(RenderState::Include { template });
+                    return Ok(RenderState::Include { template_name });
                 }
 
-                Instr::IncludeWith(name) => {
+                Instr::IncludeWith(template_name) => {
                     *pc += 1;
-                    let template = self.get_template(&t.source, name)?;
                     let globals = expr.take().unwrap();
-                    return Ok(RenderState::IncludeWith { template, globals });
+                    return Ok(RenderState::IncludeWith {
+                        template_name,
+                        globals,
+                    });
                 }
 
                 Instr::ExprStart(var) => {
@@ -200,7 +227,7 @@ impl<'a> RendererImpl<'a> {
 
                 Instr::Apply(name, _, _args) => {
                     let name_raw = &t.source[name.span];
-                    match self.engine.functions.get(name_raw) {
+                    match self.inner.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.
                         #[cfg(feature = "filters")]
                         Some(EngineBoxFn::Filter(filter)) => {
@@ -242,10 +269,21 @@ impl<'a> RendererImpl<'a> {
         Ok(RenderState::Done)
     }
 
-    fn get_template(&self, source: &str, name: &ast::String) -> Result<&'a Template<'a>> {
-        self.engine
-            .templates
-            .get(name.name.as_str())
-            .ok_or_else(|| Error::render("unknown template", source, name.span))
+    fn get_template(
+        &mut self,
+        source: &str,
+        name: &ast::String,
+    ) -> Result<&'render Template<'render>> {
+        if let Some(template_fn) = &mut self.inner.template_fn {
+            template_fn(name.as_str())
+                .map(|t| &t.template)
+                .map_err(|e| Error::render(e, source, name.span))
+        } else {
+            self.inner
+                .engine
+                .templates
+                .get(name.as_str())
+                .ok_or_else(|| Error::render("unknown template", source, name.span))
+        }
     }
 }

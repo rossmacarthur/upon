@@ -5,7 +5,9 @@ fn main() -> upon::Result<()> {
         // .comment("<#", "#>") // excluding a delimiter essentially disables it
         .build();
 
-    let out = upon::Engine::with_syntax(syntax)
+    let engine = upon::Engine::with_syntax(syntax);
+
+    let out = engine
         .compile(
             "
 <%- if user.is_enabled %>
@@ -15,12 +17,15 @@ Hello <? user.name ?>!
 <% endif -%>
 ",
         )?
-        .render(upon::value! {
-            user: {
-                is_enabled: true,
-                name: "John Smith",
-            }
-        })
+        .render(
+            &engine,
+            upon::value! {
+                user: {
+                    is_enabled: true,
+                    name: "John Smith",
+                }
+            },
+        )
         .to_string()?;
 
     println!("{out}");

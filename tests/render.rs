@@ -14,10 +14,11 @@ use crate::helpers::Writer;
 
 #[test]
 fn render_comment() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {#- ipsum #} dolor")
         .unwrap()
-        .render(Value::None)
+        .render(&engine, Value::None)
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem dolor");
@@ -37,7 +38,7 @@ fn render_inline_expr_primitive() {
     let engine = Engine::new();
     let template = engine.compile("lorem {{ ipsum }}").unwrap();
     for (value, exp) in tests {
-        let result = template.render(value).to_string().unwrap();
+        let result = template.render(&engine, value).to_string().unwrap();
         assert_eq!(result, *exp);
     }
 }
@@ -74,7 +75,7 @@ fn render_inline_expr_literal_roundtrip() {
         let result = engine
             .compile(&format!("{{{{ {arg} }}}}"))
             .unwrap()
-            .render(Value::None)
+            .render(&engine, Value::None)
             .to_string()
             .unwrap();
         assert_eq!(result, *exp);
@@ -83,10 +84,11 @@ fn render_inline_expr_literal_roundtrip() {
 
 #[test]
 fn render_inline_expr_literal_string() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile(r#"lorem {{ "test" }}"#)
         .unwrap()
-        .render(Value::None)
+        .render(&engine, Value::None)
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
@@ -94,10 +96,11 @@ fn render_inline_expr_literal_string() {
 
 #[test]
 fn render_inline_expr_literal_string_escaped() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile(r#"lorem {{ "escaped \n \r \t \\ \"" }}"#)
         .unwrap()
-        .render(Value::None)
+        .render(&engine, Value::None)
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem escaped \n \r \t \\ \"");
@@ -111,7 +114,7 @@ fn render_inline_expr_literal_with_filter() {
     let result = engine
         .compile(r#"lorem {{ "test" | ipsum }}"#)
         .unwrap()
-        .render(Value::None)
+        .render(&engine, Value::None)
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem TEST");
@@ -119,10 +122,11 @@ fn render_inline_expr_literal_with_filter() {
 
 #[test]
 fn render_inline_expr_map_key() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(value! { ipsum: { dolor: "sit"} })
+        .render(&engine, value! { ipsum: { dolor: "sit"} })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem sit");
@@ -130,10 +134,11 @@ fn render_inline_expr_map_key() {
 
 #[test]
 fn render_inline_expr_map_optional_key() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {{ ipsum?.dolor }}")
         .unwrap()
-        .render(value! { ipsum: { dolor: "sit"} })
+        .render(&engine, value! { ipsum: { dolor: "sit"} })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem sit");
@@ -141,10 +146,11 @@ fn render_inline_expr_map_optional_key() {
 
 #[test]
 fn render_inline_expr_map_optional_key_chain() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {{ ipsum?.dolor.sit }}")
         .unwrap()
-        .render(value! { ipsum: { } })
+        .render(&engine, value! { ipsum: { } })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem ");
@@ -152,10 +158,11 @@ fn render_inline_expr_map_optional_key_chain() {
 
 #[test]
 fn render_inline_expr_map_optional_key_chain_long() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {{ ipsum.dolor?.sit.amet }}")
         .unwrap()
-        .render(value! { ipsum: { dolor: {} } })
+        .render(&engine, value! { ipsum: { dolor: {} } })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem ");
@@ -164,10 +171,11 @@ fn render_inline_expr_map_optional_key_chain_long() {
 #[cfg(feature = "unicode")]
 #[test]
 fn render_inline_expr_map_index_unicode_ident() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {{ ipsum.привіт }}")
         .unwrap()
-        .render(value! { ipsum: { привіт: "sit"} })
+        .render(&engine, value! { ipsum: { привіт: "sit"} })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem sit");
@@ -175,10 +183,11 @@ fn render_inline_expr_map_index_unicode_ident() {
 
 #[test]
 fn render_inline_expr_list_index() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {{ ipsum.1 }}")
         .unwrap()
-        .render(value! { ipsum: ["sit", "amet"] })
+        .render(&engine, value! { ipsum: ["sit", "amet"] })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem amet");
@@ -191,7 +200,7 @@ fn render_inline_expr_custom_formatter() {
     let result = engine
         .compile("lorem {{ ipsum | format_list }}")
         .unwrap()
-        .render(value! { ipsum: ["sit", "amet"] })
+        .render(&engine, value! { ipsum: ["sit", "amet"] })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem sit;amet");
@@ -204,7 +213,7 @@ fn render_inline_expr_default_formatter_err() {
     let err = engine
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(value! { ipsum: { sit: "amet"} })
+        .render(&engine, value! { ipsum: { sit: "amet"} })
         .to_string()
         .unwrap_err();
     assert_format_err(
@@ -228,7 +237,7 @@ fn render_inline_expr_custom_formatter_err() {
     let err = engine
         .compile("lorem {{ ipsum | format_list }}")
         .unwrap()
-        .render(value! { ipsum: { sit: "amet"} })
+        .render(&engine, value! { ipsum: { sit: "amet"} })
         .to_string()
         .unwrap_err();
     assert_format_err(
@@ -262,10 +271,11 @@ fn format_list(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
 
 #[test]
 fn render_inline_expr_err_unknown_filter_or_formatter() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum | unknown }}")
         .unwrap()
-        .render(value! { ipsum: true })
+        .render(&engine, value! { ipsum: true })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -289,7 +299,7 @@ fn render_inline_expr_err_unknown_filter_found_formatter() {
     let err = engine
         .compile("lorem {{ ipsum | another | unknown }}")
         .unwrap()
-        .render(value! { ipsum: true })
+        .render(&engine, value! { ipsum: true })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -308,10 +318,11 @@ fn render_inline_expr_err_unknown_filter_found_formatter() {
 
 #[test]
 fn render_inline_expr_err_unknown_filter() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum | another | unknown }}")
         .unwrap()
-        .render(value! { ipsum: true })
+        .render(&engine, value! { ipsum: true })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -330,10 +341,11 @@ fn render_inline_expr_err_unknown_filter() {
 
 #[test]
 fn render_inline_expr_err_unrenderable() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(value! { ipsum: {} })
+        .render(&engine, value! { ipsum: {} })
         .to_string()
         .unwrap_err();
     assert_format_err(
@@ -352,10 +364,11 @@ fn render_inline_expr_err_unrenderable() {
 
 #[test]
 fn render_inline_expr_err_cannot_index_into_none() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(value! { ipsum: None })
+        .render(&engine, value! { ipsum: None })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -374,10 +387,11 @@ fn render_inline_expr_err_cannot_index_into_none() {
 
 #[test]
 fn render_inline_expr_err_cannot_index_into_string() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(value! { ipsum: "testing..." })
+        .render(&engine, value! { ipsum: "testing..." })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -396,10 +410,11 @@ fn render_inline_expr_err_cannot_index_into_string() {
 
 #[test]
 fn render_inline_expr_err_cannot_index_list_with_string() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(value! { ipsum: ["test", "ing..."] })
+        .render(&engine, value! { ipsum: ["test", "ing..."] })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -418,10 +433,11 @@ fn render_inline_expr_err_cannot_index_list_with_string() {
 
 #[test]
 fn render_inline_expr_err_cannot_index_map_with_integer() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum.123 }}")
         .unwrap()
-        .render(value! { ipsum: { test: "ing...", } })
+        .render(&engine, value! { ipsum: { test: "ing...", } })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -440,10 +456,11 @@ fn render_inline_expr_err_cannot_index_map_with_integer() {
 
 #[test]
 fn render_inline_expr_err_index_out_of_bounds() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum.123 }}")
         .unwrap()
-        .render(value! { ipsum: ["test", "ing..."] })
+        .render(&engine, value! { ipsum: ["test", "ing..."] })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -462,10 +479,11 @@ fn render_inline_expr_err_index_out_of_bounds() {
 
 #[test]
 fn render_inline_expr_err_not_found_in_map() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {{ ipsum.dolor }}")
         .unwrap()
-        .render(value! { ipsum : { } })
+        .render(&engine, value! { ipsum : { } })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -508,10 +526,11 @@ fn truthy() -> Vec<Value> {
 #[test]
 fn render_if_statement_cond_true() {
     for value in truthy() {
-        let result = Engine::new()
+        let engine = Engine::new();
+        let result = engine
             .compile("lorem {% if ipsum %}{{ sit }}{% else %}{{ amet }}{% endif %}")
             .unwrap()
-            .render(value! { ipsum: value.clone(), sit: "consectetur" })
+            .render(&engine, value! { ipsum: value.clone(), sit: "consectetur" })
             .to_string()
             .unwrap();
         assert_eq!(result, "lorem consectetur");
@@ -521,10 +540,14 @@ fn render_if_statement_cond_true() {
 #[test]
 fn render_if_statement_cond_false() {
     for value in falsy() {
-        let result = Engine::new()
+        let engine = Engine::new();
+        let result = engine
             .compile("lorem {% if ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
             .unwrap()
-            .render(value! { ipsum: { dolor: value.clone() }, amet: "consectetur" })
+            .render(
+                &engine,
+                value! { ipsum: { dolor: value.clone() }, amet: "consectetur" },
+            )
             .to_string()
             .unwrap();
         assert_eq!(result, "lorem consectetur");
@@ -534,10 +557,14 @@ fn render_if_statement_cond_false() {
 #[test]
 fn render_if_statement_cond_not() {
     for value in falsy() {
-        let result = Engine::new()
+        let engine = Engine::new();
+        let result = engine
             .compile("lorem {% if not ipsum.dolor %}{{ sit }}{% else %}{{ amet }}{% endif %}")
             .unwrap()
-            .render(value! { ipsum: {dolor: value.clone()}, sit: "consectetur" })
+            .render(
+                &engine,
+                value! { ipsum: {dolor: value.clone()}, sit: "consectetur" },
+            )
             .to_string()
             .unwrap();
         assert_eq!(result, "lorem consectetur");
@@ -547,10 +574,11 @@ fn render_if_statement_cond_not() {
 #[test]
 fn render_if_statement_else_if_cond_false() {
     for value in falsy() {
-        let result = Engine::new()
+        let engine = Engine::new();
+        let result = engine
             .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
             .unwrap()
-            .render(value! { ipsum: value.clone(), sit: value.clone() })
+            .render(&engine, value! { ipsum: value.clone(), sit: value.clone() })
             .to_string()
             .unwrap();
         assert_eq!(result, "lorem , consectetur");
@@ -560,10 +588,11 @@ fn render_if_statement_else_if_cond_false() {
 #[test]
 fn render_if_statement_else_if_cond_true() {
     for (t, f) in zip(truthy(), falsy()) {
-        let result = Engine::new()
+        let engine = Engine::new();
+        let result = engine
             .compile("lorem {% if ipsum %} dolor {% else if sit %} amet {% endif %}, consectetur")
             .unwrap()
-            .render(value! { ipsum: f, sit: t })
+            .render(&engine, value! { ipsum: f, sit: t })
             .to_string()
             .unwrap();
         assert_eq!(result, "lorem  amet , consectetur");
@@ -573,12 +602,13 @@ fn render_if_statement_else_if_cond_true() {
 #[test]
 fn render_if_statement_else_if_cond_not() {
     for falsy in falsy() {
-        let result = Engine::new()
+        let engine = Engine::new();
+        let result = engine
             .compile(
                 "lorem {% if ipsum %} dolor {% else if not sit %} amet {% endif %}, consectetur",
             )
             .unwrap()
-            .render(value! { ipsum: falsy.clone(), sit: falsy })
+            .render(&engine, value! { ipsum: falsy.clone(), sit: falsy })
             .to_string()
             .unwrap();
         assert_eq!(result, "lorem  amet , consectetur");
@@ -609,11 +639,11 @@ fn render_if_statement_multi() {
         ("d", false),
         ("e", false),
     ]);
-    let result = template.render(&map).to_string().unwrap();
+    let result = template.render(&engine, &map).to_string().unwrap();
     assert_eq!(result, "f");
     for var in ["a", "b", "c", "d", "e"] {
         map.insert(var, true);
-        let result = template.render(&map).to_string().unwrap();
+        let result = template.render(&engine, &map).to_string().unwrap();
         assert_eq!(result, var);
         map.insert(var, false);
     }
@@ -621,10 +651,11 @@ fn render_if_statement_multi() {
 
 #[test]
 fn render_for_statement_list() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
@@ -641,7 +672,7 @@ fn render_for_statement_filtered_list() {
     let result = engine
         .compile("lorem {% for ipsum in dolor | pop %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem tes");
@@ -649,10 +680,14 @@ fn render_for_statement_filtered_list() {
 
 #[test]
 fn render_for_statement_map() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {% for ipsum, dolor in sit %}{{ ipsum }},{{ dolor.0 }} {% endfor %}")
         .unwrap()
-        .render(value! { sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } })
+        .render(
+            &engine,
+            value! { sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } },
+        )
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem a,t b,e c,s d,t ");
@@ -660,10 +695,11 @@ fn render_for_statement_map() {
 
 #[test]
 fn render_for_statement_loop_fields() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {% for ipsum in dolor %}{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ ipsum }}  {% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] }).to_string().unwrap();
+        .render(&engine, value!{ dolor: ["t", "e", "s", "t"] }).to_string().unwrap();
     assert_eq!(
         result,
         "lorem 0,true,false,t  1,false,false,e  2,false,false,s  3,false,true,t  "
@@ -672,10 +708,11 @@ fn render_for_statement_loop_fields() {
 
 #[test]
 fn render_for_statement_loop_optional_access() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {% for ipsum in dolor %}{{ loop?.notindex }}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test");
@@ -691,7 +728,7 @@ fn render_for_statement_loop_map() {
     let result = engine
         .compile("lorem {% for ipsum in dolor %} {{ loop | debug }} {% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap();
     assert_eq!(
@@ -705,11 +742,35 @@ fn render_for_statement_loop_map() {
 }
 
 #[test]
+fn render_err_contains_template_name() {
+    let mut engine = Engine::new();
+    engine.add_template("test", "{{ ipsum }}").unwrap();
+    let err = engine
+        .template("test")
+        .render(value! {})
+        .to_string()
+        .unwrap_err();
+    assert_err(
+        &err,
+        "not found in this scope",
+        "
+  --> test:1:4
+   |
+ 1 | {{ ipsum }}
+   |    ^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn render_for_statement_err_not_found_in_map() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for ipsum in dolor %} {{ loop.xxx }} {% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -728,10 +789,11 @@ fn render_for_statement_err_not_found_in_map() {
 
 #[test]
 fn render_for_statement_err_cannot_index_into_map() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for ipsum in dolor %} {{ loop.123 }} {% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -750,10 +812,11 @@ fn render_for_statement_err_cannot_index_into_map() {
 
 #[test]
 fn render_for_statement_err_cannot_index_into_string() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for ipsum, dolor in sit %} {{ ipsum.xxx }} {% endfor %}")
         .unwrap()
-        .render(value! { sit: {t: "e", s: "t"} })
+        .render(&engine, value! { sit: {t: "e", s: "t"} })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -772,10 +835,11 @@ fn render_for_statement_err_cannot_index_into_string() {
 
 #[test]
 fn render_for_statement_err_cannot_index_into_loop_field() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for ipsum in dolor %} {{ loop.first.xxx }} {% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["t", "e", "s", "t"] })
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -803,16 +867,17 @@ fn render_for_statement_filtered_map() {
     let result = engine
         .compile(r#"lorem {% for ipsum, dolor in sit | rm: "d" %}{{ ipsum }},{{ dolor.0 }} {% endfor %}"#)
         .unwrap()
-        .render(value! { sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } }).to_string().unwrap();
+        .render(&engine, value!{ sit: { a: ["t"], b: ["e"], c: ["s"], d: ["t"] } }).to_string().unwrap();
     assert_eq!(result, "lorem a,t b,e c,s ");
 }
 
 #[test]
 fn render_for_statement_err_not_iterable() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(value! { dolor: true })
+        .render(&engine, value! { dolor: true })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -831,10 +896,11 @@ fn render_for_statement_err_not_iterable() {
 
 #[test]
 fn render_for_statement_err_list_with_two_vars() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for _, ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(value! { dolor: ["sit", "amet"] })
+        .render(&engine, value! { dolor: ["sit", "amet"] })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -853,10 +919,11 @@ fn render_for_statement_err_list_with_two_vars() {
 
 #[test]
 fn render_for_statement_err_map_with_one_var() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for ipsum in dolor %}{{ ipsum }}{% endfor %}")
         .unwrap()
-        .render(value! { dolor: { sit: "amet" }})
+        .render(&engine, value! { dolor: { sit: "amet" }})
         .to_string()
         .unwrap_err();
     assert_err(
@@ -875,10 +942,11 @@ fn render_for_statement_err_map_with_one_var() {
 
 #[test]
 fn render_for_statement_err_loop_var_scope() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% for _, ipsum in dolor %}{% endfor %}{{ ipsum }}")
         .unwrap()
-        .render(value! { dolor: { ipsum: false }})
+        .render(&engine, value! { dolor: { ipsum: false }})
         .to_string()
         .unwrap_err();
     assert_err(
@@ -897,10 +965,11 @@ fn render_for_statement_err_loop_var_scope() {
 
 #[test]
 fn render_with_statement() {
-    let result = Engine::new()
+    let engine = Engine::new();
+    let result = engine
         .compile("lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %} sit")
         .unwrap()
-        .render(value! { ipsum: "test", dolor: false })
+        .render(&engine, value! { ipsum: "test", dolor: false })
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test sit")
@@ -908,10 +977,11 @@ fn render_with_statement() {
 
 #[test]
 fn render_with_statement_err_var_scope() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile("lorem {% with ipsum as dolor %}{{ dolor }}{% endwith %}{{ dolor }}")
         .unwrap()
-        .render(value! { ipsum: "test" })
+        .render(&engine, value! { ipsum: "test" })
         .to_string()
         .unwrap_err();
     assert_err(
@@ -935,7 +1005,7 @@ fn render_include_statement() {
     let result = engine
         .compile(r#"lorem {% include "nested" %} sit"#)
         .unwrap()
-        .render(value! { ipsum: { dolor: "test" }})
+        .render(&engine, value! { ipsum: { dolor: "test" }})
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test sit");
@@ -948,7 +1018,7 @@ fn render_include_with_statement() {
     let result = engine
         .compile(r#"lorem {% include "nested" with ipsum %} sit"#)
         .unwrap()
-        .render(value! { ipsum: { dolor: "test" }})
+        .render(&engine, value! { ipsum: { dolor: "test" }})
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test sit");
@@ -963,7 +1033,7 @@ fn render_include_with_statement_owned() {
     let result = engine
         .compile(r#"lorem {% include "nested" with ipsum | to_owned %} sit"#)
         .unwrap()
-        .render(value! { ipsum: { dolor: "test" }})
+        .render(&engine, value! { ipsum: { dolor: "test" }})
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test sit");
@@ -976,7 +1046,7 @@ fn render_include_statement_parent_template_scope() {
     let result = engine
         .compile(r#"lorem {% include "nested" %} sit"#)
         .unwrap()
-        .render(value! { ipsum: { dolor: "test" }})
+        .render(&engine, value! { ipsum: { dolor: "test" }})
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test sit");
@@ -989,14 +1059,14 @@ fn render_include_statement_err_parent_template_scope() {
     let err = engine
         .compile(r#"lorem {% include "nested" with ipsum %} sit"#)
         .unwrap()
-        .render(value! { ipsum: { dolor: "test" }})
+        .render(&engine, value! { ipsum: { dolor: "test" }})
         .to_string()
         .unwrap_err();
     assert_err(
         &err,
         "not found in this scope",
         r#"
-  --> <anonymous>:1:4
+  --> nested:1:4
    |
  1 | {{ ipsum.dolor }}
    |    ^^^^^
@@ -1008,10 +1078,11 @@ fn render_include_statement_err_parent_template_scope() {
 
 #[test]
 fn render_include_statement_err_unknown_template() {
-    let err = Engine::new()
+    let engine = Engine::new();
+    let err = engine
         .compile(r#"lorem {% include "nested" %} sit"#)
         .unwrap()
-        .render(Value::None)
+        .render(&engine, Value::None)
         .to_string()
         .unwrap_err();
     assert_err(
@@ -1071,18 +1142,19 @@ fn render_include_with_statement_inside_with_statement() {
     engine
         .compile(r#"{% with false as x %} {% include "nested" with false %} {% endwith %}"#)
         .unwrap()
-        .render(Value::None)
+        .render(&engine, Value::None)
         .to_string()
         .unwrap();
 }
 
 #[test]
 fn render_to_writer() {
+    let engine = Engine::new();
     let mut w = Writer::new();
-    Engine::new()
+    engine
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(value! { ipsum : "test" })
+        .render(&engine, value! { ipsum : "test" })
         .to_writer(&mut w)
         .unwrap();
     assert_eq!(w.into_string(), "lorem test");
@@ -1090,11 +1162,12 @@ fn render_to_writer() {
 
 #[test]
 fn render_to_writer_err_io() {
+    let engine = Engine::new();
     let mut w = Writer::with_max(1);
-    let err = Engine::new()
+    let err = engine
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(value! { ipsum : "test" })
+        .render(&engine, value! { ipsum : "test" })
         .to_writer(&mut w)
         .unwrap_err();
     assert_eq!(format!("{err:#}"), "io error");
@@ -1103,11 +1176,12 @@ fn render_to_writer_err_io() {
 
 #[test]
 fn render_to_writer_err_not_io() {
+    let engine = Engine::new();
     let mut w = Writer::with_max(1);
-    let err = Engine::new()
+    let err = engine
         .compile("lorem {{ ipsum }}")
         .unwrap()
-        .render(value! { dolor : "test" })
+        .render(&engine, value! { dolor : "test" })
         .to_writer(&mut w)
         .unwrap_err();
     assert_err(

@@ -151,6 +151,12 @@ impl Scope {
     }
 }
 
+impl String {
+    pub fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
 impl Expr {
     pub fn span(&self) -> Span {
         match self {

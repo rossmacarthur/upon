@@ -31,3 +31,9 @@ cargo run --example <name>
 
 - [render_to_writer](render_to_writer.rs): Demonstrates how to render directly
   to a type implementing `std::io::Write` instead of to a string.
+
+- [custom_template_store](custom_template_store.rs): Demonstrates how to
+  implement a custom template store. This can allow for things like
+  - relative template paths
+  - controlling template access
+  - lazy loading (if you use interior mutability)
