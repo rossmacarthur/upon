@@ -19,6 +19,11 @@ configurable delimiters.
 - [Getting started](#getting-started)
 - [Further reading](#further-reading)
 - [Features](#features)
+- [Examples](#examples)
+  - [Nested templates](#nested-templates)
+  - [Render to writer](#render-to-writer)
+  - [Borrowed templates with short lifetimes](#borrowed-templates-with-short-lifetimes)
+  - [Custom template store and function](#custom-template-store-and-function)
 - [Benchmarks](#benchmarks)
 - [License](#license)
 
@@ -83,7 +88,7 @@ construct one engine during the lifetime of a program.
 let engine = upon::Engine::new();
 ```
 
-Next, [`add_template`][add_template] is used to compile and store a
+Next, [`add_template(..)`][add_template] is used to compile and store a
 template in the engine.
 
 ```rust
@@ -91,22 +96,14 @@ engine.add_template("hello", "Hello {{ user.name }}!")?;
 ```
 
 Finally, the template is rendered by fetching it using
-[`get_template`][get_template] and calling
-[`render`][render].
+[`template(..)`][template], calling
+[`render(..)`][render] and rendering to a string.
 
 ```rust
-let template = engine.get_template("hello").unwrap();
-let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
-assert_eq!(result, "Hello John Smith!");
-```
-
-If the lifetime of the template source is shorter than the engine lifetime
-or you don’t need to store the compiled template then you can also use the
-[`compile`][compile] function to return the template directly.
-
-```rust
-let template = engine.compile("Hello {{ user.name }}!")?;
-let result = template.render(&engine, upon::value!{ user: { name: "John Smith" }}).to_string()?;
+let result = engine
+    .template("hello")
+    .render(upon::value!{ user: { name: "John Smith" }})
+    .to_string()?;
 assert_eq!(result, "Hello John Smith!");
 ```
 
@@ -115,8 +112,9 @@ assert_eq!(result, "Hello John Smith!");
 - The [`syntax`][syntax] module documentation outlines the template syntax.
 - The [`filters`][filters] module documentation describes filters and how they work.
 - The [`fmt`][fmt] module documentation contains information on value formatters.
-- The [`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository contains concrete
-  code examples.
+- In addition to the examples in the current document, the
+  [`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository constains some more
+  concrete code examples.
 
 ## Features
 
@@ -129,7 +127,7 @@ The following crate features are available.
 
 - **`serde`** *(enabled by default)* — Enables all serde support and pulls
   in the [`serde`][serde] crate as a dependency. If disabled then you can use
-  [`render_from`][render_from] to render templates and
+  [`render_from(..)`][render_from] to render templates and
   construct the context using [`Value`][value]’s `From` impls.
 
 - **`unicode`** *(enabled by default)* — Enables unicode support and pulls
@@ -145,6 +143,83 @@ like. For example to use **`serde`** but disable **`filters`** and
 ```toml
 [dependencies]
 upon = { version = "...", default-features = false, features = ["serde"] }
+```
+
+## Examples
+
+### Nested templates
+
+You can include other templates by name using `{% include .. %}`.
+
+```rust
+let mut engine = upon::Engine::new();
+engine.add_template("hello", "Hello {{ user.name }}!")?;
+engine.add_template("goodbye", "Goodbye {{ user.name }}!")?;
+engine.add_template("nested", "{% include \"hello\" %}\n{% include \"goodbye\" %}")?;
+
+let result = engine.template("nested")
+    .render(upon::value!{ user: { name: "John Smith" }})
+    .to_string()?;
+assert_eq!(result, "Hello John Smith!\nGoodbye John Smith!");
+```
+
+### Render to writer
+
+Instead of rendering to a string it is possible to render the template to
+any [`std::io::Write`][stdiowrite] implementor using
+[`to_writer(..)`][to_writer].
+
+```rust
+use std::io;
+
+let mut engine = upon::Engine::new();
+engine.add_template("hello", "Hello {{ user.name }}!")?;
+
+let mut stdout = io::BufWriter::new(io::stdout());
+engine
+    .template("hello")
+    .render(upon::value!{ user: { name: "John Smith" }})
+    .to_writer(&mut stdout)?;
+// Prints: Hello John Smith!
+```
+
+### Borrowed templates with short lifetimes
+
+If the lifetime of the template source is shorter than the engine lifetime
+or you don’t need to store the compiled template then you can also use the
+[`compile(..)`][compile] function to return the template directly.
+
+```rust
+let template = engine.compile("Hello {{ user.name }}!")?;
+let result = template
+    .render(&engine, upon::value!{ user: { name: "John Smith" }})
+    .to_string()?;
+assert_eq!(result, "Hello John Smith!");
+```
+
+### Custom template store and function
+
+The [`compile(..)`][compile] function can also be used in
+conjunction with a custom template store which can allow for more advanced
+use cases. For example: relative template paths or controlling template
+access.
+
+```rust
+let mut store = std::collections::HashMap::<&str, upon::Template>::new();
+store.insert("hello", engine.compile("Hello {{ user.name }}!")?);
+store.insert("goodbye", engine.compile("Goodbye {{ user.name }}!")?);
+store.insert("nested", engine.compile("{% include \"hello\" %}\n{% include \"goodbye\" %}")?);
+
+let result = store.get("nested")
+    .unwrap()
+    .render(&engine, upon::value!{ user: { name: "John Smith" }})
+    .with_template_fn(|name| {
+        store
+            .get(name)
+            .ok_or_else(|| String::from("template not found"))
+    })
+    .to_string()?;
+assert_eq!(result, "Hello John Smith!\nGoodbye John Smith!");
 ```
 
 [Handlebars]: https://crates.io/crates/handlebars
@@ -200,13 +275,14 @@ at your option.
 [engineadd_formatter]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter
 [filters]: https://docs.rs/upon/latest/upon/filters/index.html
 [fmt]: https://docs.rs/upon/latest/upon/fmt/index.html
-[get_template]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.get_template
 [render]: https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render
 [render_from]: https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from
 [serde]: https://crates.io/crates/serde
 [stdiowrite]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 [string]: https://doc.rust-lang.org/stable/std/string/struct.String.html
 [syntax]: ./SYNTAX.md
+[template]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.template
+[to_writer]: https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.to_writer
 [unicode-ident]: https://crates.io/crates/unicode-ident
 [unicode-width]: https://crates.io/crates/unicode-width
 [value]: https://docs.rs/upon/latest/upon/enum.Value.html

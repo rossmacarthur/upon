@@ -9,7 +9,6 @@ use crate::types::program::{Instr, Template};
 use crate::value::ValueCow;
 use crate::{EngineBoxFn, Error, Result};
 
-/// A renderer that interprets a compiled [`Template`].
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct RendererImpl<'render, 'stack> {
     pub(crate) inner: RendererInner<'render>,

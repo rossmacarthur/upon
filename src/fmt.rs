@@ -14,7 +14,8 @@
 //! All formatter functions must have the following signature.
 //!
 //! ```text
-//! Fn(&mut Formatter<'_>, &Value) -> Result;
+//! use upon::{Value, fmt};
+//! Fn(&mut fmt::Formatter<'_>, &Value) -> fmt::Result;
 //! ```
 //!
 //! Since [`Error`] implements `From<String>` and `From<&str>` it is possible
@@ -54,8 +55,8 @@
 //! ### Error on [`Value::None`]
 //!
 //! The [`default`] value formatter formats [`Value::None`] as an empty string.
-//! This example demonstrates how you can configure a default formatter to
-//! instead error.
+//! This example demonstrates how you can configure a default formatter to error
+//! instead.
 //!
 //! ```
 //! use std::fmt::Write;

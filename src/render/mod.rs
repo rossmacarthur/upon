@@ -35,7 +35,8 @@ where
 
 type TemplateFn<'a> = dyn FnMut(&str) -> std::result::Result<&'a crate::Template<'a>, String> + 'a;
 
-/// A renderer that interprets a compiled [`Template`][crate::Template].
+/// A renderer that interprets a compiled [`Template`][crate::Template] or
+/// [`TemplateRef`][crate::TemplateRef].
 ///
 /// This struct is created by one of the following functions:
 /// - [`Template{,Ref}::render`][crate::Template::render]
@@ -128,7 +129,10 @@ impl<'render> Renderer<'render> {
 
     /// Set a function that is called when a template is included.
     ///
-    /// This allows custom template resolution on a per render basis.
+    /// This allows custom template resolution on a per render basis. The
+    /// default is to look for the template with the exact matching name in the
+    /// engine, i.e. the same as
+    /// [`Engine::get_template`][crate::Engine::get_template].
     pub fn with_template_fn<F>(mut self, template_fn: F) -> Self
     where
         F: FnMut(&str) -> std::result::Result<&'render crate::Template<'render>, String> + 'render,

@@ -14,16 +14,17 @@ template = "docs/SYNTAX_TEMPLATE.md"
 "Value" = "https://docs.rs/upon/latest/upon/enum.Value.html"
 
 # Engine methods
-"set_max_include_depth" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_max_include_depth"
-"add_template" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template"
-"get_template" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.get_template"
-"compile" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile"
 "Engine::add_filter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter"
 "Engine::add_formatter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter"
+"add_template(..)" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template"
+"template(..)" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.template"
+"compile(..)" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile"
+"set_max_include_depth" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_max_include_depth"
 
 # TemplateRef methods
-"render" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render"
-"render_from" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from"
+"render_from(..)" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from"
+"render(..)" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render"
+"to_writer(..)" = "https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.to_writer"
 
 # Modules
 "syntax" = "./SYNTAX.md"

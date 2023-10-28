@@ -68,7 +68,7 @@
 //! let engine = upon::Engine::new();
 //! ```
 //!
-//! Next, [`add_template`][Engine::add_template] is used to compile and store a
+//! Next, [`add_template(..)`][Engine::add_template] is used to compile and store a
 //! template in the engine.
 //!
 //! ```
@@ -78,26 +78,16 @@
 //! ```
 //!
 //! Finally, the template is rendered by fetching it using
-//! [`get_template`][Engine::get_template] and calling
-//! [`render`][TemplateRef::render].
+//! [`template(..)`][Engine::template], calling
+//! [`render(..)`][TemplateRef::render] and rendering to a string.
 //!
 //! ```
 //! # let mut engine = upon::Engine::new();
 //! # engine.add_template("hello", "Hello {{ user.name }}!")?;
-//! let template = engine.get_template("hello").unwrap();
-//! let result = template.render(upon::value!{ user: { name: "John Smith" }}).to_string()?;
-//! assert_eq!(result, "Hello John Smith!");
-//! # Ok::<(), upon::Error>(())
-//! ```
-//!
-//! If the lifetime of the template source is shorter than the engine lifetime
-//! or you don't need to store the compiled template then you can also use the
-//! [`compile`][Engine::compile] function to return the template directly.
-//!
-//! ```
-//! # let engine = upon::Engine::new();
-//! let template = engine.compile("Hello {{ user.name }}!")?;
-//! let result = template.render(&engine, upon::value!{ user: { name: "John Smith" }}).to_string()?;
+//! let result = engine
+//!     .template("hello")
+//!     .render(upon::value!{ user: { name: "John Smith" }})
+//!     .to_string()?;
 //! assert_eq!(result, "Hello John Smith!");
 //! # Ok::<(), upon::Error>(())
 //! ```
@@ -107,8 +97,9 @@
 //! - The [`syntax`] module documentation outlines the template syntax.
 //! - The [`filters`] module documentation describes filters and how they work.
 //! - The [`fmt`] module documentation contains information on value formatters.
-//! - The [`examples/`][examples] directory in the repository contains concrete
-//!   code examples.
+//! - In addition to the examples in the current document, the
+//!   [`examples/`][examples] directory in the repository constains some more
+//!   concrete code examples.
 //!
 //! [examples]: https://github.com/rossmacarthur/upon/tree/trunk/examples
 //!
@@ -123,7 +114,7 @@
 //!
 //! - **`serde`** _(enabled by default)_ — Enables all serde support and pulls
 //!   in the [`serde`] crate as a dependency. If disabled then you can use
-//!   [`render_from`][TemplateRef::render_from] to render templates and
+//!   [`render_from(..)`][TemplateRef::render_from] to render templates and
 //!   construct the context using [`Value`]'s `From` impls.
 //!
 //! - **`unicode`** _(enabled by default)_ — Enables unicode support and pulls
@@ -140,6 +131,89 @@
 //! ```toml
 //! [dependencies]
 //! upon = { version = "...", default-features = false, features = ["serde"] }
+//! ```
+//!
+//! # Examples
+//!
+//! ## Nested templates
+//!
+//! You can include other templates by name using `{% include .. %}`.
+//!
+//! ```
+//! let mut engine = upon::Engine::new();
+//! engine.add_template("hello", "Hello {{ user.name }}!")?;
+//! engine.add_template("goodbye", "Goodbye {{ user.name }}!")?;
+//! engine.add_template("nested", "{% include \"hello\" %}\n{% include \"goodbye\" %}")?;
+//!
+//! let result = engine.template("nested")
+//!     .render(upon::value!{ user: { name: "John Smith" }})
+//!     .to_string()?;
+//! assert_eq!(result, "Hello John Smith!\nGoodbye John Smith!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! ## Render to writer
+//!
+//! Instead of rendering to a string it is possible to render the template to
+//! any [`std::io::Write`] implementor using
+//! [`to_writer(..)`][crate::Renderer::to_writer].
+//!
+//! ```
+//! use std::io;
+//!
+//! let mut engine = upon::Engine::new();
+//! engine.add_template("hello", "Hello {{ user.name }}!")?;
+//!
+//! let mut stdout = io::BufWriter::new(io::stdout());
+//! engine
+//!     .template("hello")
+//!     .render(upon::value!{ user: { name: "John Smith" }})
+//!     .to_writer(&mut stdout)?;
+//! // Prints: Hello John Smith!
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! ## Borrowed templates with short lifetimes
+//!
+//! If the lifetime of the template source is shorter than the engine lifetime
+//! or you don't need to store the compiled template then you can also use the
+//! [`compile(..)`][Engine::compile] function to return the template directly.
+//!
+//! ```
+//! # let engine = upon::Engine::new();
+//! let template = engine.compile("Hello {{ user.name }}!")?;
+//! let result = template
+//!     .render(&engine, upon::value!{ user: { name: "John Smith" }})
+//!     .to_string()?;
+//! assert_eq!(result, "Hello John Smith!");
+//! # Ok::<(), upon::Error>(())
+//! ```
+//!
+//! ## Custom template store and function
+//!
+//! The [`compile(..)`][Engine::compile] function can also be used in
+//! conjunction with a custom template store which can allow for more advanced
+//! use cases. For example: relative template paths or controlling template
+//! access.
+//!
+//! ```
+//! # let engine = upon::Engine::new();
+//! let mut store = std::collections::HashMap::<&str, upon::Template>::new();
+//! store.insert("hello", engine.compile("Hello {{ user.name }}!")?);
+//! store.insert("goodbye", engine.compile("Goodbye {{ user.name }}!")?);
+//! store.insert("nested", engine.compile("{% include \"hello\" %}\n{% include \"goodbye\" %}")?);
+//!
+//! let result = store.get("nested")
+//!     .unwrap()
+//!     .render(&engine, upon::value!{ user: { name: "John Smith" }})
+//!     .with_template_fn(|name| {
+//!         store
+//!             .get(name)
+//!             .ok_or_else(|| String::from("template not found"))
+//!     })
+//!     .to_string()?;
+//! assert_eq!(result, "Hello John Smith!\nGoodbye John Smith!");
+//! # Ok::<(), upon::Error>(())
 //! ```
 
 #![deny(unsafe_code)]
@@ -215,7 +289,9 @@ type ValueFn<'a> = dyn Fn(&[ValueMember]) -> std::result::Result<Value, String> 
 /// [`render_from_fn`][Template::render_from_fn].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ValueMember<'a> {
+    /// The type of member access (direct or optional).
     pub op: ValueAccessOp,
+    /// The index or key being accessed.
     pub access: ValueAccess<'a>,
 }
 
