@@ -8,7 +8,7 @@ description = "A simple, powerful template engine with minimal dependencies and 
 readme = "README.md"
 repository = "https://github.com/rossmacarthur/upon"
 license = "MIT OR Apache-2.0"
-keywords = ["engine", "template", "jinja", "handlebars", "html"]
+keywords = ["template", "jinja2", "liquid", "mustache", "handlebars"]
 categories = ["template-engine"]
 include = ["src/**/*", "LICENSE-*", "README.md"]
 
