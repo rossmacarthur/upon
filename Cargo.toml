@@ -1,6 +1,6 @@
 [package]
 name = "upon"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["Ross MacArthur <ross@macarthur.io>"]
 edition = "2021"
 rust-version = "1.60"

@@ -1,5 +1,20 @@
 # Releases
 
+## 0.8.0
+
+*October 28th, 2023*
+
+### Features
+
+- [Add `with_template_fn` to `Renderer`][39a55429] This allows you to configure
+  the way that included templates are resolved.
+
+- [Allow setting `max_include_depth` at renderer level][53671a10] This allows
+  you to configure the maximum include depth on a per-renderer basis.
+
+[53671a10]: https://github.com/rossmacarthur/upon/commit/53671a10811a622c093fb5349a62246e9a900d29
+[39a55429]: https://github.com/rossmacarthur/upon/commit/39a5542981ef6492b23a198823c235dcb4968e4e
+
 ## 0.7.1
 
 *July 23rd, 2023*

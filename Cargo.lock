@@ -79,7 +79,7 @@ dependencies = [
  "serde_json",
  "tera",
  "tinytemplate",
- "upon 0.7.1",
+ "upon 0.8.0",
 ]
 
 [[package]]
@@ -419,7 +419,7 @@ dependencies = [
  "arbitrary",
  "libfuzzer-sys",
  "serde",
- "upon 0.7.1",
+ "upon 0.8.0",
 ]
 
 [[package]]
@@ -1302,7 +1302,7 @@ dependencies = [
 
 [[package]]
 name = "upon"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "serde",
  "unicode-ident",
