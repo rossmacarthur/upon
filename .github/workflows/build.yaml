@@ -19,7 +19,7 @@ jobs:
       RUSTFLAGS: --deny warnings
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: dtolnay/rust-toolchain@master
       with:
@@ -46,32 +46,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+
+      - uses: extractions/setup-crate@v1
+        with:
+          owner: taiki-e
+          name: cargo-hack
 
       - name: Test
         run: cargo test --workspace
 
-      - name: Test (no default features)
-        run: cargo test --lib --tests --no-default-features
-
-      - name: Test (filters)
-        run: cargo test --lib --tests --no-default-features --features filters
-
-      - name: Test (serde)
-        run: cargo test --lib --tests --no-default-features --features serde
-
-      - name: Test (unicode)
-        run: cargo test --lib --tests --no-default-features --features unicode
-
-      - name: Test (filters,serde)
-        run: cargo test --lib --tests --no-default-features --features filters,serde
-
-      - name: Test (serde,unicode)
-        run: cargo test --lib --tests --no-default-features --features serde,unicode
-
-      - name: Test (filters,unicode)
-        run: cargo test --lib --tests --no-default-features --features filters,unicode
+      - name: Test (feature powerset)
+        run: cargo hack test --package upon --feature-powerset --depth 2 --lib --tests
 
   # ---------------------------------------------------------------------------
   # MSRV
@@ -81,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@1.60
       - name: Check (no filters)
@@ -101,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
 
     - name: Install cargo-onedoc
@@ -121,11 +108,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Calculate version from tag
         id: version
-        run: echo "::set-output name=value::${GITHUB_REF#refs/tags/}"
+        run: echo "value=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Check tag against package version
         run: grep '^version = "${{ steps.version.outputs.value }}"$' Cargo.toml
@@ -139,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
     - name: Publish
       env:
