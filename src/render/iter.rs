@@ -14,28 +14,36 @@ use crate::{Error, Result, Value};
 pub enum LoopState<'a> {
     /// An iterator over a borrowed list and the last item yielded
     ListBorrowed {
-        item: &'a ast::Ident,
+        /// The name of the loop variable
+        i: &'a str,
         iter: Enumerate<slice::Iter<'a, Value>>,
         value: Option<(usize, &'a Value)>,
     },
 
     /// An iterator over an owned list and the last item yielded
     ListOwned {
-        item: &'a ast::Ident,
+        /// The name of the loop variable
+        i: &'a str,
         iter: Enumerate<list::IntoIter<Value>>,
         value: Option<(usize, Value)>,
     },
 
     /// An iterator over a borrowed map and the last key and value yielded
     MapBorrowed {
-        kv: &'a ast::KeyValue,
+        /// The name of the loop key variable
+        k: &'a str,
+        /// The name of the loop value variable
+        v: &'a str,
         iter: Enumerate<map::Iter<'a, String, Value>>,
         value: Option<(usize, (&'a String, &'a Value))>,
     },
 
     /// An iterator over an owned map and the last key and value yielded
     MapOwned {
-        kv: &'a ast::KeyValue,
+        /// The name of the loop key variable
+        k: &'a str,
+        /// The name of the loop value variable
+        v: &'a str,
         iter: Enumerate<map::IntoIter<String, Value>>,
         value: Option<(usize, (String, Value))>,
     },
@@ -44,7 +52,7 @@ pub enum LoopState<'a> {
 impl<'a> LoopState<'a> {
     /// Constructs the initial loop state.
     pub fn new(
-        source: &str,
+        source: &'a str,
         vars: &'a ast::LoopVars,
         iterable: ValueCow<'a>,
         span: Span,
@@ -81,7 +89,7 @@ impl<'a> LoopState<'a> {
                 Value::List(list) => {
                     let item = unpack_list_item(vars)?;
                     Ok(Self::ListBorrowed {
-                        item,
+                        i: &source[item.span],
                         iter: list.iter().enumerate(),
                         value: None,
                     })
@@ -90,7 +98,8 @@ impl<'a> LoopState<'a> {
                 Value::Map(map) => {
                     let kv = unpack_map_item(vars)?;
                     Ok(Self::MapBorrowed {
-                        kv,
+                        k: &source[kv.key.span],
+                        v: &source[kv.value.span],
                         iter: map.iter().enumerate(),
                         value: None,
                     })
@@ -102,7 +111,7 @@ impl<'a> LoopState<'a> {
                 Value::List(list) => {
                     let item = unpack_list_item(vars)?;
                     Ok(Self::ListOwned {
-                        item,
+                        i: &source[item.span],
                         iter: list.into_iter().enumerate(),
                         value: None,
                     })
@@ -111,7 +120,8 @@ impl<'a> LoopState<'a> {
                 Value::Map(map) => {
                     let kv = unpack_map_item(vars)?;
                     Ok(Self::MapOwned {
-                        kv,
+                        k: &source[kv.key.span],
+                        v: &source[kv.value.span],
                         iter: map.into_iter().enumerate(),
                         value: None,
                     })
@@ -166,28 +176,28 @@ impl<'a> LoopState<'a> {
 
         match self {
             Self::ListBorrowed {
-                item,
+                i,
                 value: Some((_, value)),
                 ..
-            } if name == &source[item.span] => {
+            } if name == *i => {
                 let v = resolve!(*value);
                 Ok(Some(ValueCow::Borrowed(v)))
             }
 
             Self::ListOwned {
-                item,
+                i,
                 value: Some((_, value)),
                 ..
-            } if name == &source[item.span] => {
+            } if name == *i => {
                 let v = resolve!(value);
                 Ok(Some(ValueCow::Owned(v.clone())))
             }
 
             Self::MapBorrowed {
-                kv,
+                k,
                 value: Some((_, (string, _))),
                 ..
-            } if name == &source[kv.key.span] => {
+            } if name == *k => {
                 if let [m, ..] = var.rest() {
                     return Err(err(m.span));
                 }
@@ -195,10 +205,10 @@ impl<'a> LoopState<'a> {
             }
 
             Self::MapOwned {
-                kv,
+                k,
                 value: Some((_, (string, _))),
                 ..
-            } if name == &source[kv.key.span] => {
+            } if name == *k => {
                 if let [m, ..] = var.rest() {
                     return Err(err(m.span));
                 }
@@ -206,19 +216,19 @@ impl<'a> LoopState<'a> {
             }
 
             Self::MapBorrowed {
-                kv,
+                v,
                 value: Some((_, (_, value))),
                 ..
-            } if name == &source[kv.value.span] => {
+            } if name == *v => {
                 let v = resolve!(*value);
                 Ok(Some(ValueCow::Borrowed(v)))
             }
 
             Self::MapOwned {
-                kv,
+                v,
                 value: Some((_, (_, value))),
                 ..
-            } if name == &source[kv.value.span] => {
+            } if name == *v => {
                 let v = resolve!(value);
                 Ok(Some(ValueCow::Owned(v.clone())))
             }

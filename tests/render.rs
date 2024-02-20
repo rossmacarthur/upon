@@ -872,6 +872,89 @@ fn render_for_statement_filtered_map() {
 }
 
 #[test]
+fn render_for_statement_nested_borrowed_list() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "lorem {{ ipsum }} ").unwrap();
+    let result = engine
+        .compile(r#"lorem {% for ipsum in dolor %}{% include "nested" %}{% endfor %}"#)
+        .unwrap()
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem lorem t lorem e lorem s lorem t ");
+}
+
+#[cfg(feature = "filters")]
+#[test]
+fn render_for_statement_nested_owned_list() {
+    let mut engine = Engine::new();
+    engine.add_filter("to_owned", Value::to_owned);
+    engine.add_template("nested", "lorem {{ ipsum }} ").unwrap();
+    let result = engine
+        .compile(r#"lorem {% for ipsum in dolor | to_owned %}{% include "nested" %}{% endfor %}"#)
+        .unwrap()
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem lorem t lorem e lorem s lorem t ");
+}
+
+#[test]
+fn render_for_statement_nested_borrowed_map() {
+    let mut engine = Engine::new();
+    engine
+        .add_template("nested", "lorem {{ ipsum }} {{ dolor }} ")
+        .unwrap();
+    let result = engine
+        .compile(r#"lorem {% for ipsum, dolor in sit %}{% include "nested" %}{% endfor %}"#)
+        .unwrap()
+        .render(&engine, value! { sit: { a: "t", b: "e", c: "s", d: "t" } })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem lorem a t lorem b e lorem c s lorem d t ");
+}
+
+#[cfg(feature = "filters")]
+#[test]
+fn render_for_statement_nested_owned_map() {
+    let mut engine = Engine::new();
+    engine.add_filter("to_owned", Value::to_owned);
+    engine
+        .add_template("nested", "lorem {{ ipsum }} {{ dolor }} ")
+        .unwrap();
+    let result = engine
+        .compile(
+            r#"lorem {% for ipsum, dolor in sit | to_owned %}{% include "nested" %}{% endfor %}"#,
+        )
+        .unwrap()
+        .render(&engine, value! { sit: { a: "t", b: "e", c: "s", d: "t" } })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem lorem a t lorem b e lorem c s lorem d t ");
+}
+
+#[test]
+fn render_for_statement_nested_loop_fields() {
+    let mut engine = Engine::new();
+    engine
+        .add_template(
+            "nested",
+            "{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ ipsum }}",
+        )
+        .unwrap();
+    let result = engine
+        .compile(r#"lorem {% for ipsum in dolor %}{% include "nested" %} {% endfor %}"#)
+        .unwrap()
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
+        .to_string()
+        .unwrap();
+    assert_eq!(
+        result,
+        "lorem 0,true,false,t 1,false,false,e 2,false,false,s 3,false,true,t "
+    );
+}
+
+#[test]
 fn render_for_statement_err_not_iterable() {
     let engine = Engine::new();
     let err = engine
