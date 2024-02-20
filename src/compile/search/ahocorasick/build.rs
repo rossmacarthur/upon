@@ -292,7 +292,7 @@ impl State {
         // must always be longest since any subsequent match must be from a
         // failure transition, and a failure transition by construction points
         // to a proper suffix. A proper suffix is, by definition, smaller.
-        self.matches.get(0).map(|&p| p.len)
+        self.matches.first().map(|&p| p.len)
     }
 }
 
