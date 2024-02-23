@@ -1,4 +1,12 @@
-# Releases
+# 📝 Release notes
+
+## 0.8.1
+
+*February 23rd, 2024*
+
+- [Fix bug with loop var access in nested template][d9e46eaa]
+
+[d9e46eaa]: https://github.com/rossmacarthur/upon/commit/d9e46eaa41c30123cafcfc08be61f966281d577d
 
 ## 0.8.0
 
