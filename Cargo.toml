@@ -41,3 +41,6 @@ unicode = ["dep:unicode-ident", "dep:unicode-width"]
 
 [workspace]
 members = ["benches", "fuzz", "tools/*"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(internal_debug)'] }

@@ -333,7 +333,7 @@ pub struct TemplateRef<'engine> {
     template: &'engine program::Template<'engine>,
 }
 
-impl<'engine> Default for Engine<'engine> {
+impl Default for Engine<'_> {
     #[inline]
     fn default() -> Self {
         Self::new()

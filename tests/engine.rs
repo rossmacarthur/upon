@@ -6,7 +6,7 @@ use upon::{value, Engine};
 
 #[test]
 fn engine_debug() {
-    format!("{:?}", Engine::new());
+    let _ = format!("{:?}", Engine::new());
 }
 
 #[test]

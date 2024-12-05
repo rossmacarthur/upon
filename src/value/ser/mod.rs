@@ -131,9 +131,9 @@ impl serde::Serializer for Serializer {
         self.serialize_unit()
     }
 
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         value.serialize(self)
     }
@@ -155,14 +155,14 @@ impl serde::Serializer for Serializer {
         self.serialize_str(variant)
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(self, _name: &'static str, value: &T) -> Result<Self::Ok>
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<Self::Ok>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
         _variant_index: u32,
@@ -170,7 +170,7 @@ impl serde::Serializer for Serializer {
         value: &T,
     ) -> Result<Self::Ok>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let mut map = BTreeMap::new();
         map.insert(String::from(variant), to_value(value)?);

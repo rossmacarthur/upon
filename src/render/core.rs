@@ -224,7 +224,7 @@ where
                     debug_assert!(prev.is_none());
                 }
 
-                Instr::Apply(name, _, _args) => {
+                Instr::Apply(name, _args) => {
                     let name_raw = &t.source[name.span];
                     match self.inner.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.

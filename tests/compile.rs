@@ -71,7 +71,7 @@ const BASE_EXPRS: &[&str] = &[
 fn compile_inline_expr_literal() {
     let engine = Engine::new();
     for arg in BASE_EXPRS {
-        engine.compile(&format!("{{{{ {arg} }}}}")).unwrap();
+        engine.compile(format!("{{{{ {arg} }}}}")).unwrap();
     }
 }
 
@@ -80,7 +80,7 @@ fn compile_inline_expr_filter_arg() {
     let engine = Engine::new();
     for arg in BASE_EXPRS {
         engine
-            .compile(&format!("{{{{ lorem | ipsum: {arg} }}}}"))
+            .compile(format!("{{{{ lorem | ipsum: {arg} }}}}"))
             .unwrap();
     }
 }

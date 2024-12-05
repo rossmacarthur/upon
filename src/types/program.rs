@@ -60,7 +60,7 @@ pub enum Instr {
     ExprStartLit(Value),
 
     /// Apply the filter to the value at the top of the stack
-    Apply(ast::Ident, Span, Option<ast::Args>),
+    Apply(ast::Ident, Option<ast::Args>),
 }
 
 #[cfg(not(internal_debug))]

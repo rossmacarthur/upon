@@ -37,9 +37,9 @@ impl serde::ser::SerializeStructVariant for SerializeStructVariant {
     type Ok = Value;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         self.map.insert(key.into(), to_value(value)?);
         Ok(())

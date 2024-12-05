@@ -139,10 +139,10 @@ impl Compiler {
                 name,
                 args,
                 receiver,
-                span,
+                ..
             }) => {
                 self.compile_expr(*receiver);
-                self.push(Instr::Apply(name, span, args));
+                self.push(Instr::Apply(name, args));
             }
         }
     }
@@ -160,10 +160,10 @@ impl Compiler {
 
     fn pop_emit_expr(&mut self, span: Span) {
         let emit = match self.instrs.last() {
-            Some(Instr::Apply(_, _, None)) => {
+            Some(Instr::Apply(_, None)) => {
                 let instr = self.instrs.pop().unwrap();
                 match instr {
-                    Instr::Apply(ident, _, _) => Instr::EmitWith(ident, span),
+                    Instr::Apply(ident, _) => Instr::EmitWith(ident, span),
                     _ => unreachable!(),
                 }
             }

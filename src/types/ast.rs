@@ -25,7 +25,7 @@ pub enum Stmt {
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct InlineExpr {
     pub expr: Expr,
-    pub span: Span,
+    pub _span: Span,
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]

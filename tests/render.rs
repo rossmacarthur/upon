@@ -73,7 +73,7 @@ fn render_inline_expr_literal_roundtrip() {
     let engine = Engine::new();
     for (arg, exp) in tests {
         let result = engine
-            .compile(&format!("{{{{ {arg} }}}}"))
+            .compile(format!("{{{{ {arg} }}}}"))
             .unwrap()
             .render(&engine, Value::None)
             .to_string()

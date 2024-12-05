@@ -126,8 +126,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 (Token::BeginExpr, begin) => {
                     let expr = self.parse_expr()?;
                     let end = self.expect(Token::EndExpr)?;
-                    let span = begin.combine(end);
-                    ast::Stmt::InlineExpr(ast::InlineExpr { expr, span })
+                    let _span = begin.combine(end);
+                    ast::Stmt::InlineExpr(ast::InlineExpr { expr, _span })
                 }
 
                 // The start of a block, e.g. `{% if cond %}`
