@@ -150,6 +150,9 @@ impl<'a> LoopState<'a> {
     }
 
     pub fn lookup_var(&self, source: &str, var: &ast::Var) -> Result<Option<ValueCow<'a>>> {
+        if var.path.is_empty() {
+            return Ok(None);
+        }
         let name = match var.first().access {
             ast::Access::Index(_) => return Ok(None),
             ast::Access::Key(ast::Ident { span }) => &source[span],

@@ -339,7 +339,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         };
 
         match (block_state, tk) {
-            (BlockState::Unknown, Token::Ident) => {
+            (BlockState::Unknown, Token::Dot | Token::Ident) => {
                 self.state = State::BlockPath { begin, end };
             }
             (BlockState::Path, Token::Pipe | Token::Comma | Token::Colon) => {

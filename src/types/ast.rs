@@ -100,6 +100,7 @@ pub enum BaseExpr {
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Var {
     pub path: Vec<Member>,
+    pub span: Span,
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
@@ -177,7 +178,7 @@ impl Expr {
 impl BaseExpr {
     pub fn span(&self) -> Span {
         match self {
-            BaseExpr::Var(var) => var.span(),
+            BaseExpr::Var(var) => var.span,
             BaseExpr::Literal(lit) => lit.span,
             BaseExpr::List(list) => list.span,
             BaseExpr::Map(map) => map.span,
@@ -186,16 +187,12 @@ impl BaseExpr {
 }
 
 impl Var {
-    pub fn span(&self) -> Span {
-        self.first().span.combine(self.last().span)
-    }
-
     pub fn first(&self) -> &Member {
         self.path.first().unwrap()
     }
 
-    pub fn last(&self) -> &Member {
-        self.path.last().unwrap()
+    pub fn first_span(&self) -> Span {
+        self.first().access.span()
     }
 
     pub fn rest(&self) -> &[Member] {

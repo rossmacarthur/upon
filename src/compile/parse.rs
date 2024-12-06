@@ -506,6 +506,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 ast::BaseExpr::Literal(lit)
             }
 
+            (Token::Dot, span) => {
+                let var = if self.is_next_access()? {
+                    let first = self.parse_member(ast::AccessOp::Direct, span)?;
+                    self.parse_var(first)?
+                } else {
+                    ast::Var { path: vec![], span }
+                };
+                ast::BaseExpr::Var(var)
+            }
+
             (Token::Ident, span) => {
                 let first = ast::Member {
                     op: ast::AccessOp::Direct,
@@ -547,27 +557,30 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             match self.peek()? {
                 Some((Token::Dot, sp)) => {
                     self.expect(Token::Dot)?;
-                    let access = self.parse_access()?;
-                    path.push(ast::Member {
-                        op: ast::AccessOp::Direct,
-                        access,
-                        span: sp.combine(access.span()),
-                    });
+                    path.push(self.parse_member(ast::AccessOp::Direct, sp)?);
                 }
                 Some((Token::QuestionDot, sp)) => {
                     self.expect(Token::QuestionDot)?;
-                    let access = self.parse_access()?;
-                    path.push(ast::Member {
-                        op: ast::AccessOp::Optional,
-                        access,
-                        span: sp.combine(access.span()),
-                    });
+                    path.push(self.parse_member(ast::AccessOp::Optional, sp)?);
                 }
                 _ => break,
             }
         }
+        let span = path
+            .first()
+            .unwrap()
+            .span
+            .combine(path.last().unwrap().span);
+        Ok(ast::Var { path, span })
+    }
 
-        Ok(ast::Var { path })
+    fn parse_member(&mut self, op: ast::AccessOp, span: Span) -> Result<ast::Member> {
+        let access = self.parse_access()?;
+        Ok(ast::Member {
+            op,
+            access,
+            span: span.combine(access.span()),
+        })
     }
 
     /// Parses a type of member access.
@@ -856,6 +869,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             Some((tk, span)) => Err(self.err_unexpected_token(exp.human(), tk, span)),
             None => Err(self.err_unexpected_eof(exp.human())),
         }
+    }
+
+    /// Returns `true` if the next token is an access token.
+    fn is_next_access(&mut self) -> Result<bool> {
+        Ok(self
+            .peek()?
+            .map(|(tk, _)| tk == Token::Index || tk == Token::Ident)
+            .unwrap_or(false))
     }
 
     /// Returns `true` if the next token is a keyword equal to the provided one.

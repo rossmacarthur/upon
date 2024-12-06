@@ -5,6 +5,7 @@ use std::ops::Deref;
 use crate::Value;
 
 #[cfg_attr(internal_debug, derive(Debug))]
+#[derive(Clone)]
 pub enum ValueCow<'a> {
     Borrowed(&'a Value),
     Owned(Value),

@@ -74,7 +74,7 @@ impl<'a> Stack<'a> {
                         .collect();
                     return value_fn(&path)
                         .map(ValueCow::Owned)
-                        .map_err(|reason| Error::render(reason, source, v.span()));
+                        .map_err(|reason| Error::render(reason, source, v.span));
                 }
 
                 State::Scope(scope) => match lookup_path_maybe(source, scope, &v.path)? {
@@ -82,7 +82,9 @@ impl<'a> Stack<'a> {
                     None => continue,
                 },
 
-                State::Var(name, var) if source[v.first().access.span()] == source[name.span] => {
+                State::Var(name, var)
+                    if !v.path.is_empty() && source[v.first_span()] == source[name.span] =>
+                {
                     return lookup_path(source, var, v.rest());
                 }
 

@@ -76,6 +76,9 @@ pub fn lookup_path_maybe<'a>(
     value: &ValueCow<'a>,
     path: &[ast::Member],
 ) -> Result<Option<ValueCow<'a>>> {
+    if path.is_empty() {
+        return Ok(Some(value.clone()));
+    }
     match value {
         ValueCow::Borrowed(mut value) => {
             for (i, p) in path.iter().enumerate() {

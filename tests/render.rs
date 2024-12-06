@@ -192,6 +192,32 @@ fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
 }
 
 #[test]
+fn render_inline_expr_root() {
+    let engine = Engine::new();
+    let result = engine
+        .compile("lorem {{ . }}")
+        .unwrap()
+        .render(&engine, "ipsum")
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem ipsum");
+}
+
+#[cfg(feature = "filters")]
+#[test]
+fn render_inline_expr_root_with_filter() {
+    let mut engine = Engine::new();
+    engine.add_filter("ipsum", str::to_uppercase);
+    let result = engine
+        .compile("lorem {{ . | ipsum }}")
+        .unwrap()
+        .render(&engine, "test")
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem TEST");
+}
+
+#[test]
 fn render_inline_expr_map_key() {
     let engine = Engine::new();
     let result = engine
@@ -262,6 +288,18 @@ fn render_inline_expr_list_index() {
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem amet");
+}
+
+#[test]
+fn render_inline_expr_root_list_index() {
+    let engine = Engine::new();
+    let result = engine
+        .compile("lorem {{ .0 }}")
+        .unwrap()
+        .render(&engine, vec!["ipsum", "dolor"])
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem ipsum");
 }
 
 #[test]
@@ -790,6 +828,29 @@ fn render_for_statement_loop_optional_access() {
 }
 
 #[test]
+fn render_for_statement_root() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", |f, v| {
+        writeln!(f, "{v:?}")?;
+        Ok(())
+    });
+    let result = engine
+        .compile("lorem {% for ipsum in dolor %} {{ . | debug }} {% endfor %}")
+        .unwrap()
+        .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
+        .to_string()
+        .unwrap();
+    assert_eq!(
+        result,
+        r#"lorem  Map({"dolor": List([String("t"), String("e"), String("s"), String("t")])})
+  Map({"dolor": List([String("t"), String("e"), String("s"), String("t")])})
+  Map({"dolor": List([String("t"), String("e"), String("s"), String("t")])})
+  Map({"dolor": List([String("t"), String("e"), String("s"), String("t")])})
+ "#
+    );
+}
+
+#[test]
 fn render_for_statement_loop_map() {
     let mut engine = Engine::new();
     engine.add_formatter("debug", |f, v| {
@@ -1127,6 +1188,26 @@ fn render_with_statement() {
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem test sit")
+}
+
+#[test]
+fn render_with_statement_root() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", |f, v| {
+        writeln!(f, "{v:?}")?;
+        Ok(())
+    });
+    let result = engine
+        .compile("lorem {% with ipsum as dolor %}{{ . | debug }}{% endwith %}")
+        .unwrap()
+        .render(&engine, value! { ipsum: "test" })
+        .to_string()
+        .unwrap();
+    assert_eq!(
+        result,
+        r#"lorem Map({"ipsum": String("test")})
+"#
+    )
 }
 
 #[test]
