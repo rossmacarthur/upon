@@ -516,6 +516,17 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 let var = self.parse_var(first)?;
                 ast::BaseExpr::Var(var)
             }
+
+            (Token::OpenBracket, span) => {
+                let list = self.parse_list(span)?;
+                ast::BaseExpr::List(list)
+            }
+
+            (Token::OpenBrace, span) => {
+                let map = self.parse_map(span)?;
+                ast::BaseExpr::Map(map)
+            }
+
             (tk, span) => {
                 return Err(self.err_unexpected_token("expression", tk, span));
             }
@@ -761,6 +772,44 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             raw[1..raw.len() - 1].to_owned()
         };
         Ok(string)
+    }
+
+    /// Parses a list literal.
+    fn parse_list(&mut self, span: Span) -> Result<ast::List> {
+        let mut items = Vec::new();
+        loop {
+            if self.is_next(Token::CloseBracket)? {
+                break;
+            }
+            let item = self.parse_base_expr()?;
+            items.push(item);
+            if !self.is_next(Token::Comma)? {
+                break;
+            }
+            self.expect(Token::Comma)?;
+        }
+        let span = span.combine(self.expect(Token::CloseBracket)?);
+        Ok(ast::List { items, span })
+    }
+
+    /// Parses a map literal.
+    fn parse_map(&mut self, span: Span) -> Result<ast::Map> {
+        let mut items = Vec::new();
+        loop {
+            if self.is_next(Token::CloseBrace)? {
+                break;
+            }
+            let key = self.parse_ident()?;
+            self.expect(Token::Colon)?;
+            let value = self.parse_base_expr()?;
+            items.push((key, value));
+            if !self.is_next(Token::Comma)? {
+                break;
+            }
+            self.expect(Token::Comma)?;
+        }
+        let span = span.combine(self.expect(Token::CloseBrace)?);
+        Ok(ast::Map { items, span })
     }
 
     /// Expects the given keyword.

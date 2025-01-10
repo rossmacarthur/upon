@@ -28,6 +28,9 @@ pub struct Lexer<'engine, 'source> {
 
     /// A buffer to store the next token.
     next: Option<(Token, Span)>,
+
+    /// The stack of brackets within a block.
+    brackets: Vec<(Span, Token)>,
 }
 
 /// The state of the lexer.
@@ -89,6 +92,14 @@ pub enum Token {
     BeginComment,
     /// End block tag, e.g. `#}`
     EndComment,
+    /// `[`
+    OpenBracket,
+    /// `]`
+    CloseBracket,
+    /// `{`
+    OpenBrace,
+    /// `}`
+    CloseBrace,
     /// `.`
     Dot,
     /// `?.`
@@ -127,6 +138,7 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             state: State::Template,
             left_trim: false,
             next: None,
+            brackets: Vec::new(),
         }
     }
 
@@ -244,6 +256,10 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                 if tk != end {
                     return Err(self.err_unexpected_token(tk, i..j));
                 }
+                // Check for unclosed brackets.
+                if let Some((open, end)) = self.brackets.pop() {
+                    return Err(self.err_unclosed(open, end));
+                }
 
                 // A matching end tag! Update the state and
                 // return the token.
@@ -269,6 +285,40 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     ':' => (Token::Colon, i + 1),
                     '+' => (Token::Plus, i + 1),
                     '-' => (Token::Minus, i + 1),
+
+                    // Brackets
+                    '[' => {
+                        let sp = Span::from(i..(i + c.len_utf8()));
+                        self.brackets.push((sp, Token::CloseBracket));
+                        (Token::OpenBracket, i + 1)
+                    }
+                    ']' => {
+                        let (_, close) = self.brackets.pop().ok_or_else(|| {
+                            self.err_unexpected_token(Token::CloseBracket, i..(i + c.len_utf8()))
+                        })?;
+                        if close != Token::CloseBracket {
+                            return Err(self
+                                .err_unexpected_token(Token::CloseBracket, i..(i + c.len_utf8())));
+                        }
+                        (Token::CloseBracket, i + 1)
+                    }
+
+                    '{' => {
+                        let sp = Span::from(i..(i + c.len_utf8()));
+                        self.brackets.push((sp, Token::CloseBrace));
+                        (Token::OpenBrace, i + 1)
+                    }
+                    '}' => {
+                        let (_, close) = self.brackets.pop().ok_or_else(|| {
+                            self.err_unexpected_token(Token::CloseBrace, i..(i + c.len_utf8()))
+                        })?;
+                        if close != Token::CloseBrace {
+                            return Err(
+                                self.err_unexpected_token(Token::CloseBrace, i..(i + c.len_utf8()))
+                            );
+                        }
+                        (Token::CloseBrace, i + 1)
+                    }
 
                     // Multi-character tokens with a distinct start character.
                     '?' => self.lex_question_dot(iter, i)?,
@@ -464,6 +514,10 @@ impl Token {
             Self::EndBlock => "end block",
             Self::BeginComment => "begin comment",
             Self::EndComment => "end comment",
+            Self::OpenBracket => "open bracket",
+            Self::CloseBracket => "close bracket",
+            Self::OpenBrace => "open brace",
+            Self::CloseBrace => "close brace",
             Self::Dot => "member access operator",
             Self::QuestionDot => "optional member access operator",
             Self::Pipe => "pipe",
@@ -480,7 +534,7 @@ impl Token {
         }
     }
 
-    /// Returns the corresponding tag if this token is a tag.
+    /// Returns the corresponding tag if this token is a tag or bracket.
     fn pair(&self) -> Self {
         match self {
             Self::BeginExpr => Self::EndExpr,
@@ -489,7 +543,11 @@ impl Token {
             Self::EndBlock => Self::BeginBlock,
             Self::BeginComment => Self::EndComment,
             Self::EndComment => Self::BeginComment,
-            _ => panic!("not a tag"),
+            Self::OpenBracket => Self::CloseBracket,
+            Self::CloseBracket => Self::OpenBracket,
+            Self::OpenBrace => Self::CloseBrace,
+            Self::CloseBrace => Self::OpenBrace,
+            _ => panic!("not a tag or bracket"),
         }
     }
 
@@ -646,6 +704,32 @@ mod tests {
                 (Token::EndExpr, "-}}"),
                 (Token::Raw, ""),
                 (Token::BeginExpr, "{{-"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "}}"),
+                (Token::Raw, " dolor")
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_expr_literals() {
+        let tokens = lex("lorem {{ [1, 3] {.} }} dolor").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem "),
+                (Token::BeginExpr, "{{"),
+                (Token::Whitespace, " "),
+                (Token::OpenBracket, "["),
+                (Token::Number, "1"),
+                (Token::Comma, ","),
+                (Token::Whitespace, " "),
+                (Token::Number, "3"),
+                (Token::CloseBracket, "]"),
+                (Token::Whitespace, " "),
+                (Token::OpenBrace, "{"),
+                (Token::Dot, "."),
+                (Token::CloseBrace, "}"),
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),
                 (Token::Raw, " dolor")

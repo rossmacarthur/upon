@@ -121,6 +121,77 @@ fn render_inline_expr_literal_with_filter() {
 }
 
 #[test]
+fn render_inline_expr_literal_list() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", debug);
+    let result = engine
+        .compile(r#"{{ [true, 123, -3.14, "test", lorem] | debug }}"#)
+        .unwrap()
+        .render(&engine, value! { lorem: "ipsum" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "[true, 123, -3.14, test, ipsum]");
+}
+
+#[test]
+fn render_inline_expr_literal_map() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", debug);
+    let result = engine
+        .compile(r#"{{ {a: true, b: 123, c: -3.14, d: "test", e: lorem} | debug }}"#)
+        .unwrap()
+        .render(&engine, value! { lorem: "ipsum" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "{a: true, b: 123, c: -3.14, d: test, e: ipsum}");
+}
+
+#[test]
+fn render_inline_expr_nested_lists_and_maps() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", debug);
+    let result = engine
+        .compile(r#"{{ [true, [123, -3.14], {a: "test", b: lorem, c: [1, 2]}] | debug }}"#)
+        .unwrap()
+        .render(&engine, value! { lorem: "ipsum" })
+        .to_string()
+        .unwrap();
+    assert_eq!(
+        result,
+        "[true, [123, -3.14], {a: test, b: ipsum, c: [1, 2]}]"
+    );
+}
+
+fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
+    match v {
+        Value::List(list) => {
+            f.write_char('[')?;
+            for (i, item) in list.iter().enumerate() {
+                if i != 0 {
+                    f.write_str(", ")?;
+                }
+                debug(f, item)?;
+            }
+            f.write_char(']')?;
+            Ok(())
+        }
+        Value::Map(map) => {
+            f.write_char('{')?;
+            for (i, (key, value)) in map.iter().enumerate() {
+                if i != 0 {
+                    f.write_str(", ")?;
+                }
+                write!(f, "{}: ", key)?;
+                debug(f, value)?;
+            }
+            f.write_char('}')?;
+            Ok(())
+        }
+        _ => fmt::default(f, v),
+    }
+}
+
+#[test]
 fn render_inline_expr_map_key() {
     let engine = Engine::new();
     let result = engine
@@ -1095,7 +1166,20 @@ fn render_include_statement() {
 }
 
 #[test]
-fn render_include_with_statement() {
+fn render_include_with_statement_map() {
+    let mut engine = Engine::new();
+    engine.add_template("nested", "{{ dolor }}").unwrap();
+    let result = engine
+        .compile(r#"lorem {% include "nested" with { dolor: dolor } %} sit"#)
+        .unwrap()
+        .render(&engine, value! { dolor: "test" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem test sit");
+}
+
+#[test]
+fn render_include_with_statement_var() {
     let mut engine = Engine::new();
     engine.add_template("nested", "{{ dolor }}").unwrap();
     let result = engine

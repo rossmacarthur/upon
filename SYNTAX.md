@@ -41,6 +41,12 @@ available in templates.
 - Floats: `0.123`, `-3.14`, `5.23e10`
 - Strings: `"Hello World!"`, escape characters are supported: `\r`, `\n`,
   `\t`, `\\`, `\"`
+- Lists: `[1, 2, 3]`, `[value, "string", 3.14]`
+- Maps: `{a: value, b: "string", c: 3.14}`, literal map keys are always
+  constants and must be valid identifiers
+
+Both lists and maps can contain any type of value including literals and
+[values](#values).
 
 ### Values
 
@@ -72,9 +78,9 @@ And also hello {{ users.2.name }}!
 
 The dotted path syntax will raise an error when the field or index is not
 found. If you want to try lookup a field and return [`Value::None`] when it
-is not found then you can use the optional dotted path syntax. The following
-would try lookup the field “surname” from “user” and return [`Value::None`]
-if it is not found.
+is not found then you can use the optional dotted path syntax (`?.`). The
+following would try lookup the field “surname” from “user” and return
+[`Value::None`] if it is not found.
 
 ```text
 Hello {{ user.name }} {{ user?.surname }}!

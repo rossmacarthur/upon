@@ -99,6 +99,8 @@ pub struct Args {
 pub enum BaseExpr {
     Var(Var),
     Literal(Literal),
+    List(List),
+    Map(Map),
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
@@ -145,6 +147,18 @@ pub struct Literal {
     pub span: Span,
 }
 
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct List {
+    pub items: Vec<BaseExpr>,
+    pub span: Span,
+}
+
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct Map {
+    pub items: Vec<(Ident, BaseExpr)>,
+    pub span: Span,
+}
+
 impl Scope {
     pub const fn new() -> Self {
         Self { stmts: Vec::new() }
@@ -171,6 +185,8 @@ impl BaseExpr {
         match self {
             BaseExpr::Var(var) => var.span(),
             BaseExpr::Literal(lit) => lit.span,
+            BaseExpr::List(list) => list.span,
+            BaseExpr::Map(map) => map.span,
         }
     }
 }

@@ -256,6 +256,74 @@ fn lex_err_undelimited_string_newline() {
     );
 }
 
+#[test]
+fn lex_err_unclosed_open_bracket() {
+    let err = Engine::new().compile("lorem {{ [ }} dolor").unwrap_err();
+    assert_err(
+        &err,
+        "unclosed open bracket",
+        r#"
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ [ }} dolor
+   |          ^--
+   |
+   = reason: REASON
+"#,
+    );
+}
+
+#[test]
+fn lex_err_unexpected_close_bracket() {
+    let err = Engine::new().compile("lorem {{ ] }} dolor").unwrap_err();
+    assert_err(
+        &err,
+        "unexpected close bracket",
+        r#"
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ] }} dolor
+   |          ^--
+   |
+   = reason: REASON
+"#,
+    );
+}
+
+#[test]
+fn lex_err_unclosed_open_brace() {
+    let err = Engine::new().compile("lorem {{ { }} dolor").unwrap_err();
+    assert_err(
+        &err,
+        "unclosed open brace",
+        r#"
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ { }} dolor
+   |          ^--
+   |
+   = reason: REASON
+"#,
+    );
+}
+
+#[test]
+fn lex_err_unexpected_close_brace() {
+    let err = Engine::new().compile("lorem {{ } }} dolor").unwrap_err();
+    assert_err(
+        &err,
+        "unexpected close brace",
+        r#"
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ } }} dolor
+   |          ^--
+   |
+   = reason: REASON
+"#,
+    );
+}
+
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
     let display = format!("invalid syntax: {reason}");

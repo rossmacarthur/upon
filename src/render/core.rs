@@ -8,7 +8,7 @@ use crate::types::ast;
 use crate::types::program::{Instr, Template};
 use crate::types::span::Span;
 use crate::value::ValueCow;
-use crate::{EngineBoxFn, Error, Result};
+use crate::{EngineBoxFn, Error, Result, Value};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct RendererImpl<'render, 'stack> {
@@ -223,6 +223,37 @@ where
                 Instr::ExprStartLiteral(literal) => {
                     let value = ValueCow::Borrowed(&literal.value);
                     exprs.push((value, literal.span));
+                }
+
+                Instr::ExprStartList(span) => {
+                    let value = ValueCow::Owned(crate::Value::new_list());
+                    exprs.push((value, *span));
+                }
+
+                Instr::ExprStartMap(span) => {
+                    let value = ValueCow::Owned(crate::Value::new_map());
+                    exprs.push((value, *span));
+                }
+
+                Instr::ExprListPush => {
+                    let (item, _) = exprs.pop().unwrap();
+                    match exprs.last_mut().unwrap() {
+                        (ValueCow::Owned(Value::List(l)), _) => {
+                            l.push(item.to_owned());
+                        }
+                        _ => panic!("expected owned list"),
+                    }
+                }
+
+                Instr::ExprMapInsert(key) => {
+                    let key = t.source[key.span].to_owned();
+                    let (value, _) = exprs.pop().unwrap();
+                    match exprs.last_mut().unwrap() {
+                        (ValueCow::Owned(Value::Map(m)), _) => {
+                            m.insert(key, value.to_owned());
+                        }
+                        _ => panic!("expected owned map"),
+                    }
                 }
 
                 Instr::Apply(name, _arity, _span) => {

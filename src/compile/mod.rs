@@ -163,6 +163,20 @@ impl Compiler {
             ast::BaseExpr::Literal(literal) => {
                 self.push(Instr::ExprStartLiteral(literal));
             }
+            ast::BaseExpr::List(list) => {
+                self.push(Instr::ExprStartList(list.span));
+                for item in list.items {
+                    self.compile_base_expr(item);
+                    self.push(Instr::ExprListPush);
+                }
+            }
+            ast::BaseExpr::Map(map) => {
+                self.push(Instr::ExprStartMap(map.span));
+                for (key, value) in map.items {
+                    self.compile_base_expr(value);
+                    self.push(Instr::ExprMapInsert(key));
+                }
+            }
         }
     }
 
@@ -171,7 +185,7 @@ impl Compiler {
             Some(Instr::Apply(_, _, _)) => {
                 let instr = self.instrs.pop().unwrap();
                 match instr {
-                    Instr::Apply(ident, len, span) => Instr::EmitWith(ident, len, span),
+                    Instr::Apply(ident, arity, span) => Instr::EmitWith(ident, arity, span),
                     _ => unreachable!(),
                 }
             }

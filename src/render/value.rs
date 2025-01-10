@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::types::ast;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
@@ -26,6 +28,14 @@ impl Value {
             Value::List(_) => "list",
             Value::Map(_) => "map",
         }
+    }
+
+    pub(crate) fn new_map() -> Self {
+        Self::Map(BTreeMap::new())
+    }
+
+    pub(crate) fn new_list() -> Self {
+        Self::List(Vec::new())
     }
 }
 

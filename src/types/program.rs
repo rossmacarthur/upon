@@ -61,6 +61,18 @@ pub enum Instr {
     /// Start building an expression using a literal
     ExprStartLiteral(ast::Literal),
 
+    /// Start building a list expression
+    ExprStartList(Span),
+
+    /// Start building a map expression
+    ExprStartMap(Span),
+
+    /// Append an item to the current list expression
+    ExprListPush,
+
+    /// Insert an item to the current map expression
+    ExprMapInsert(ast::Ident),
+
     /// Apply the filter using the value and args on the top of the stack.
     ///
     /// The second value is the number of arguments to pop from the stack
