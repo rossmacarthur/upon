@@ -49,10 +49,12 @@ pub struct Renderer<'render> {
 }
 
 enum Globals<'render> {
+    #[cfg(feature = "serde")]
     Owned(Result<Value>),
     Borrowed(&'render Value),
     Fn(Box<ValueFn<'render>>),
 }
+
 pub(crate) struct RendererInner<'render> {
     engine: &'render Engine<'render>,
     template: &'render Template<'render>,
@@ -156,12 +158,11 @@ impl<'render> Renderer<'render> {
     pub fn to_string(self) -> Result<String> {
         let Self { globals, inner } = self;
         match globals {
+            #[cfg(feature = "serde")]
             Globals::Owned(result) => {
                 let value = result?;
                 let stack = Stack::new(&value);
-                let x = to_string(inner, stack);
-                drop(value);
-                x
+                to_string(inner, stack)
             }
             Globals::Borrowed(value) => {
                 let stack = Stack::new(value);
@@ -181,6 +182,7 @@ impl<'render> Renderer<'render> {
     {
         let Self { globals, inner } = self;
         match globals {
+            #[cfg(feature = "serde")]
             Globals::Owned(result) => {
                 let value = result?;
                 let stack = Stack::new(&value);

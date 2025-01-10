@@ -80,6 +80,17 @@ impl Error {
         }
     }
 
+    /// Constructs a new render error without pretty information.
+    #[cfg(feature = "filters")]
+    pub(crate) fn render_plain(reason: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::Render,
+            name: None,
+            reason: Some(reason.into()),
+            pretty: None,
+        }
+    }
+
     /// Constructs a max include depth error.
     pub(crate) fn max_include_depth(max: usize) -> Self {
         Self {

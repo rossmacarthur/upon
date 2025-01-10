@@ -15,7 +15,6 @@ pub use crate::compile::search::Searcher;
 
 use crate::types::ast;
 use crate::types::program::{Instr, Template, FIXME};
-use crate::types::span::Span;
 use crate::{Engine, Result};
 
 /// Compile a template into a program.
@@ -60,9 +59,8 @@ impl Compiler {
             }
 
             ast::Stmt::InlineExpr(ast::InlineExpr { expr, .. }) => {
-                let span = expr.span();
                 self.compile_expr(expr);
-                self.pop_emit_expr(span);
+                self.pop_emit_expr();
             }
 
             ast::Stmt::Include(ast::Include { name, globals }) => match globals {
@@ -139,10 +137,20 @@ impl Compiler {
                 name,
                 args,
                 receiver,
-                ..
+                span,
             }) => {
                 self.compile_expr(*receiver);
-                self.push(Instr::Apply(name, args));
+                let arity = match args {
+                    None => 0,
+                    Some(args) => {
+                        let arity = args.values.len();
+                        for arg in args.values {
+                            self.compile_base_expr(arg);
+                        }
+                        arity
+                    }
+                };
+                self.push(Instr::Apply(name, arity, span));
             }
         }
     }
@@ -150,24 +158,24 @@ impl Compiler {
     fn compile_base_expr(&mut self, base_expr: ast::BaseExpr) {
         match base_expr {
             ast::BaseExpr::Var(var) => {
-                self.push(Instr::ExprStart(var));
+                self.push(Instr::ExprStartVar(var));
             }
-            ast::BaseExpr::Literal(ast::Literal { value, .. }) => {
-                self.push(Instr::ExprStartLit(value));
+            ast::BaseExpr::Literal(literal) => {
+                self.push(Instr::ExprStartLiteral(literal));
             }
         }
     }
 
-    fn pop_emit_expr(&mut self, span: Span) {
-        let emit = match self.instrs.last() {
-            Some(Instr::Apply(_, None)) => {
+    fn pop_emit_expr(&mut self) {
+        let emit = match self.instrs.last_mut() {
+            Some(Instr::Apply(_, _, _)) => {
                 let instr = self.instrs.pop().unwrap();
                 match instr {
-                    Instr::Apply(ident, _) => Instr::EmitWith(ident, span),
+                    Instr::Apply(ident, len, span) => Instr::EmitWith(ident, len, span),
                     _ => unreachable!(),
                 }
             }
-            _ => Instr::Emit(span),
+            _ => Instr::Emit,
         };
         self.push(emit);
     }

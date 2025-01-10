@@ -93,7 +93,7 @@ fn render_filter_arity_5() {
 }
 
 #[test]
-fn render_filter_value_types() {
+fn render_filter_arg0_types() {
     let mut engine = Engine::new();
 
     // unit
@@ -134,7 +134,7 @@ fn render_filter_value_types() {
 }
 
 #[test]
-fn render_filter_arg_types() {
+fn render_filter_arg1_types() {
     let mut engine = Engine::new();
 
     // unit
@@ -173,6 +173,132 @@ fn render_filter_arg_types() {
 }
 
 #[test]
+fn render_filter_arg2_types() {
+    let mut engine = Engine::new();
+
+    // unit
+    engine.add_filter("_", |_: Value, _: Value, _: ()| ());
+
+    // bool
+    engine.add_filter("_", |_: Value, _: Value, _: bool| ());
+
+    // ints
+    engine.add_filter("_", |_: Value, _: Value, _: u8| ());
+    engine.add_filter("_", |_: Value, _: Value, _: u16| ());
+    engine.add_filter("_", |_: Value, _: Value, _: u32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: u64| ());
+    engine.add_filter("_", |_: Value, _: Value, _: u128| ());
+    engine.add_filter("_", |_: Value, _: Value, _: usize| ());
+    engine.add_filter("_", |_: Value, _: Value, _: i8| ());
+    engine.add_filter("_", |_: Value, _: Value, _: i16| ());
+    engine.add_filter("_", |_: Value, _: Value, _: i32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: i64| ());
+    engine.add_filter("_", |_: Value, _: Value, _: i128| ());
+    engine.add_filter("_", |_: Value, _: Value, _: isize| ());
+
+    // floats
+    engine.add_filter("_", |_: Value, _: Value, _: f32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: f64| ());
+
+    // strings
+    engine.add_filter("_", |_: Value, _: Value, _: String| ());
+    engine.add_filter("_", |_: Value, _: Value, _: &str| ());
+
+    // list
+    engine.add_filter("_", |_: Value, _: Value, _: Vec<Value>| ());
+
+    // map
+    engine.add_filter("_", |_: Value, _: Value, _: BTreeMap<String, Value>| ());
+}
+
+#[test]
+fn render_filter_arg3_types() {
+    let mut engine = Engine::new();
+
+    // unit
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: ()| ());
+
+    // bool
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: bool| ());
+
+    // ints
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: u8| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: u16| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: u32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: u64| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: u128| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: usize| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: i8| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: i16| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: i32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: i64| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: i128| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: isize| ());
+
+    // floats
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: f32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: f64| ());
+
+    // strings
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: String| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: &str| ());
+
+    // list
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Vec<Value>| ());
+
+    // map
+    engine.add_filter(
+        "_",
+        |_: Value, _: Value, _: Value, _: BTreeMap<String, Value>| (),
+    );
+}
+
+#[test]
+fn render_filter_arg4_types() {
+    let mut engine = Engine::new();
+
+    // unit
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: ()| ());
+
+    // bool
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: bool| ());
+
+    // ints
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: u8| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: u16| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: u32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: u64| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: u128| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: usize| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: i8| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: i16| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: i32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: i64| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: i128| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: isize| ());
+
+    // floats
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: f32| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: f64| ());
+
+    // strings
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: String| ());
+    engine.add_filter("_", |_: Value, _: Value, _: Value, _: Value, _: &str| ());
+
+    // list
+    engine.add_filter(
+        "_",
+        |_: Value, _: Value, _: Value, _: Value, _: Vec<Value>| (),
+    );
+
+    // map
+    engine.add_filter(
+        "_",
+        |_: Value, _: Value, _: Value, _: Value, _: BTreeMap<String, Value>| (),
+    );
+}
+
+#[test]
 fn render_filter_err_expected_0_args() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: Value| v);
@@ -184,7 +310,7 @@ fn render_filter_err_expected_0_args() {
         .unwrap_err();
     assert_err(
         &err,
-        "filter expected 0 arguments",
+        "filter expects 0 arguments, 1 provided",
         "
   --> <anonymous>:1:11
    |
@@ -208,7 +334,7 @@ fn render_filter_err_expected_n_args() {
         .unwrap_err();
     assert_err(
         &err,
-        "filter expected 3 arguments",
+        "filter expects 3 arguments, 0 provided",
         "
   --> <anonymous>:1:11
    |
@@ -221,7 +347,7 @@ fn render_filter_err_expected_n_args() {
 }
 
 #[test]
-fn render_filter_borrowed_value_str() {
+fn render_filter_borrowed_arg_str_from_borrowed() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: &str| v.to_owned());
     let result = engine
@@ -234,7 +360,21 @@ fn render_filter_borrowed_value_str() {
 }
 
 #[test]
-fn render_filter_borrowed_value_list() {
+fn render_filter_borrowed_arg_str_from_owned() {
+    let mut engine = Engine::new();
+    engine.add_filter("into_owned", |v: Value| v);
+    engine.add_filter("test", |v: &str| v.to_owned());
+    let result = engine
+        .compile("{{ name | into_owned | test }}")
+        .unwrap()
+        .render(&engine, value! { name: "John Smith" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "John Smith");
+}
+
+#[test]
+fn render_filter_borrowed_arg_list_from_borrowed() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: &[Value]| v[0].clone());
     let result = engine
@@ -247,7 +387,21 @@ fn render_filter_borrowed_value_list() {
 }
 
 #[test]
-fn render_filter_borrowed_value_map() {
+fn render_filter_borrowed_arg_list_from_owned() {
+    let mut engine = Engine::new();
+    engine.add_filter("into_owned", |v: Value| v);
+    engine.add_filter("test", |v: &[Value]| v[0].clone());
+    let result = engine
+        .compile("{{ name | into_owned | test }}")
+        .unwrap()
+        .render(&engine, value! { name: ["John", "Smith"] })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "John");
+}
+
+#[test]
+fn render_filter_borrowed_arg_map_from_borrowed() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: &BTreeMap<String, Value>| v["john"].to_owned());
     let result = engine
@@ -260,11 +414,39 @@ fn render_filter_borrowed_value_map() {
 }
 
 #[test]
-fn render_filter_borrowed_value_value() {
+fn render_filter_borrowed_arg_map_from_owned() {
+    let mut engine = Engine::new();
+    engine.add_filter("into_owned", |v: Value| v);
+    engine.add_filter("test", |v: &BTreeMap<String, Value>| v["john"].to_owned());
+    let result = engine
+        .compile("{{ name | into_owned | test }}")
+        .unwrap()
+        .render(&engine, value! { name: { john: "Smith" } })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "Smith");
+}
+
+#[test]
+fn render_filter_borrowed_arg_value_from_borrowed() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: &Value| v.clone());
     let result = engine
         .compile("{{ name | test }}")
+        .unwrap()
+        .render(&engine, value! { name: "John Smith" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "John Smith");
+}
+
+#[test]
+fn render_filter_borrowed_arg_value_from_owned() {
+    let mut engine = Engine::new();
+    engine.add_filter("into_owned", |v: Value| v);
+    engine.add_filter("test", |v: &Value| v.clone());
+    let result = engine
+        .compile("{{ name | into_owned | test }}")
         .unwrap()
         .render(&engine, value! { name: "John Smith" })
         .to_string()
@@ -289,6 +471,30 @@ fn render_filter_borrowed_arg_str() {
 }
 
 #[test]
+fn render_filter_borrowed_args_from_owned() {
+    let mut engine = Engine::new();
+    engine.add_filter("into_owned", |v: Value| v);
+    engine.add_filter("prepend", |s1: &str, s2: &str| format!("{s2} {s1}"));
+    let result = engine
+        .compile(
+            "{% for name in names | into_owned %}\n\
+             {{ surname | prepend: name }}\n\
+             {% endfor %}",
+        )
+        .unwrap()
+        .render(
+            &engine,
+            value! {
+                names: ["John", "James", "Jimothy"],
+                surname: "Smith"
+            },
+        )
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "\nJohn Smith\n\nJames Smith\n\nJimothy Smith\n");
+}
+
+#[test]
 fn render_filter_err_expected_value_type() {
     let mut engine = Engine::new();
     engine.add_filter("test", |v: bool| v);
@@ -300,7 +506,7 @@ fn render_filter_err_expected_value_type() {
         .unwrap_err();
     assert_err(
         &err,
-        "filter expected bool value, found string",
+        "filter expects bool value, found string",
         "
   --> <anonymous>:1:11
    |
@@ -324,7 +530,7 @@ fn render_filter_err_expected_arg_type() {
         .unwrap_err();
     assert_err(
         &err,
-        "filter expected bool argument, found integer",
+        "filter expects bool argument, found integer",
         "
   --> <anonymous>:1:17
    |
@@ -348,47 +554,12 @@ fn render_filter_err_expected_value_try_from_int() {
         .unwrap_err();
     assert_err(
         &err,
-        "filter expected i8 value, but `128` is out of range",
+        "filter expects i8 value, but `128` is out of range",
         "
   --> <anonymous>:1:10
    |
  1 | {{ age | add: 3 }}
    |          ^^^
-   |
-   = reason: REASON
-",
-    );
-}
-
-#[test]
-fn render_filter_err_expected_arg_reference() {
-    let mut engine = Engine::new();
-    engine.add_filter("into_owned", |v: Value| v);
-    engine.add_filter("prepend", |s1: &str, s2: &str| format!("{s2} {s1}"));
-    let err = engine
-        .compile(
-            "{% for name in names | into_owned %}\n\
-             {{ surname | prepend: name }}\n\
-             {% endfor %}",
-        )
-        .unwrap()
-        .render(
-            &engine,
-            value! {
-                names: ["John", "James", "Jimothy"],
-                surname: "Smith"
-            },
-        )
-        .to_string()
-        .unwrap_err();
-    assert_err(
-        &err,
-        "filter expected reference argument but this string can only be passed as owned",
-        "
-  --> <anonymous>:2:23
-   |
- 2 | {{ surname | prepend: name }}
-   |                       ^^^^
    |
    = reason: REASON
 ",
@@ -407,7 +578,7 @@ fn render_filter_err_expected_arg_try_from_int() {
         .unwrap_err();
     assert_err(
         &err,
-        "filter expected i8 argument, but `128` is out of range",
+        "filter expects i8 argument, but `128` is out of range",
         "
   --> <anonymous>:1:19
    |

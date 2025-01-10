@@ -20,13 +20,3 @@ impl Deref for ValueCow<'_> {
         }
     }
 }
-
-impl ValueCow<'_> {
-    #[cfg(feature = "filters")]
-    pub fn take(&mut self) -> Value {
-        match self {
-            Self::Borrowed(v) => v.clone(),
-            Self::Owned(v) => std::mem::take(v),
-        }
-    }
-}

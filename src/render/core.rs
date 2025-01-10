@@ -6,6 +6,7 @@ use crate::render::stack::{Stack, State};
 use crate::render::RendererInner;
 use crate::types::ast;
 use crate::types::program::{Instr, Template};
+use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{EngineBoxFn, Error, Result};
 
@@ -17,12 +18,12 @@ pub struct RendererImpl<'render, 'stack> {
 
 #[cfg(feature = "filters")]
 #[cfg_attr(internal_debug, derive(Debug))]
-pub struct FilterState<'a> {
-    pub stack: &'a Stack<'a>,
-    pub source: &'a str,
-    pub filter: &'a ast::Ident,
-    pub value: &'a mut ValueCow<'a>,
-    pub args: &'a [ast::BaseExpr],
+pub struct FilterState<'stack, 'args>
+where
+    'stack: 'args,
+{
+    pub source: &'stack str,
+    pub args: &'args mut [(ValueCow<'stack>, Span)],
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
@@ -100,8 +101,8 @@ where
         t: &'render Template<'render>,
         pc: &mut usize,
     ) -> Result<RenderState<'render, 'stack>> {
-        // An expression that we are building
-        let mut expr: Option<ValueCow<'stack>> = None;
+        // The expressions that we are building
+        let mut exprs: Vec<(ValueCow<'stack>, Span)> = Vec::new();
 
         while let Some(instr) = t.instrs.get(*pc) {
             match instr {
@@ -111,23 +112,23 @@ where
                 }
 
                 Instr::JumpIfTrue(j) => {
-                    if expr.take().unwrap().as_bool() {
+                    if exprs.pop().unwrap().0.as_bool() {
                         *pc = *j;
                         continue;
                     }
                 }
 
                 Instr::JumpIfFalse(j) => {
-                    if !expr.take().unwrap().as_bool() {
+                    if !exprs.pop().unwrap().0.as_bool() {
                         *pc = *j;
                         continue;
                     }
                 }
 
-                Instr::Emit(span) => {
-                    let value = expr.take().unwrap();
+                Instr::Emit => {
+                    let (value, span) = exprs.pop().unwrap();
                     (self.inner.engine.default_formatter)(f, &value)
-                        .map_err(|err| Error::format(err, &t.source, *span))?;
+                        .map_err(|err| Error::format(err, &t.source, span))?;
                 }
 
                 Instr::EmitRaw(span) => {
@@ -137,7 +138,7 @@ where
                     f.write_str(raw)?;
                 }
 
-                Instr::EmitWith(name, _span) => {
+                Instr::EmitWith(name, _arity, _span) => {
                     let name_raw = &t.source[name.span];
                     match self.inner.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply
@@ -145,22 +146,21 @@ where
                         // formatter.
                         #[cfg(feature = "filters")]
                         Some(EngineBoxFn::Filter(filter)) => {
-                            let mut value = expr.take().unwrap();
+                            let at = exprs.len() - (_arity + 1);
+                            let args = &mut exprs[at..];
                             let result = filter(FilterState {
-                                stack: &self.stack,
                                 source: &t.source,
-                                filter: name,
-                                value: &mut value,
-                                args: &[],
+                                args,
                             })
                             .map_err(|err| err.enrich(&t.source, name.span))?;
+                            exprs.truncate(at);
                             (self.inner.engine.default_formatter)(f, &result)
                                 .map_err(|err| Error::format(err, &t.source, *_span))?;
                         }
                         // The referenced function is a formatter so we simply
                         // emit the value with it.
                         Some(EngineBoxFn::Formatter(formatter)) => {
-                            let value = expr.take().unwrap();
+                            let (value, _) = exprs.pop().unwrap();
                             formatter(f, &value)
                                 .map_err(|err| Error::format(err, &t.source, name.span))?;
                         }
@@ -176,7 +176,7 @@ where
                 }
 
                 Instr::LoopStart(vars, span) => {
-                    let iterable = expr.take().unwrap();
+                    let (iterable, _) = exprs.pop().unwrap();
                     self.stack.push(State::Loop(LoopState::new(
                         &t.source, vars, iterable, *span,
                     )?));
@@ -191,7 +191,7 @@ where
                 }
 
                 Instr::WithStart(name) => {
-                    let value = expr.take().unwrap();
+                    let (value, _) = exprs.pop().unwrap();
                     self.stack.push(State::Var(name, value))
                 }
 
@@ -201,49 +201,45 @@ where
 
                 Instr::Include(template_name) => {
                     *pc += 1;
+                    debug_assert!(exprs.is_empty());
                     return Ok(RenderState::Include { template_name });
                 }
 
                 Instr::IncludeWith(template_name) => {
                     *pc += 1;
-                    let globals = expr.take().unwrap();
+                    let (globals, _) = exprs.pop().unwrap();
+                    debug_assert!(exprs.is_empty());
                     return Ok(RenderState::IncludeWith {
                         template_name,
                         globals,
                     });
                 }
 
-                Instr::ExprStart(var) => {
+                Instr::ExprStartVar(var) => {
                     let value = self.stack.lookup_var(&t.source, var)?;
-                    let prev = expr.replace(value);
-                    debug_assert!(prev.is_none());
+                    exprs.push((value, var.span()));
                 }
 
-                Instr::ExprStartLit(value) => {
-                    let prev = expr.replace(ValueCow::Owned(value.clone()));
-                    debug_assert!(prev.is_none());
+                Instr::ExprStartLiteral(literal) => {
+                    let value = ValueCow::Borrowed(&literal.value);
+                    exprs.push((value, literal.span));
                 }
 
-                Instr::Apply(name, _args) => {
+                Instr::Apply(name, _arity, _span) => {
                     let name_raw = &t.source[name.span];
                     match self.inner.engine.functions.get(name_raw) {
                         // The referenced function is a filter, so we apply it.
                         #[cfg(feature = "filters")]
                         Some(EngineBoxFn::Filter(filter)) => {
-                            let mut value = expr.take().unwrap();
-                            let args = _args
-                                .as_ref()
-                                .map(|args| args.values.as_slice())
-                                .unwrap_or(&[]);
+                            let at = exprs.len() - (_arity + 1);
+                            let args = &mut exprs[at..];
                             let result = filter(FilterState {
-                                stack: &self.stack,
                                 source: &t.source,
-                                filter: name,
-                                value: &mut value,
                                 args,
                             })
-                            .map_err(|e| e.enrich(&t.source, name.span))?;
-                            expr.replace(ValueCow::Owned(result));
+                            .map_err(|e| e.enrich(&t.source, *_span))?;
+                            exprs.truncate(at);
+                            exprs.push((ValueCow::Owned(result), *_span));
                         }
                         // The referenced function is a formatter which is not valid
                         // in the middle of an expression.
@@ -265,6 +261,7 @@ where
         }
 
         assert!(*pc == t.instrs.len());
+        debug_assert!(exprs.is_empty());
         Ok(RenderState::Done)
     }
 
