@@ -1,6 +1,6 @@
 use crate::compile::parse::Keyword;
+use crate::types::delimiter::Delimiter;
 use crate::types::span::Span;
-use crate::types::syntax;
 use crate::{Engine, Error, Result};
 
 /// A lexer that tokenizes the template source into distinct chunks so that the
@@ -196,8 +196,8 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         };
 
         match self.engine.searcher.find_at(self.source, i) {
-            Some((kind, j, k)) => {
-                let (tk, trim) = Token::from_kind(kind);
+            Some((delimiter, j, k)) => {
+                let (tk, trim) = Token::from_delimiter(delimiter);
 
                 if !tk.is_begin_tag() {
                     return Err(self.err_unexpected_token(tk, j..k));
@@ -247,8 +247,8 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         // for the corresponding end tag `end`.
 
         let (tk, j) = match self.engine.searcher.starts_with(self.source, i) {
-            Some((kind, j)) => {
-                let (tk, trim) = Token::from_kind(kind);
+            Some((delimiter, j)) => {
+                let (tk, trim) = Token::from_delimiter(delimiter);
 
                 if tk.is_begin_tag() {
                     return Err(self.err_unclosed(begin, end));
@@ -364,8 +364,8 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         //    i     j k
 
         match self.engine.searcher.find_at(self.source, i) {
-            Some((kind, j, k)) => {
-                let (tk, trim) = Token::from_kind(kind);
+            Some((delimiter, j, k)) => {
+                let (tk, trim) = Token::from_delimiter(delimiter);
 
                 if tk.is_begin_tag() {
                     return Err(self.err_unclosed(begin, end));
@@ -566,20 +566,20 @@ impl Token {
         matches!(self, Self::Whitespace)
     }
 
-    fn from_kind(tk: syntax::Kind) -> (Self, bool) {
-        match tk {
-            syntax::Kind::BeginExpr => (Self::BeginExpr, false),
-            syntax::Kind::EndExpr => (Self::EndExpr, false),
-            syntax::Kind::BeginExprTrim => (Self::BeginExpr, true),
-            syntax::Kind::EndExprTrim => (Self::EndExpr, true),
-            syntax::Kind::BeginBlock => (Self::BeginBlock, false),
-            syntax::Kind::EndBlock => (Self::EndBlock, false),
-            syntax::Kind::BeginBlockTrim => (Self::BeginBlock, true),
-            syntax::Kind::EndBlockTrim => (Self::EndBlock, true),
-            syntax::Kind::BeginComment => (Self::BeginComment, false),
-            syntax::Kind::EndComment => (Self::EndComment, false),
-            syntax::Kind::BeginCommentTrim => (Self::BeginComment, true),
-            syntax::Kind::EndCommentTrim => (Self::EndComment, true),
+    fn from_delimiter(d: Delimiter) -> (Self, bool) {
+        match d {
+            Delimiter::BeginExpr => (Self::BeginExpr, false),
+            Delimiter::EndExpr => (Self::EndExpr, false),
+            Delimiter::BeginExprTrim => (Self::BeginExpr, true),
+            Delimiter::EndExprTrim => (Self::EndExpr, true),
+            Delimiter::BeginBlock => (Self::BeginBlock, false),
+            Delimiter::EndBlock => (Self::EndBlock, false),
+            Delimiter::BeginBlockTrim => (Self::BeginBlock, true),
+            Delimiter::EndBlockTrim => (Self::EndBlock, true),
+            Delimiter::BeginComment => (Self::BeginComment, false),
+            Delimiter::EndComment => (Self::EndComment, false),
+            Delimiter::BeginCommentTrim => (Self::BeginComment, true),
+            Delimiter::EndCommentTrim => (Self::EndComment, true),
         }
     }
 }
@@ -638,6 +638,15 @@ mod tests {
         assert_eq!(
             tokens,
             [(Token::Raw, "lorem ipsum "), (Token::BeginExpr, "{{"),]
+        );
+    }
+
+    #[test]
+    fn lex_begin_expr_trickery() {
+        let tokens = lex("lorem { ipsum {{").unwrap();
+        assert_eq!(
+            tokens,
+            [(Token::Raw, "lorem { ipsum "), (Token::BeginExpr, "{{"),]
         );
     }
 
@@ -837,6 +846,23 @@ mod tests {
     }
 
     #[test]
+    fn lex_block_trim() {
+        let tokens = lex("lorem ipsum {%- dolor -%} sit").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum"),
+                (Token::BeginBlock, "{%-"),
+                (Token::Whitespace, " "),
+                (Token::Ident, "dolor"),
+                (Token::Whitespace, " "),
+                (Token::EndBlock, "-%}"),
+                (Token::Raw, "sit"),
+            ]
+        );
+    }
+
+    #[test]
     fn lex_block_and_expr() {
         let tokens =
             lex("{% if cond %} lorem ipsum {{ path.segment }} dolor sit amet {% end %}").unwrap();
@@ -895,6 +921,21 @@ mod tests {
                 (Token::Raw, "lorem ipsum "),
                 (Token::BeginComment, "{#"),
                 (Token::Raw, " dolor")
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_end_comment() {
+        let tokens = lex("lorem ipsum {# dolor #} sit amet").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem ipsum "),
+                (Token::BeginComment, "{#"),
+                (Token::Raw, " dolor "),
+                (Token::EndComment, "#}"),
+                (Token::Raw, " sit amet"),
             ]
         );
     }

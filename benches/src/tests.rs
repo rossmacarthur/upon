@@ -3,7 +3,21 @@ use crate::{Engine, Handlebars, Liquid, Minijinja, Tera, TinyTemplate, Upon};
 
 macro_rules! t {
     ($E:ty, $source:literal) => {{
-        let result = render::<$E>(include_str!($source));
+        let result = render::<$E>(include_str!($source), false, false);
+        goldie::assert!(result);
+    }};
+}
+
+macro_rules! t_filters {
+    ($E:ty, $source:literal) => {{
+        let result = render::<$E>(include_str!($source), false, true);
+        goldie::assert!(result);
+    }};
+}
+
+macro_rules! t_syntax {
+    ($E:ty, $source:literal) => {{
+        let result = render::<$E>(include_str!($source), true, false);
         goldie::assert!(result);
     }};
 }
@@ -39,25 +53,35 @@ fn basic_upon() {
 
 #[test]
 fn filters_handlebars() {
-    t!(Handlebars, "../benchdata/filters/handlebars.html");
+    t_filters!(Handlebars, "../benchdata/filters/handlebars.html");
 }
 
 #[test]
 fn filters_minijinja() {
-    t!(Minijinja, "../benchdata/filters/minijinja.html");
+    t_filters!(Minijinja, "../benchdata/filters/minijinja.html");
 }
 
 #[test]
 fn filters_tera() {
-    t!(Tera, "../benchdata/filters/tera.html");
+    t_filters!(Tera, "../benchdata/filters/tera.html");
 }
 
 #[test]
 fn filters_upon() {
-    t!(Upon, "../benchdata/filters/upon.html");
+    t_filters!(Upon, "../benchdata/filters/upon.html");
 }
 
-fn render<'a, E: Engine<'a>>(source: &'a str) -> String {
+#[test]
+fn syntax_minijinja() {
+    t_syntax!(Minijinja, "../benchdata/syntax/minijinja.html");
+}
+
+#[test]
+fn syntax_upon() {
+    t_syntax!(Upon, "../benchdata/syntax/upon.html");
+}
+
+fn render<'a, E: Engine<'a>>(source: &'a str, syntax: bool, filters: bool) -> String {
     let ctx = Context {
         title: "My awesome webpage!".to_owned(),
         users: vec![
@@ -79,8 +103,14 @@ fn render<'a, E: Engine<'a>>(source: &'a str) -> String {
         ],
     };
 
-    let mut engine = E::new();
-    engine.add_filters();
+    let mut engine = if syntax {
+        E::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"))
+    } else {
+        E::new()
+    };
+    if filters {
+        engine.add_filters();
+    }
     engine.add_template("bench", source);
     engine.render("bench", &ctx)
 }

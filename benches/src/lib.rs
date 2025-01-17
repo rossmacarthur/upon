@@ -5,10 +5,19 @@ mod tests;
 use std::collections::HashMap;
 
 /// Abstraction for a template engine.
-pub trait Engine<'a> {
+pub trait Engine<'a>: Sized {
     fn name() -> &'static str;
     fn new() -> Self;
-    fn add_filters(&mut self);
+    fn with_syntax(
+        _expr: (&'static str, &'static str),
+        _block: (&'static str, &'static str),
+        _comment: (&'static str, &'static str),
+    ) -> Self {
+        unimplemented!()
+    }
+    fn add_filters(&mut self) {
+        unimplemented!()
+    }
     fn add_template(&mut self, name: &'static str, source: &'a str);
     fn render<S>(&self, name: &'static str, ctx: &S) -> String
     where
@@ -84,9 +93,6 @@ impl<'engine> Engine<'engine> for Liquid {
     }
 
     #[inline]
-    fn add_filters(&mut self) {}
-
-    #[inline]
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
         let template = self.parser.parse(source).unwrap();
         self.store.insert(name, template);
@@ -123,6 +129,24 @@ impl<'engine> Engine<'engine> for Minijinja<'engine> {
     }
 
     #[inline]
+    fn with_syntax(
+        (variable_start, variable_end): (&'static str, &'static str),
+        (block_start, block_end): (&'static str, &'static str),
+        (comment_start, comment_end): (&'static str, &'static str),
+    ) -> Self {
+        let mut env = minijinja::Environment::new();
+        env.set_syntax(minijinja::Syntax {
+            block_start: block_start.into(),
+            block_end: block_end.into(),
+            variable_start: variable_start.into(),
+            variable_end: variable_end.into(),
+            comment_start: comment_start.into(),
+            comment_end: comment_end.into(),
+        })
+        .unwrap();
+        env
+    }
+
     fn add_filters(&mut self) {}
 
     #[inline]
@@ -196,9 +220,6 @@ impl<'engine> Engine<'engine> for TinyTemplate<'engine> {
     }
 
     #[inline]
-    fn add_filters(&mut self) {}
-
-    #[inline]
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
         self.add_template(name, source).unwrap();
     }
@@ -227,6 +248,21 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
     #[inline]
     fn new() -> Self {
         upon::Engine::new()
+    }
+
+    #[inline]
+    fn with_syntax(
+        (begin_expr, end_expr): (&'static str, &'static str),
+        (begin_block, end_block): (&'static str, &'static str),
+        (begin_comment, end_comment): (&'static str, &'static str),
+    ) -> Self {
+        upon::Engine::with_syntax(
+            upon::Syntax::builder()
+                .expr(begin_expr, end_expr)
+                .block(begin_block, end_block)
+                .comment(begin_comment, end_comment)
+                .build(),
+        )
     }
 
     #[inline]

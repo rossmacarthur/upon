@@ -5,8 +5,8 @@
 //! contains [**expressions**](#expressions) for rendering values and
 //! [**blocks**](#blocks) for controlling logic. These require you to use
 //! specific syntax delimiters in the template. Because `upon` allows you to
-//! configure these delimiters, this document will only refer to the
-//! [**default**][crate::Syntax::default] configuration.
+//! configure these delimiters, this document will only refer to the **default**
+//! configuration.
 //!
 //! # Expressions
 //!

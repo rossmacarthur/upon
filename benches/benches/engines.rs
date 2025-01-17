@@ -11,6 +11,7 @@ criterion_group! {
     benches,
     bench_init,
     bench_compile,
+    bench_syntax,
     bench_render,
     bench_filters,
 }
@@ -55,6 +56,25 @@ pub fn bench_compile(c: &mut Criterion) {
     bench!(Tera, "../benchdata/basic/tera.html");
     bench!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
     bench!(Upon, "../benchdata/basic/upon.html");
+}
+
+/// Benchmarks the time taken to compile a template with custom syntax.
+pub fn bench_syntax(c: &mut Criterion) {
+    let mut g = c.benchmark_group("syntax");
+
+    macro_rules! bench {
+        ($E:ty, $source:literal) => {{
+            g.bench_function(<$E as Engine>::name(), |b| {
+                let source = repeat(include_str!($source), 50);
+                let mut engine =
+                    <$E as Engine>::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"));
+                b.iter(|| engine.add_template("bench", &source));
+            });
+        }};
+    }
+
+    bench!(Minijinja, "../benchdata/syntax/minijinja.html");
+    bench!(Upon, "../benchdata/syntax/upon.html");
 }
 
 /// Benchmarks the time taken to render a template as a string.

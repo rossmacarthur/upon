@@ -1,4 +1,4 @@
-use upon::{Engine, Error, Syntax};
+use upon::{Engine, Error};
 
 #[test]
 fn lex_while_eof() {
@@ -17,17 +17,25 @@ fn lex_while_eof() {
     );
 }
 
+#[cfg(feature = "syntax")]
 #[test]
 fn lex_syntax_overlapping() {
-    let syntax = Syntax::builder().expr("{", "}").block("{{", "}}").build();
+    let syntax = upon::Syntax::builder()
+        .expr("{", "}")
+        .block("{{", "}}")
+        .build();
     Engine::with_syntax(syntax)
         .compile("lorem { ipsum } {{ if dolor }} {{ endif }} sit amet")
         .unwrap();
 }
 
+#[cfg(feature = "syntax")]
 #[test]
 fn lex_syntax_overlapping_flipped() {
-    let syntax = Syntax::builder().expr("{{", "}}").block("{", "}").build();
+    let syntax = upon::Syntax::builder()
+        .expr("{{", "}}")
+        .block("{", "}")
+        .build();
     Engine::with_syntax(syntax)
         .compile("lorem {{ ipsum }} { if dolor } { endif } sit amet")
         .unwrap();
@@ -40,9 +48,13 @@ fn lex_syntax_whitespace_trimming() {
         .unwrap();
 }
 
+#[cfg(feature = "syntax")]
 #[test]
 fn lex_syntax_precedence() {
-    let syntax = Syntax::builder().expr("{|", "|}").block("{", "}").build();
+    let syntax = upon::Syntax::builder()
+        .expr("{|", "|}")
+        .block("{", "}")
+        .build();
     Engine::with_syntax(syntax)
         .compile("lorem {| ipsum | dolor |} sit")
         .unwrap();

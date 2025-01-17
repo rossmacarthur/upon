@@ -130,6 +130,10 @@ The following crate features are available.
   [`render_from(..)`][render_from] to render templates and
   construct the context using [`Value`][value]’s `From` impls.
 
+- **`syntax`** *(disabled by default)* — Enables support for configuring
+  custom delimiters in templates (see `Engine::with_syntax`) and pulls in
+  the `aho-corasick` crate.
+
 - **`unicode`** *(enabled by default)* — Enables unicode support and pulls
   in the [`unicode-ident`][unicode-ident] and
   [`unicode-width`][unicode-width] crates. If disabled then unicode

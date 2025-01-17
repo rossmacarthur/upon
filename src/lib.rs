@@ -117,6 +117,10 @@
 //!   [`render_from(..)`][TemplateRef::render_from] to render templates and
 //!   construct the context using [`Value`]'s `From` impls.
 //!
+//! - **`syntax`** _(disabled by default)_ — Enables support for configuring
+//!   custom delimiters in templates (see [`Engine::with_syntax`]) and pulls in
+//!   the [`aho-corasick`][aho_corasick] crate.
+//!
 //! - **`unicode`** _(enabled by default)_ — Enables unicode support and pulls
 //!   in the [`unicode-ident`][unicode_ident] and
 //!   [`unicode-width`][unicode_width] crates. If disabled then unicode
@@ -239,6 +243,8 @@ use std::collections::BTreeMap;
 
 pub use crate::error::Error;
 pub use crate::render::Renderer;
+#[cfg(feature = "syntax")]
+#[cfg_attr(docsrs, doc(cfg(feature = "syntax")))]
 pub use crate::types::syntax::{Syntax, SyntaxBuilder};
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -344,7 +350,7 @@ impl<'engine> Engine<'engine> {
     /// Construct a new engine.
     #[inline]
     pub fn new() -> Self {
-        Self::with_syntax(Syntax::default())
+        Self::with_searcher(Searcher::new())
     }
 
     /// Construct a new engine with custom syntax.
@@ -357,10 +363,24 @@ impl<'engine> Engine<'engine> {
     /// let syntax = Syntax::builder().expr("<{", "}>").block("<[", "]>").build();
     /// let engine = Engine::with_syntax(syntax);
     /// ```
+    ///
+    /// # Note
+    ///
+    /// Passing a custom syntax to this function always uses the `aho-corasick`
+    /// implementation for searching. This means that even if you pass the
+    /// default syntax to this function it is *not* equivalent to
+    /// [`Engine::new()`][Engine::new].
+    #[cfg_attr(docsrs, doc(cfg(feature = "syntax")))]
+    #[cfg(feature = "syntax")]
     #[inline]
     pub fn with_syntax(syntax: Syntax<'engine>) -> Self {
+        Self::with_searcher(Searcher::with_syntax(syntax))
+    }
+
+    #[inline]
+    fn with_searcher(searcher: Searcher) -> Self {
         Self {
-            searcher: Searcher::new(syntax),
+            searcher,
             default_formatter: &fmt::default,
             functions: BTreeMap::new(),
             templates: BTreeMap::new(),

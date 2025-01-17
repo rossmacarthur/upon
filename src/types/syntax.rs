@@ -1,47 +1,28 @@
 use std::marker::PhantomData;
 
+use crate::types::delimiter::Delimiter;
+
 /// The template syntax configuration.
 ///
 /// Use [`Syntax::default()`] to get the default syntax configuration and
 /// [`Syntax::builder()`] to create a custom syntax configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Syntax<'a> {
-    pub(crate) patterns: Vec<(Kind, String)>,
+    /// The corresponding delimiters for the patterns.
+    pub(crate) delimiters: Vec<Delimiter>,
+    /// The configured patterns.
+    pub(crate) patterns: Vec<String>,
     _marker: PhantomData<&'a ()>,
 }
 
 /// A builder for the syntax configuration.
 ///
-/// This struct is typically created using [`Syntax::builder()`].
+/// This struct is created using [`Syntax::builder()`].
 #[derive(Debug, Clone)]
 pub struct SyntaxBuilder<'a> {
     expr: Option<(&'a str, &'a str)>,
     block: Option<(&'a str, &'a str)>,
     comment: Option<(&'a str, &'a str)>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Kind {
-    BeginExpr = 0,
-    EndExpr = 1,
-    BeginExprTrim = 2,
-    EndExprTrim = 3,
-    BeginBlock = 4,
-    EndBlock = 5,
-    BeginBlockTrim = 6,
-    EndBlockTrim = 7,
-    BeginComment = 8,
-    EndComment = 9,
-    BeginCommentTrim = 10,
-    EndCommentTrim = 11,
-}
-
-#[test]
-fn kind_usize() {
-    for p in 0..12 {
-        let k = Kind::from_usize(p);
-        assert_eq!(k as usize, p);
-    }
 }
 
 impl Default for Syntax<'_> {
@@ -81,22 +62,15 @@ impl<'a> Syntax<'a> {
     /// ```
     #[inline]
     pub fn builder() -> SyntaxBuilder<'a> {
-        SyntaxBuilder::new()
-    }
-}
-
-impl<'a> SyntaxBuilder<'a> {
-    /// Creates a new syntax builder.
-    #[inline]
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
+        SyntaxBuilder {
             expr: None,
             block: None,
             comment: None,
         }
     }
+}
 
+impl<'a> SyntaxBuilder<'a> {
     /// Set the block syntax.
     ///
     /// If not set then the expression syntax will not be available.
@@ -141,54 +115,34 @@ impl<'a> SyntaxBuilder<'a> {
 
     /// Builds the syntax configuration.
     pub fn build(&self) -> Syntax<'a> {
+        let mut delimiters = Vec::new();
         let mut patterns = Vec::new();
+        let mut push = |delimiter, pattern| {
+            delimiters.push(delimiter);
+            patterns.push(pattern);
+        };
         if let Some((begin, end)) = self.expr {
-            patterns.push((Kind::BeginExpr, begin.into()));
-            patterns.push((Kind::EndExpr, end.into()));
-            patterns.push((Kind::BeginExprTrim, format!("{begin}-")));
-            patterns.push((Kind::EndExprTrim, format!("-{end}")));
+            push(Delimiter::BeginExpr, begin.into());
+            push(Delimiter::EndExpr, end.into());
+            push(Delimiter::BeginExprTrim, format!("{begin}-"));
+            push(Delimiter::EndExprTrim, format!("-{end}"));
         };
         if let Some((begin, end)) = self.block {
-            patterns.push((Kind::BeginBlock, begin.into()));
-            patterns.push((Kind::EndBlock, end.into()));
-            patterns.push((Kind::BeginBlockTrim, format!("{begin}-")));
-            patterns.push((Kind::EndBlockTrim, format!("-{end}")));
+            push(Delimiter::BeginBlock, begin.into());
+            push(Delimiter::EndBlock, end.into());
+            push(Delimiter::BeginBlockTrim, format!("{begin}-"));
+            push(Delimiter::EndBlockTrim, format!("-{end}"));
         }
         if let Some((begin, end)) = self.comment {
-            patterns.push((Kind::BeginComment, begin.into()));
-            patterns.push((Kind::EndComment, end.into()));
-            patterns.push((Kind::BeginCommentTrim, format!("{begin}-")));
-            patterns.push((Kind::EndCommentTrim, format!("-{end}")));
+            push(Delimiter::BeginComment, begin.into());
+            push(Delimiter::EndComment, end.into());
+            push(Delimiter::BeginCommentTrim, format!("{begin}-"));
+            push(Delimiter::EndCommentTrim, format!("-{end}"));
         }
         Syntax {
+            delimiters,
             patterns,
             _marker: PhantomData,
         }
-    }
-}
-
-impl Kind {
-    pub fn from_usize(id: usize) -> Self {
-        match id {
-            0 => Self::BeginExpr,
-            1 => Self::EndExpr,
-            2 => Self::BeginExprTrim,
-            3 => Self::EndExprTrim,
-            4 => Self::BeginBlock,
-            5 => Self::EndBlock,
-            6 => Self::BeginBlockTrim,
-            7 => Self::EndBlockTrim,
-            8 => Self::BeginComment,
-            9 => Self::EndComment,
-            10 => Self::BeginCommentTrim,
-            11 => Self::EndCommentTrim,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<Kind> for usize {
-    fn from(k: Kind) -> Self {
-        k as usize
     }
 }
