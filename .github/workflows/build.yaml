@@ -69,16 +69,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.66
 
-      - uses: dtolnay/rust-toolchain@1.60
-      - name: Check (no filters, no syntax)
-        run: cargo check --no-default-features --features serde,unicode
-
-      - uses: dtolnay/rust-toolchain@1.61
-      - name: Check (no filters)
-        run: cargo check --no-default-features --features serde,syntax,unicode
-
-      - uses: dtolnay/rust-toolchain@1.65
       - name: Test
         run: cargo test --all-features
         env:

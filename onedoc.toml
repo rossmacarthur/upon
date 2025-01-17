@@ -14,6 +14,7 @@ template = "docs/SYNTAX_TEMPLATE.md"
 "Value" = "https://docs.rs/upon/latest/upon/enum.Value.html"
 
 # Engine methods
+"Engine::with_syntax" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.with_syntax"
 "Engine::add_filter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter"
 "Engine::add_formatter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter"
 "add_template(..)" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template"
@@ -36,6 +37,7 @@ template = "docs/SYNTAX_TEMPLATE.md"
 "std::io::Write" = "https://doc.rust-lang.org/stable/std/io/trait.Write.html"
 
 # Crates
+"aho-corasick" = "https://crates.io/crates/aho-corasick"
 "serde" = "https://crates.io/crates/serde"
 "unicode-ident" = "https://crates.io/crates/unicode-ident"
 "unicode-width" = "https://crates.io/crates/unicode-width"

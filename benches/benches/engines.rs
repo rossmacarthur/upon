@@ -11,9 +11,7 @@ criterion_group! {
     benches,
     bench_init,
     bench_compile,
-    bench_syntax,
     bench_render,
-    bench_filters,
 }
 
 /// Benchmarks the time taken to create a new instance of the engine.
@@ -38,34 +36,20 @@ pub fn bench_init(c: &mut Criterion) {
 
 /// Benchmarks the time taken to compile a template.
 pub fn bench_compile(c: &mut Criterion) {
-    let mut g = c.benchmark_group("compile");
-
     macro_rules! bench {
-        ($E:ty, $source:literal) => {{
-            g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!($source), 50);
+        ($g:ident, $E:ty, $source:literal) => {{
+            $g.bench_function(<$E as Engine>::name(), |b| {
+                let source = repeat(include_str!(concat!("../benchdata/", $source)), 50);
                 let mut engine = <$E as Engine>::new();
                 b.iter(|| engine.add_template("bench", &source));
             });
         }};
     }
 
-    bench!(Handlebars, "../benchdata/basic/handlebars.html");
-    bench!(Liquid, "../benchdata/basic/liquid.html");
-    bench!(Minijinja, "../benchdata/basic/minijinja.html");
-    bench!(Tera, "../benchdata/basic/tera.html");
-    bench!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
-    bench!(Upon, "../benchdata/basic/upon.html");
-}
-
-/// Benchmarks the time taken to compile a template with custom syntax.
-pub fn bench_syntax(c: &mut Criterion) {
-    let mut g = c.benchmark_group("syntax");
-
-    macro_rules! bench {
-        ($E:ty, $source:literal) => {{
-            g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!($source), 50);
+    macro_rules! bench_with_syntax {
+        ($g:ident, $E:ty, $source:literal) => {{
+            $g.bench_function(<$E as Engine>::name(), |b| {
+                let source = repeat(include_str!(concat!("../benchdata/", $source)), 50);
                 let mut engine =
                     <$E as Engine>::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"));
                 b.iter(|| engine.add_template("bench", &source));
@@ -73,20 +57,38 @@ pub fn bench_syntax(c: &mut Criterion) {
         }};
     }
 
-    bench!(Minijinja, "../benchdata/syntax/minijinja.html");
-    bench!(Upon, "../benchdata/syntax/upon.html");
+    {
+        let mut g = c.benchmark_group("compile/basic");
+        // 8 times slower than the next slowest, leave out so the chart looks reasonable:
+        // bench!(g, Handlebars, "basic/handlebars.html");
+        bench!(g, Liquid, "basic/liquid.html");
+        bench!(g, Minijinja, "basic/jinja.html");
+        bench!(g, Tera, "basic/jinja.html");
+        bench!(g, TinyTemplate, "basic/tinytemplate.html");
+        bench!(g, Upon, "basic/jinja.html");
+    }
+
+    {
+        let mut g = c.benchmark_group("compile/syntax");
+        bench_with_syntax!(g, Minijinja, "syntax/jinja.html");
+        bench_with_syntax!(g, Upon, "syntax/jinja.html");
+    }
+
+    {
+        let mut g = c.benchmark_group("compile/literals");
+        bench!(g, Minijinja, "literals/minijinja.html");
+        bench!(g, Upon, "literals/upon.html");
+    }
 }
 
 /// Benchmarks the time taken to render a template as a string.
 pub fn bench_render(c: &mut Criterion) {
-    let mut g = c.benchmark_group("render");
-
     let ctx = context::random(150);
 
     macro_rules! bench {
-        ($E:ty, $source:literal) => {{
-            g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!($source), 20);
+        ($g:ident, $E:ty, $source:literal) => {{
+            $g.bench_function(<$E as Engine>::name(), |b| {
+                let source = repeat(include_str!(concat!("../benchdata/", $source)), 50);
                 let mut engine = <$E as Engine>::new();
                 <$E as Engine>::add_template(&mut engine, "bench", &source);
                 b.iter(|| <$E as Engine>::render(&engine, "bench", &ctx));
@@ -94,36 +96,23 @@ pub fn bench_render(c: &mut Criterion) {
         }};
     }
 
-    bench!(Handlebars, "../benchdata/basic/handlebars.html");
-    bench!(Liquid, "../benchdata/basic/liquid.html");
-    bench!(Minijinja, "../benchdata/basic/minijinja.html");
-    bench!(Tera, "../benchdata/basic/tera.html");
-    bench!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
-    bench!(Upon, "../benchdata/basic/upon.html");
-}
-
-/// Benchmarks the time taken to transform a string with multiple filters.
-fn bench_filters(c: &mut Criterion) {
-    let mut g = c.benchmark_group("filters");
-
-    let ctx = context::random(250);
-
-    macro_rules! bench {
-        ($E:ty, $source:literal) => {{
-            g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!($source), 10);
-                let mut engine = <$E as Engine>::new();
-                <$E as Engine>::add_filters(&mut engine);
-                <$E as Engine>::add_template(&mut engine, "bench", &source);
-                b.iter(|| <$E as Engine>::render(&engine, "bench", &ctx));
-            });
-        }};
+    {
+        let mut g = c.benchmark_group("render/basic");
+        bench!(g, Handlebars, "basic/handlebars.html");
+        bench!(g, Liquid, "basic/liquid.html");
+        bench!(g, Minijinja, "basic/jinja.html");
+        bench!(g, Tera, "basic/jinja.html");
+        bench!(g, TinyTemplate, "basic/tinytemplate.html");
+        bench!(g, Upon, "basic/jinja.html");
     }
 
-    bench!(Handlebars, "../benchdata/filters/handlebars.html");
-    bench!(Minijinja, "../benchdata/filters/minijinja.html");
-    bench!(Tera, "../benchdata/filters/tera.html");
-    bench!(Upon, "../benchdata/filters/upon.html");
+    {
+        let mut g = c.benchmark_group("render/filters");
+        bench!(g, Handlebars, "filters/handlebars.html");
+        bench!(g, Minijinja, "filters/jinja.html");
+        bench!(g, Tera, "filters/jinja.html");
+        bench!(g, Upon, "filters/jinja.html");
+    }
 }
 
 fn repeat(source: &str, n: usize) -> String {

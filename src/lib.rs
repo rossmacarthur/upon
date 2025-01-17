@@ -48,9 +48,8 @@
 //!
 //! ## MSRV
 //!
-//! Currently the minimum supported version for `upon` is Rust 1.65. Disabling
-//! the **`filters`** feature reduces it to Rust 1.60. The MSRV will only ever
-//! be increased in a breaking release.
+//! Currently the minimum supported version for `upon` is Rust 1.66. The MSRV
+//! will only ever be increased in a breaking release.
 //!
 //! # Getting started
 //!

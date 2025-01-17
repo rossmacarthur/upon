@@ -3,21 +3,14 @@ use crate::{Engine, Handlebars, Liquid, Minijinja, Tera, TinyTemplate, Upon};
 
 macro_rules! t {
     ($E:ty, $source:literal) => {{
-        let result = render::<$E>(include_str!($source), false, false);
-        goldie::assert!(result);
-    }};
-}
-
-macro_rules! t_filters {
-    ($E:ty, $source:literal) => {{
-        let result = render::<$E>(include_str!($source), false, true);
+        let result = render::<$E>(include_str!($source), false);
         goldie::assert!(result);
     }};
 }
 
 macro_rules! t_syntax {
     ($E:ty, $source:literal) => {{
-        let result = render::<$E>(include_str!($source), true, false);
+        let result = render::<$E>(include_str!($source), true);
         goldie::assert!(result);
     }};
 }
@@ -33,12 +26,12 @@ fn basic_liquid() {
 
 #[test]
 fn basic_minijinja() {
-    t!(Minijinja, "../benchdata/basic/minijinja.html");
+    t!(Minijinja, "../benchdata/basic/jinja.html");
 }
 
 #[test]
 fn basic_tera() {
-    t!(Tera, "../benchdata/basic/tera.html");
+    t!(Tera, "../benchdata/basic/jinja.html");
 }
 
 #[test]
@@ -48,40 +41,50 @@ fn basic_tinytemplate() {
 
 #[test]
 fn basic_upon() {
-    t!(Upon, "../benchdata/basic/upon.html");
+    t!(Upon, "../benchdata/basic/jinja.html");
 }
 
 #[test]
 fn filters_handlebars() {
-    t_filters!(Handlebars, "../benchdata/filters/handlebars.html");
+    t!(Handlebars, "../benchdata/filters/handlebars.html");
 }
 
 #[test]
 fn filters_minijinja() {
-    t_filters!(Minijinja, "../benchdata/filters/minijinja.html");
+    t!(Minijinja, "../benchdata/filters/jinja.html");
 }
 
 #[test]
 fn filters_tera() {
-    t_filters!(Tera, "../benchdata/filters/tera.html");
+    t!(Tera, "../benchdata/filters/jinja.html");
 }
 
 #[test]
 fn filters_upon() {
-    t_filters!(Upon, "../benchdata/filters/upon.html");
+    t!(Upon, "../benchdata/filters/jinja.html");
+}
+
+#[test]
+fn literals_minijinja() {
+    t!(Minijinja, "../benchdata/literals/minijinja.html");
+}
+
+#[test]
+fn literals_upon() {
+    t!(Upon, "../benchdata/literals/upon.html");
 }
 
 #[test]
 fn syntax_minijinja() {
-    t_syntax!(Minijinja, "../benchdata/syntax/minijinja.html");
+    t_syntax!(Minijinja, "../benchdata/syntax/jinja.html");
 }
 
 #[test]
 fn syntax_upon() {
-    t_syntax!(Upon, "../benchdata/syntax/upon.html");
+    t_syntax!(Upon, "../benchdata/syntax/jinja.html");
 }
 
-fn render<'a, E: Engine<'a>>(source: &'a str, syntax: bool, filters: bool) -> String {
+fn render<'a, E: Engine<'a>>(source: &'a str, syntax: bool) -> String {
     let ctx = Context {
         title: "My awesome webpage!".to_owned(),
         users: vec![
@@ -108,9 +111,6 @@ fn render<'a, E: Engine<'a>>(source: &'a str, syntax: bool, filters: bool) -> St
     } else {
         E::new()
     };
-    if filters {
-        engine.add_filters();
-    }
     engine.add_template("bench", source);
     engine.render("bench", &ctx)
 }

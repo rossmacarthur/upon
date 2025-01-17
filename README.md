@@ -68,9 +68,8 @@ inspired by template engines like [Liquid] and [Jinja].
 
 ### MSRV
 
-Currently the minimum supported version for `upon` is Rust 1.65. Disabling
-the **`filters`** feature reduces it to Rust 1.60. The MSRV will only ever
-be increased in a breaking release.
+Currently the minimum supported version for `upon` is Rust 1.66. The MSRV
+will only ever be increased in a breaking release.
 
 ## Getting started
 
@@ -131,8 +130,8 @@ The following crate features are available.
   construct the context using [`Value`][value]’s `From` impls.
 
 - **`syntax`** *(disabled by default)* — Enables support for configuring
-  custom delimiters in templates (see `Engine::with_syntax`) and pulls in
-  the `aho-corasick` crate.
+  custom delimiters in templates (see [`Engine::with_syntax`][enginewith_syntax]) and pulls in
+  the [`aho-corasick`][aho-corasick] crate.
 
 - **`unicode`** *(enabled by default)* — Enables unicode support and pulls
   in the [`unicode-ident`][unicode-ident] and
@@ -273,10 +272,12 @@ at your option.
 
 
 [add_template]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template
+[aho-corasick]: https://crates.io/crates/aho-corasick
 [compile]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile
 [engine]: https://docs.rs/upon/latest/upon/struct.Engine.html
 [engineadd_filter]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter
 [engineadd_formatter]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter
+[enginewith_syntax]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.with_syntax
 [filters]: https://docs.rs/upon/latest/upon/filters/index.html
 [fmt]: https://docs.rs/upon/latest/upon/fmt/index.html
 [render]: https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render
