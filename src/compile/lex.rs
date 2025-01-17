@@ -585,7 +585,7 @@ impl Token {
 }
 
 fn is_whitespace(c: char) -> bool {
-    matches!(c, '\t' | ' ')
+    matches!(c, '\t' | ' ' | '\r' | '\n')
 }
 
 #[cfg(feature = "unicode")]
@@ -713,6 +713,23 @@ mod tests {
                 (Token::EndExpr, "-}}"),
                 (Token::Raw, ""),
                 (Token::BeginExpr, "{{-"),
+                (Token::Whitespace, " "),
+                (Token::EndExpr, "}}"),
+                (Token::Raw, " dolor")
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_expr_multiline() {
+        let tokens = lex("lorem {{\n ipsum }} dolor").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem "),
+                (Token::BeginExpr, "{{"),
+                (Token::Whitespace, "\n "),
+                (Token::Ident, "ipsum"),
                 (Token::Whitespace, " "),
                 (Token::EndExpr, "}}"),
                 (Token::Raw, " dolor")
@@ -858,6 +875,23 @@ mod tests {
                 (Token::Whitespace, " "),
                 (Token::EndBlock, "-%}"),
                 (Token::Raw, "sit"),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_block_multiline() {
+        let tokens = lex("lorem {%\n ipsum %} dolor").unwrap();
+        assert_eq!(
+            tokens,
+            [
+                (Token::Raw, "lorem "),
+                (Token::BeginBlock, "{%"),
+                (Token::Whitespace, "\n "),
+                (Token::Ident, "ipsum"),
+                (Token::Whitespace, " "),
+                (Token::EndBlock, "%}"),
+                (Token::Raw, " dolor")
             ]
         );
     }
