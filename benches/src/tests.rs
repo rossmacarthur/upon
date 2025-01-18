@@ -66,12 +66,12 @@ fn filters_upon() {
 
 #[test]
 fn literals_minijinja() {
-    t!(Minijinja, "../benchdata/literals/minijinja.html");
+    t!(Minijinja, "../benchdata/literals/jinja.html");
 }
 
 #[test]
 fn literals_upon() {
-    t!(Upon, "../benchdata/literals/upon.html");
+    t!(Upon, "../benchdata/literals/jinja.html");
 }
 
 #[test]

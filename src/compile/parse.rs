@@ -7,9 +7,9 @@ use crate::{Engine, Error, Result, Value};
 
 /// A parser that constructs an AST from a token stream.
 ///
-/// The parser is implemented as a simple hand written parser with no recursion.
-/// It sometimes needs to peek at the next token to know how to proceed and uses
-/// the `peeked` buffer to do this.
+/// The parser is implemented as a simple hand written parser. It sometimes
+/// needs to peek at the next token to know how to proceed and uses the `peeked`
+/// buffer to do this.
 pub struct Parser<'engine, 'source> {
     /// A lexer that tokenizes the template source.
     tokens: Lexer<'engine, 'source>,
@@ -403,9 +403,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
             Keyword::EndWith => Ok(Block::EndWith),
             Keyword::Include => {
-                let span = self.expect(Token::String)?;
-                let name = self.parse_string(span)?;
-                let name = ast::String { name, span };
+                let name = self.parse_string()?;
                 let globals = if self.is_next_keyword(Keyword::With)? {
                     self.expect_keyword(Keyword::With)?;
                     Some(self.parse_expr()?)
@@ -437,7 +435,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
     /// Parses an expression.
     ///
-    /// This is a variable with zero or more function calls. For example:
+    /// This is a base expression with zero or more function calls. For example:
     ///
     ///   user.name | lower | prefix: "Mr. "
     ///
@@ -678,7 +676,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         }
     }
 
-    /// Parse an integer.
+    /// Parse a literal integer.
     fn parse_literal_integer(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
         let digits = raw.as_bytes();
         let (i, radix) = match digits {
@@ -718,7 +716,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(ast::Literal { value, span })
     }
 
-    /// Parses a float.
+    /// Parses a literal float.
     fn parse_literal_float(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
         let float: f64 = raw
             .parse()
@@ -730,14 +728,21 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(ast::Literal { value, span })
     }
 
-    /// Parses a string.
+    /// Parses a literal string.
     fn parse_literal_string(&self, span: Span) -> Result<ast::Literal> {
-        let value = Value::String(self.parse_string(span)?);
+        let value = Value::String(self.parse_quoted_string(span)?);
         Ok(ast::Literal { value, span })
     }
 
-    /// Parses a string and handles escape characters.
-    fn parse_string(&self, span: Span) -> Result<String> {
+    /// Parses a string.
+    fn parse_string(&mut self) -> Result<ast::String> {
+        let span = self.expect(Token::String)?;
+        let value = self.parse_quoted_string(span)?;
+        Ok(ast::String { value, span })
+    }
+
+    /// Parses a quoted string and handles escape characters.
+    fn parse_quoted_string(&self, span: Span) -> Result<String> {
         let raw = &self.source()[span];
         let string = if raw.contains('\\') {
             let mut iter = raw.char_indices().map(|(i, c)| (span.m + i, c));
@@ -774,7 +779,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(string)
     }
 
-    /// Parses a list literal.
+    /// Parses a list.
     fn parse_list(&mut self, span: Span) -> Result<ast::List> {
         let mut items = Vec::new();
         loop {
@@ -792,14 +797,14 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(ast::List { items, span })
     }
 
-    /// Parses a map literal.
+    /// Parses a map.
     fn parse_map(&mut self, span: Span) -> Result<ast::Map> {
         let mut items = Vec::new();
         loop {
             if self.is_next(Token::CloseBrace)? {
                 break;
             }
-            let key = self.parse_ident()?;
+            let key = self.parse_string()?;
             self.expect(Token::Colon)?;
             let value = self.parse_base_expr()?;
             items.push((key, value));

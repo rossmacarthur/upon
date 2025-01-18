@@ -246,7 +246,7 @@ where
                 }
 
                 Instr::ExprMapInsert(key) => {
-                    let key = t.source[key.span].to_owned();
+                    let key = key.value.clone();
                     let (value, _) = exprs.pop().unwrap();
                     match exprs.last_mut().unwrap() {
                         (ValueCow::Owned(Value::Map(m)), _) => {

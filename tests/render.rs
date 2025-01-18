@@ -138,7 +138,7 @@ fn render_inline_expr_literal_map() {
     let mut engine = Engine::new();
     engine.add_formatter("debug", debug);
     let result = engine
-        .compile(r#"{{ {a: true, b: 123, c: -3.14, d: "test", e: lorem} | debug }}"#)
+        .compile(r#"{{ {"a": true, "b": 123, "c": -3.14, "d": "test", "e": lorem} | debug }}"#)
         .unwrap()
         .render(&engine, value! { lorem: "ipsum" })
         .to_string()
@@ -151,7 +151,7 @@ fn render_inline_expr_nested_lists_and_maps() {
     let mut engine = Engine::new();
     engine.add_formatter("debug", debug);
     let result = engine
-        .compile(r#"{{ [true, [123, -3.14], {a: "test", b: lorem, c: [1, 2]}] | debug }}"#)
+        .compile(r#"{{ [true, [123, -3.14], {"a": "test", "b": lorem, "c": [1, 2]}] | debug }}"#)
         .unwrap()
         .render(&engine, value! { lorem: "ipsum" })
         .to_string()
@@ -1170,7 +1170,7 @@ fn render_include_with_statement_map() {
     let mut engine = Engine::new();
     engine.add_template("nested", "{{ dolor }}").unwrap();
     let result = engine
-        .compile(r#"lorem {% include "nested" with { dolor: dolor } %} sit"#)
+        .compile(r#"lorem {% include "nested" with { "dolor": dolor } %} sit"#)
         .unwrap()
         .render(&engine, value! { dolor: "test" })
         .to_string()

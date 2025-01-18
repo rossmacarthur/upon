@@ -76,8 +76,8 @@ pub fn bench_compile(c: &mut Criterion) {
 
     {
         let mut g = c.benchmark_group("compile/literals");
-        bench!(g, Minijinja, "literals/minijinja.html");
-        bench!(g, Upon, "literals/upon.html");
+        bench!(g, Minijinja, "literals/jinja.html");
+        bench!(g, Upon, "literals/jinja.html");
     }
 }
 

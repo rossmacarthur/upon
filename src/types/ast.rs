@@ -36,7 +36,7 @@ pub struct Include {
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct String {
-    pub name: std::string::String,
+    pub value: std::string::String,
     pub span: Span,
 }
 
@@ -155,7 +155,7 @@ pub struct List {
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Map {
-    pub items: Vec<(Ident, BaseExpr)>,
+    pub items: Vec<(String, BaseExpr)>,
     pub span: Span,
 }
 
@@ -167,7 +167,7 @@ impl Scope {
 
 impl String {
     pub fn as_str(&self) -> &str {
-        self.name.as_str()
+        self.value.as_str()
     }
 }
 

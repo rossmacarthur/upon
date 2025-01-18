@@ -71,7 +71,7 @@ pub enum Instr {
     ExprListPush,
 
     /// Insert an item to the current map expression
-    ExprMapInsert(ast::Ident),
+    ExprMapInsert(ast::String),
 
     /// Apply the filter using the value and args on the top of the stack.
     ///
