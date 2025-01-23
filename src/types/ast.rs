@@ -35,12 +35,6 @@ pub struct Include {
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
-pub struct String {
-    pub value: std::string::String,
-    pub span: Span,
-}
-
-#[cfg_attr(internal_debug, derive(Debug))]
 pub struct IfElse {
     pub not: bool,
     pub cond: Expr,
@@ -159,15 +153,15 @@ pub struct Map {
     pub span: Span,
 }
 
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct String {
+    pub value: std::string::String,
+    pub span: Span,
+}
+
 impl Scope {
     pub const fn new() -> Self {
         Self { stmts: Vec::new() }
-    }
-}
-
-impl String {
-    pub fn as_str(&self) -> &str {
-        self.value.as_str()
     }
 }
 
@@ -215,5 +209,11 @@ impl Access {
             Access::Index(key) => key.span,
             Access::Key(key) => key.span,
         }
+    }
+}
+
+impl String {
+    pub fn as_str(&self) -> &str {
+        self.value.as_str()
     }
 }

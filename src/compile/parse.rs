@@ -483,20 +483,21 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
             (Token::Minus, sign) => {
                 let span = self.expect(Token::Number)?;
-                let lit =
-                    self.parse_literal_number(&self.source()[span], sign.combine(span), Sign::Neg)?;
+                let raw = &self.source()[span];
+                let lit = self.parse_literal_number(Sign::Neg, sign.combine(span), raw)?;
                 ast::BaseExpr::Literal(lit)
             }
 
             (Token::Plus, sign) => {
                 let span = self.expect(Token::Number)?;
-                let lit =
-                    self.parse_literal_number(&self.source()[span], sign.combine(span), Sign::Pos)?;
+                let raw = &self.source()[span];
+                let lit = self.parse_literal_number(Sign::Pos, sign.combine(span), raw)?;
                 ast::BaseExpr::Literal(lit)
             }
 
             (Token::Number, span) => {
-                let lit = self.parse_literal_number(&self.source()[span], span, Sign::Pos)?;
+                let raw = &self.source()[span];
+                let lit = self.parse_literal_number(Sign::Pos, span, raw)?;
                 ast::BaseExpr::Literal(lit)
             }
 
@@ -655,15 +656,10 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parses an integer or a float.
-    fn parse_literal_number(
-        &self,
-        raw: &'source str,
-        span: Span,
-        sign: Sign,
-    ) -> Result<ast::Literal> {
-        match self.parse_literal_integer(raw, span, sign) {
+    fn parse_literal_number(&self, sign: Sign, span: Span, raw: &str) -> Result<ast::Literal> {
+        match self.parse_literal_integer(sign, span, raw) {
             Ok(lit) => Ok(lit),
-            Err(err) => match self.parse_literal_float(raw, span, sign) {
+            Err(err) => match self.parse_literal_float(sign, span, raw) {
                 Ok(lit) => Ok(lit),
                 Err(err2) => {
                     if raw.contains(['.', '-', '+']) {
@@ -677,7 +673,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parse a literal integer.
-    fn parse_literal_integer(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
+    fn parse_literal_integer(&self, sign: Sign, span: Span, raw: &str) -> Result<ast::Literal> {
         let digits = raw.as_bytes();
         let (i, radix) = match digits {
             [b'0', b'b', ..] => (2, 2),
@@ -717,7 +713,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     }
 
     /// Parses a literal float.
-    fn parse_literal_float(&self, raw: &str, span: Span, sign: Sign) -> Result<ast::Literal> {
+    fn parse_literal_float(&self, sign: Sign, span: Span, raw: &str) -> Result<ast::Literal> {
         let float: f64 = raw
             .parse()
             .map_err(|_| Error::syntax("invalid float literal", self.source(), span))?;
@@ -774,7 +770,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
             string
         } else {
-            raw[1..raw.len() - 1].to_owned()
+            String::from(&raw[1..raw.len() - 1])
         };
         Ok(string)
     }

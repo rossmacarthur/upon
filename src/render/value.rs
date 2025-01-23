@@ -7,7 +7,9 @@ use crate::{Error, Result, Value};
 impl ValueCow<'_> {
     pub fn as_bool(&self) -> bool {
         match &**self {
-            Value::None | Value::Bool(false) | Value::Integer(0) => false,
+            Value::None => false,
+            Value::Bool(false) => false,
+            Value::Integer(0) => false,
             Value::Float(n) if *n == 0.0 => false,
             Value::String(s) if s.is_empty() => false,
             Value::List(l) if l.is_empty() => false,

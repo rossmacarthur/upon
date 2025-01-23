@@ -11,6 +11,7 @@ pub struct Span {
 }
 
 impl Span {
+    /// Combines two spans into a single span that covers both.
     pub fn combine(self, other: Self) -> Self {
         let m = min(self.m, other.m);
         let n = max(self.n, other.n);

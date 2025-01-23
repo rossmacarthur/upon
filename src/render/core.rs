@@ -70,7 +70,8 @@ where
                                 Some(s) => e.with_template_name(s.to_owned()),
                                 None => e,
                             })?;
-                    templates.push((template, Some(template_name.as_str()), 0, false));
+                    let name = Some(template_name.as_str());
+                    templates.push((template, name, 0, false));
                 }
                 RenderState::IncludeWith {
                     template_name,
@@ -84,7 +85,8 @@ where
                             })?;
                     self.stack.push(State::Boundary);
                     self.stack.push(State::Scope(globals));
-                    templates.push((template, Some(template_name.as_str()), 0, true));
+                    let name = Some(template_name.as_str());
+                    templates.push((template, name, 0, true));
                 }
             }
             if templates.len() > max_include_depth {
