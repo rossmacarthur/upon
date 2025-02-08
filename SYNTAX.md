@@ -42,8 +42,8 @@ available in templates.
 - Strings: `"Hello World!"`, escape characters are supported: `\r`, `\n`,
   `\t`, `\\`, `\"`
 - Lists: `[1, 2, 3]`, `[value, "string", 3.14]`
-- Maps: `{a: value, b: "string", c: 3.14}`, literal map keys are always
-  constants and must be valid identifiers
+- Maps: `{"a": value, "b": "string", "c": 3.14}`, literal map keys are
+  always constant strings
 
 Both lists and maps can contain any type of value including literals and
 [values](#values).
