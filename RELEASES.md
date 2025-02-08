@@ -2,7 +2,7 @@
 
 ## 0.9.0
 
-*Unreleased*
+*February 8th, 2025*
 
 - [Support list and map literals.][69cf095b] List and map literals can now be
   used in templates. List literals are created using square brackets and map
