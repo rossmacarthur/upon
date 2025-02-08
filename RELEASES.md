@@ -1,5 +1,21 @@
 # 📝 Release notes
 
+## 0.9.0
+
+*Unreleased*
+
+- [Support list and map literals.][69cf095b] List and map literals can now be
+  used in templates. List literals are created using square brackets and map
+  literals are created using curly braces. For example, `[1, 2, 3]` is a list
+  literal and `{ "key": "value" }` is a map literal.
+
+- [Fix bug with filters expecting a borrowed argument would error.][cbc56d5e]
+  If a filter expected a borrowed argument, but the argument was owned, the
+  filter code would error. This is now fixed.
+
+[cbc56d5e]: https://github.com/rossmacarthur/upon/commit/cbc56d5ee25c74ec3c0afacf3e2b52444d57390b
+[69cf095b]: https://github.com/rossmacarthur/upon/commit/69cf095b81168604a37dd0ec35f82254f4f56037
+
 ## 0.8.1
 
 *February 23rd, 2024*
