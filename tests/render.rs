@@ -181,7 +181,7 @@ fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
                 if i != 0 {
                     f.write_str(", ")?;
                 }
-                write!(f, "{}: ", key)?;
+                write!(f, "{key}: ")?;
                 debug(f, value)?;
             }
             f.write_char('}')?;

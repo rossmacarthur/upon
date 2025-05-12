@@ -6,7 +6,8 @@ use crate::types::delimiter::Delimiter;
 ///
 /// Use [`Syntax::default()`] to get the default syntax configuration and
 /// [`Syntax::builder()`] to create a custom syntax configuration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Syntax<'a> {
     /// The corresponding delimiters for the patterns.
     pub(crate) delimiters: Vec<Delimiter>,
@@ -46,6 +47,13 @@ impl Default for Syntax<'_> {
             .block("{%", "%}")
             .comment("{#", "#}")
             .build()
+    }
+}
+
+#[cfg(not(internal_debug))]
+impl std::fmt::Debug for Syntax<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Syntax").finish_non_exhaustive()
     }
 }
 

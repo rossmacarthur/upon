@@ -43,6 +43,19 @@ impl Searcher {
     }
 }
 
+#[cfg(not(internal_debug))]
+impl std::fmt::Debug for Searcher {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Default(_) => f.debug_tuple("DefaultSearcher").finish(),
+            #[cfg(feature = "syntax")]
+            Self::AhoCorasick(_) => f
+                .debug_struct("AhoCorasickSearcher")
+                .finish_non_exhaustive(),
+        }
+    }
+}
+
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct DefaultSearcher;
 

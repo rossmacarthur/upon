@@ -225,7 +225,7 @@ impl std::fmt::Display for Error {
 // Pretty
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Holds iformation necessary for prettily displaying the error.
+/// Holds information necessary for prettily displaying the error.
 #[derive(Debug)]
 struct Pretty {
     /// Zero-indexed line number.

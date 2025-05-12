@@ -6,8 +6,6 @@ use std::borrow::Cow;
 use crate::types::ast;
 use crate::types::span::Span;
 
-pub const FIXME: usize = !0;
-
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Template<'source> {
     pub source: Cow<'source, str>,
@@ -83,6 +81,6 @@ pub enum Instr {
 #[cfg(not(internal_debug))]
 impl std::fmt::Debug for Template<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("<compiled>")
+        f.debug_struct("Template").finish_non_exhaustive()
     }
 }

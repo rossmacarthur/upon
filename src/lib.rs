@@ -97,7 +97,7 @@
 //! - The [`filters`] module documentation describes filters and how they work.
 //! - The [`fmt`] module documentation contains information on value formatters.
 //! - In addition to the examples in the current document, the
-//!   [`examples/`][examples] directory in the repository constains some more
+//!   [`examples/`][examples] directory in the repository contains some more
 //!   concrete code examples.
 //!
 //! [examples]: https://github.com/rossmacarthur/upon/tree/trunk/examples
@@ -253,7 +253,7 @@ pub use crate::value::Value;
 use crate::compile::Searcher;
 #[cfg(feature = "filters")]
 use crate::filters::{Filter, FilterArgs, FilterFn, FilterReturn};
-use crate::fmt::FormatFn;
+use crate::fmt::FormatterFn;
 use crate::types::program;
 
 /// A type alias for results in this crate.
@@ -262,7 +262,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// The compilation and rendering engine.
 pub struct Engine<'engine> {
     searcher: Searcher,
-    default_formatter: &'engine FormatFn,
+    default_formatter: &'engine FormatterFn,
     functions: BTreeMap<Cow<'engine, str>, EngineBoxFn>,
     templates: BTreeMap<Cow<'engine, str>, program::Template<'engine>>,
     max_include_depth: usize,
@@ -281,12 +281,12 @@ pub enum EngineFn {
 }
 
 enum EngineBoxFn {
-    Formatter(Box<FormatFn>),
+    Formatter(Box<FormatterFn>),
     #[cfg(feature = "filters")]
     Filter(Box<FilterFn>),
 }
 
-type ValueFn<'a> = dyn Fn(&[ValueMember]) -> std::result::Result<Value, String> + 'a;
+type ValueFn<'a> = dyn Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'a;
 
 /// A member in a value path.
 ///
@@ -326,6 +326,7 @@ pub enum ValueAccessOp {
 /// engine. However, it is considered a logic error to attempt to render this
 /// template using a different engine than the one that created it. If that
 /// happens the render call may panic or produce incorrect output.
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Template<'source> {
     template: program::Template<'source>,
 }
@@ -505,7 +506,7 @@ impl<'engine> Engine<'engine> {
     pub fn template(&self, name: &str) -> TemplateRef<'_> {
         match self.get_template(name) {
             Some(template) => template,
-            None => panic!("template with name '{}' does not exist in engine", name),
+            None => panic!("template with name '{name}' does not exist in engine"),
         }
     }
 
@@ -548,8 +549,8 @@ impl<'engine> Engine<'engine> {
 impl std::fmt::Debug for Engine<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Engine")
-            .field("searcher", &(..))
-            .field("default_formatter", &(..))
+            .field("searcher", &self.searcher)
+            .field("default_formatter", &format_args!("FormatterFn"))
             .field("functions", &self.functions)
             .field("templates", &self.templates)
             .field("max_include_depth", &self.max_include_depth)
@@ -569,12 +570,12 @@ impl EngineBoxFn {
 
 impl std::fmt::Debug for EngineBoxFn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = match self {
+        f.debug_tuple(match self {
             #[cfg(feature = "filters")]
-            Self::Filter(_) => "Filter",
-            Self::Formatter(_) => "Formatter",
-        };
-        f.debug_tuple(name).finish()
+            Self::Filter(_) => "FilterFn",
+            Self::Formatter(_) => "FormatterFn",
+        })
+        .finish()
     }
 }
 
@@ -628,12 +629,10 @@ impl<'render> Template<'render> {
     }
 }
 
+#[cfg(not(internal_debug))]
 impl std::fmt::Debug for Template<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Template")
-            .field("engine", &(..))
-            .field("template", &self.template)
-            .finish()
+        f.debug_struct("Template").finish_non_exhaustive()
     }
 }
 

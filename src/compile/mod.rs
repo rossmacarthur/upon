@@ -14,7 +14,7 @@ use std::borrow::Cow;
 pub use crate::compile::search::Searcher;
 
 use crate::types::ast;
-use crate::types::program::{Instr, Template, FIXME};
+use crate::types::program::{Instr, Template};
 use crate::{Engine, Result};
 
 /// Compile a template into a program.
@@ -32,6 +32,12 @@ struct Compiler {
     instrs: Vec<Instr>,
 }
 
+/// A placeholder for a jump instruction.
+///
+/// When used it should always be updated by `update_jump` and shouldn't appear
+/// in the final program.
+const JUMP_PLACEHOLDER: usize = !0;
+
 impl Compiler {
     fn new() -> Self {
         Self { instrs: Vec::new() }
@@ -40,10 +46,8 @@ impl Compiler {
     fn compile_template(mut self, source: Cow<'_, str>, template: ast::Template) -> Template<'_> {
         let ast::Template { scope } = template;
         self.compile_scope(scope);
-        Template {
-            source,
-            instrs: self.instrs,
-        }
+        let Self { instrs } = self;
+        Template { source, instrs }
     }
 
     fn compile_scope(&mut self, scope: ast::Scope) {
@@ -83,9 +87,9 @@ impl Compiler {
 
                 // then branch
                 let instr = if not {
-                    Instr::JumpIfTrue(FIXME)
+                    Instr::JumpIfTrue(JUMP_PLACEHOLDER)
                 } else {
-                    Instr::JumpIfFalse(FIXME)
+                    Instr::JumpIfFalse(JUMP_PLACEHOLDER)
                 };
                 let j = self.push(instr);
                 self.compile_scope(then_branch);
@@ -93,7 +97,7 @@ impl Compiler {
                 match else_branch {
                     Some(else_branch) => {
                         // else branch
-                        let j2 = self.push(Instr::Jump(FIXME));
+                        let j2 = self.push(Instr::Jump(JUMP_PLACEHOLDER));
                         self.update_jump(j);
                         self.compile_scope(else_branch);
                         self.update_jump(j2)
@@ -112,7 +116,7 @@ impl Compiler {
                 let span = iterable.span();
                 self.compile_expr(iterable);
                 self.push(Instr::LoopStart(vars, span));
-                let j = self.push(Instr::LoopNext(FIXME));
+                let j = self.push(Instr::LoopNext(JUMP_PLACEHOLDER));
                 self.compile_scope(body);
                 self.push(Instr::Jump(j));
                 self.update_jump(j);
