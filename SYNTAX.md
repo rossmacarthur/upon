@@ -10,6 +10,7 @@ Documents the template syntax.
   - [Literals](#literals)
   - [Values](#values)
   - [Filters](#filters)
+  - [Functions](#functions)
 - [Blocks](#blocks)
   - [Conditionals](#conditionals)
   - [Loops](#loops)
@@ -104,6 +105,29 @@ append a suffix to it.
 
 ```html
 {{ page.path | append: ".html" }}
+```
+
+See the [`functions`][functions] module documentation for more
+information on filters.
+
+### Functions
+
+Functions can also be called with the `name(args...)` syntax. This allows
+you to use functions in other contexts like arguments to other functions or
+at the start of an expression. For example, assuming a function called
+`now` is registered in the engine, the following would produce an expression
+with the current date and time.
+
+```html
+{{ now() }}
+```
+
+Functions can also take arguments which must be a sequence of comma
+separated values, literals, or function calls. In the following we call a
+function `add` with two arguments.
+
+```html
+{{ add(1, 2) }}
 ```
 
 See the [`functions`][functions] module documentation for more

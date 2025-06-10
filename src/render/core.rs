@@ -156,7 +156,7 @@ where
                         // formatter.
                         #[cfg(feature = "functions")]
                         Some(EngineBoxCallable::Function(function)) => {
-                            let at = exprs.len() - (_arity + 1);
+                            let at = exprs.len() - _arity;
                             let args = &mut exprs[at..];
                             let result = function(FunctionState {
                                 source: &t.source,
@@ -275,7 +275,7 @@ where
                         // The referenced function is a function, so we apply it.
                         #[cfg(feature = "functions")]
                         Some(EngineBoxCallable::Function(function)) => {
-                            let at = exprs.len() - (_arity + 1);
+                            let at = exprs.len() - _arity;
                             let args = &mut exprs[at..];
                             let result = function(FunctionState {
                                 source: &t.source,

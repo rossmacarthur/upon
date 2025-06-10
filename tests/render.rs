@@ -10,7 +10,7 @@ use std::iter::zip;
 use upon::fmt;
 use upon::{value, Engine, Error, Value};
 
-use crate::helpers::Writer;
+use crate::helpers::{debug, Writer};
 
 #[test]
 fn render_comment() {
@@ -160,35 +160,6 @@ fn render_inline_expr_nested_lists_and_maps() {
         result,
         "[true, [123, -3.14], {a: test, b: ipsum, c: [1, 2]}]"
     );
-}
-
-fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
-    match v {
-        Value::List(list) => {
-            f.write_char('[')?;
-            for (i, item) in list.iter().enumerate() {
-                if i != 0 {
-                    f.write_str(", ")?;
-                }
-                debug(f, item)?;
-            }
-            f.write_char(']')?;
-            Ok(())
-        }
-        Value::Map(map) => {
-            f.write_char('{')?;
-            for (i, (key, value)) in map.iter().enumerate() {
-                if i != 0 {
-                    f.write_str(", ")?;
-                }
-                write!(f, "{key}: ")?;
-                debug(f, value)?;
-            }
-            f.write_char('}')?;
-            Ok(())
-        }
-        _ => fmt::default(f, v),
-    }
 }
 
 #[test]
@@ -816,23 +787,20 @@ fn render_for_statement_loop_optional_access() {
 #[test]
 fn render_for_statement_loop_map() {
     let mut engine = Engine::new();
-    engine.add_formatter("debug", |f, v| {
-        writeln!(f, "{v:?}")?;
-        Ok(())
-    });
+    engine.add_formatter("debug", debug);
     let result = engine
-        .compile("lorem {% for ipsum in dolor %} {{ loop | debug }} {% endfor %}")
+        .compile("lorem {% for ipsum in dolor %} {{ loop | debug }}\n{% endfor -%}")
         .unwrap()
         .render(&engine, value! { dolor: ["t", "e", "s", "t"] })
         .to_string()
         .unwrap();
     assert_eq!(
         result,
-        r#"lorem  Map({"first": Bool(true), "index": Integer(0), "last": Bool(false)})
-  Map({"first": Bool(false), "index": Integer(1), "last": Bool(false)})
-  Map({"first": Bool(false), "index": Integer(2), "last": Bool(false)})
-  Map({"first": Bool(false), "index": Integer(3), "last": Bool(true)})
- "#
+        r#"lorem  {first: true, index: 0, last: false}
+ {first: false, index: 1, last: false}
+ {first: false, index: 2, last: false}
+ {first: false, index: 3, last: true}
+"#
     );
 }
 

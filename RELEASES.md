@@ -4,6 +4,20 @@
 
 *Unreleased*
 
+- [Add support for in-place function calls][todo]. Previously, function calls
+  only supported the "filter" syntax, which always required at least one
+  argument to be "piped" into the call. This change adds an additional name and
+  parenthesized argument syntax including those without arguments. For example
+  code like the following is now valid:
+
+  ```
+  {{ now() }}
+  ```
+
+  ```
+  {{ item.price | format: get_currency(user.id) }}
+  ```
+
 - [Support parenthesized expressions][todo]. This allows you to use parentheses
   in inline expressions, such as:
   ```

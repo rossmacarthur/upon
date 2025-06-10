@@ -174,6 +174,17 @@ pub trait FunctionError {
 // Function
 ////////////////////////////////////////////////////////////////////////////////
 
+impl<Func, R> Function<R, ()> for Func
+where
+    Func: Fn() -> R,
+    R: FunctionReturn,
+{
+    #[doc(hidden)]
+    fn call<'a>(&self, (): ()) -> R {
+        self()
+    }
+}
+
 impl<Func, R, A> Function<R, (A,)> for Func
 where
     Func: Fn(A) -> R,
@@ -262,6 +273,15 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 // FunctionArgs
 ////////////////////////////////////////////////////////////////////////////////
+
+impl FunctionArgs for () {
+    type Output<'a> = ();
+
+    fn from_state<'args>(state: FunctionState<'_, 'args>) -> Result<Self::Output<'args>> {
+        let [] = get_args::<0>(state.args)?;
+        Ok(())
+    }
+}
 
 impl<A> FunctionArgs for (A,)
 where
@@ -362,14 +382,9 @@ where
 fn get_args<'stack, 'args, const N: usize>(
     args: &'args mut [(ValueCow<'stack>, Span)],
 ) -> Result<&'args mut [(ValueCow<'stack>, Span); N]> {
-    let n = args.len() - 1;
-    args.try_into().map_err(|_| {
-        Error::render_plain(format!(
-            "function expects {} arguments, {} provided",
-            N - 1,
-            n
-        ))
-    })
+    let n = args.len();
+    args.try_into()
+        .map_err(|_| Error::render_plain(format!("function expects {N} arguments, {n} provided")))
 }
 
 fn err_expected_arg(err: args::Error, source: &str, fname: &str, span: Span) -> Error {

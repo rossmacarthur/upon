@@ -137,7 +137,7 @@ impl Compiler {
                 self.compile_base_expr(base_expr);
             }
 
-            ast::Expr::Call(ast::Call {
+            ast::Expr::Filter(ast::Filter {
                 name,
                 args,
                 receiver,
@@ -153,7 +153,7 @@ impl Compiler {
                         }
                         arity
                     }
-                };
+                } + 1; // +1 for the receiver
                 self.push(Instr::Apply(name, arity, span));
             }
         }
@@ -183,6 +183,19 @@ impl Compiler {
             }
             ast::BaseExpr::Paren(paren) => {
                 self.compile_expr(*paren.expr);
+            }
+            ast::BaseExpr::Call(ast::Call { name, args, span }) => {
+                let arity = match args {
+                    None => 0,
+                    Some(args) => {
+                        let arity = args.values.len();
+                        for arg in args.values {
+                            self.compile_base_expr(arg);
+                        }
+                        arity
+                    }
+                };
+                self.push(Instr::Apply(name, arity, span));
             }
         }
     }

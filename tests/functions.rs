@@ -1,9 +1,69 @@
 #![cfg(feature = "functions")]
 #![cfg(feature = "serde")]
 
+mod helpers;
+
 use std::collections::BTreeMap;
 
 use upon::{value, Engine, Error, Value};
+
+use crate::helpers::debug;
+
+#[test]
+fn render_function_arity_0() {
+    let mut engine = Engine::new();
+    engine.add_function("hello", || "Hello World!");
+    let result = engine
+        .compile("{{ hello() }}")
+        .unwrap()
+        .render(&engine, value! {})
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "Hello World!");
+}
+
+#[test]
+fn render_function_arity_1() {
+    let mut engine = Engine::new();
+    engine.add_function("hello", |name: &str| format!("Hello, {name}!"));
+    let result = engine
+        .compile("{{ hello(name) }}")
+        .unwrap()
+        .render(&engine, value! { name: "John" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "Hello, John!");
+}
+
+#[test]
+fn render_function_arity_2() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", debug);
+    engine.add_function("range", |lo: i64, hi: i64| Vec::from_iter(lo..hi));
+    let result = engine
+        .compile("{{ range(1, 5) | debug }}")
+        .unwrap()
+        .render(&engine, value! {})
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "[1, 2, 3, 4]");
+}
+
+#[test]
+fn render_function_arity_3() {
+    let mut engine = Engine::new();
+    engine.add_formatter("debug", debug);
+    engine.add_function("range", |lo: i64, hi: i64, step: usize| {
+        Vec::from_iter((lo..hi).step_by(step))
+    });
+    let result = engine
+        .compile("{{ range(1, 5, 2) | debug }}")
+        .unwrap()
+        .render(&engine, value! {})
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "[1, 3]");
+}
 
 #[test]
 fn render_filter_arity_1() {
@@ -90,6 +150,28 @@ fn render_filter_arity_5() {
         .to_string()
         .unwrap();
     assert_eq!(result, "John Smith!!!");
+}
+
+#[test]
+fn render_filter_with_nested_function_arg() {
+    let mut engine = Engine::new();
+    engine.add_function("surname", || "Smith");
+    engine.add_function("replace", |v: String, from: String, to: String| {
+        v.replace(&from, &to)
+    });
+    let result = engine
+        .compile(r#"{{ name | replace: surname(), ("Oldton" | replace: "Old", "New") }}"#)
+        .unwrap()
+        .render(&engine, value! { name: "John Smith" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "John Newton");
+}
+
+#[test]
+fn add_function_empty() {
+    let mut engine = Engine::new();
+    engine.add_function("empty", || ());
 }
 
 #[test]
@@ -299,7 +381,31 @@ fn add_function_arg4_types() {
 }
 
 #[test]
-fn render_filter_err_expected_0_args() {
+fn render_filter_err_args_expects_0_provided_1() {
+    let mut engine = Engine::new();
+    engine.add_function("name", || "John Smith");
+    let err = engine
+        .compile(r#"{{ name("John") }}"#)
+        .unwrap()
+        .render(&engine, value! {})
+        .to_string()
+        .unwrap_err();
+    assert_err(
+        &err,
+        "function expects 0 arguments, 1 provided",
+        r#"
+  --> <anonymous>:1:4
+   |
+ 1 | {{ name("John") }}
+   |    ^^^^
+   |
+   = reason: REASON
+"#,
+    );
+}
+
+#[test]
+fn render_filter_err_args_expects_1_provided_2() {
     let mut engine = Engine::new();
     engine.add_function("test", |v: Value| v);
     let err = engine
@@ -310,7 +416,7 @@ fn render_filter_err_expected_0_args() {
         .unwrap_err();
     assert_err(
         &err,
-        "function expects 0 arguments, 1 provided",
+        "function expects 1 arguments, 2 provided",
         "
   --> <anonymous>:1:11
    |
@@ -323,7 +429,7 @@ fn render_filter_err_expected_0_args() {
 }
 
 #[test]
-fn render_filter_err_expected_n_args() {
+fn render_filter_err_args_expects_4_provided_1() {
     let mut engine = Engine::new();
     engine.add_function("test", |v: Value, _: i64, _: i64, _: i64| v);
     let err = engine
@@ -334,7 +440,7 @@ fn render_filter_err_expected_n_args() {
         .unwrap_err();
     assert_err(
         &err,
-        "function expects 3 arguments, 0 provided",
+        "function expects 4 arguments, 1 provided",
         "
   --> <anonymous>:1:11
    |

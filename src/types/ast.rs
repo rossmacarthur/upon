@@ -86,20 +86,14 @@ impl Scope {
 #[cfg_attr(internal_debug, derive(Debug))]
 pub enum Expr {
     Base(BaseExpr),
-    Call(Call),
+    Filter(Filter),
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
-pub struct Call {
+pub struct Filter {
     pub name: Ident,
     pub args: Option<Args>,
     pub receiver: Box<Expr>,
-    pub span: Span,
-}
-
-#[cfg_attr(internal_debug, derive(Debug))]
-pub struct Args {
-    pub values: Vec<BaseExpr>,
     pub span: Span,
 }
 
@@ -110,6 +104,7 @@ pub enum BaseExpr {
     List(List),
     Map(Map),
     Paren(Paren),
+    Call(Call),
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
@@ -163,6 +158,19 @@ pub struct List {
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
+pub struct Call {
+    pub name: Ident,
+    pub args: Option<Args>,
+    pub span: Span,
+}
+
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct Args {
+    pub values: Vec<BaseExpr>,
+    pub span: Span,
+}
+
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Map {
     pub items: Vec<(String, BaseExpr)>,
     pub span: Span,
@@ -184,7 +192,7 @@ impl Expr {
     pub fn span(&self) -> Span {
         match self {
             Self::Base(base) => base.span(),
-            Self::Call(call) => call.span,
+            Self::Filter(call) => call.span,
         }
     }
 }
@@ -197,6 +205,7 @@ impl BaseExpr {
             BaseExpr::List(list) => list.span,
             BaseExpr::Map(map) => map.span,
             BaseExpr::Paren(paren) => paren.span,
+            BaseExpr::Call(call) => call.span,
         }
     }
 }

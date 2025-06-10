@@ -452,10 +452,11 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             } else {
                 (None, expr.span().combine(name.span))
             };
-            expr = ast::Expr::Call(ast::Call {
+            let receiver = Box::new(expr);
+            expr = ast::Expr::Filter(ast::Filter {
                 name,
                 args,
-                receiver: Box::new(expr),
+                receiver,
                 span,
             });
         }
@@ -507,13 +508,13 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             }
 
             (Token::Ident, span) => {
-                let first = ast::Member {
-                    op: ast::AccessOp::Direct,
-                    access: ast::Access::Key(ast::Ident { span }),
-                    span,
-                };
-                let var = self.parse_var(first)?;
-                ast::BaseExpr::Var(var)
+                if let Some((Token::OpenParen, _)) = self.peek()? {
+                    let call = self.parse_call(span)?;
+                    ast::BaseExpr::Call(call)
+                } else {
+                    let var = self.parse_var(span)?;
+                    ast::BaseExpr::Var(var)
+                }
             }
 
             (Token::OpenBracket, span) => {
@@ -543,6 +544,25 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         Ok(expr)
     }
 
+    /// Parses a function call.
+    ///
+    ///    name()
+    ///
+    ///    name("nested", arg, user?.age)
+    ///
+    fn parse_call(&mut self, span: Span) -> Result<ast::Call> {
+        self.expect(Token::OpenParen)?;
+        let name = ast::Ident { span };
+        let args = if self.is_next(Token::CloseParen)? {
+            None
+        } else {
+            Some(self.parse_args(span)?)
+        };
+        let end = self.expect(Token::CloseParen)?;
+        let span = span.combine(end);
+        Ok(ast::Call { name, args, span })
+    }
+
     /// Parses a variable specification.
     ///
     ///    user
@@ -551,8 +571,12 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///    user?.age
     ///
-    fn parse_var(&mut self, first: ast::Member) -> Result<ast::Var> {
-        let mut path = vec![first];
+    fn parse_var(&mut self, span: Span) -> Result<ast::Var> {
+        let mut path = vec![ast::Member {
+            op: ast::AccessOp::Direct,
+            access: ast::Access::Key(ast::Ident { span }),
+            span,
+        }];
         loop {
             match self.peek()? {
                 Some((Token::Dot, sp)) => {
