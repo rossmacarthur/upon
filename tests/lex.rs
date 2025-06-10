@@ -336,6 +336,40 @@ fn lex_err_unexpected_close_brace() {
     );
 }
 
+#[test]
+fn lex_err_unclosed_open_parenthesis() {
+    let err = Engine::new().compile("lorem {{ ( }} dolor").unwrap_err();
+    assert_err(
+        &err,
+        "unclosed open parenthesis",
+        r#"
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ( }} dolor
+   |          ^--
+   |
+   = reason: REASON
+"#,
+    );
+}
+
+#[test]
+fn lex_err_unexpected_close_parenthesis() {
+    let err = Engine::new().compile("lorem {{ ) }} dolor").unwrap_err();
+    assert_err(
+        &err,
+        "unexpected close parenthesis",
+        r#"
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ) }} dolor
+   |          ^--
+   |
+   = reason: REASON
+"#,
+    );
+}
+
 #[track_caller]
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
     let display = format!("invalid syntax: {reason}");

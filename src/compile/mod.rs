@@ -181,6 +181,9 @@ impl Compiler {
                     self.push(Instr::ExprMapInsert(key));
                 }
             }
+            ast::BaseExpr::Paren(paren) => {
+                self.compile_expr(*paren.expr);
+            }
         }
     }
 

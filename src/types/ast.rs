@@ -2,6 +2,10 @@
 
 use crate::types::span::Span;
 
+// /////////////////////////////////////////////////////////////////////////////
+//  Blocks
+// /////////////////////////////////////////////////////////////////////////////
+
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct Template {
     pub scope: Scope,
@@ -69,6 +73,16 @@ pub struct With {
     pub body: Scope,
 }
 
+impl Scope {
+    pub const fn new() -> Self {
+        Self { stmts: Vec::new() }
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+//  Expressions
+// /////////////////////////////////////////////////////////////////////////////
+
 #[cfg_attr(internal_debug, derive(Debug))]
 pub enum Expr {
     Base(BaseExpr),
@@ -95,6 +109,7 @@ pub enum BaseExpr {
     Literal(Literal),
     List(List),
     Map(Map),
+    Paren(Paren),
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
@@ -159,10 +174,10 @@ pub struct String {
     pub span: Span,
 }
 
-impl Scope {
-    pub const fn new() -> Self {
-        Self { stmts: Vec::new() }
-    }
+#[cfg_attr(internal_debug, derive(Debug))]
+pub struct Paren {
+    pub expr: Box<Expr>,
+    pub span: Span,
 }
 
 impl Expr {
@@ -181,6 +196,7 @@ impl BaseExpr {
             BaseExpr::Literal(lit) => lit.span,
             BaseExpr::List(list) => list.span,
             BaseExpr::Map(map) => map.span,
+            BaseExpr::Paren(paren) => paren.span,
         }
     }
 }

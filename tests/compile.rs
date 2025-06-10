@@ -20,7 +20,7 @@ fn compile_comment() {
 #[test]
 fn compile_inline_expr() {
     Engine::new()
-        .compile("lorem {{ ipsum.dolor | fn | another }} sit amet")
+        .compile("lorem {{ ipsum.dolor | fn | another: (sit | fn) }} amet")
         .unwrap();
 }
 

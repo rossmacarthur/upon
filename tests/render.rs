@@ -388,10 +388,34 @@ fn render_inline_expr_err_unknown_function_found_formatter() {
 }
 
 #[test]
+fn render_inline_expr_err_unknown_function_found_formatter_nested() {
+    let mut engine = Engine::new();
+    engine.add_formatter("dolor", |_, _| Ok(()));
+    let err = engine
+        .compile("lorem {{ (ipsum | dolor) | unknown }}")
+        .unwrap()
+        .render(&engine, value! { ipsum: true })
+        .to_string()
+        .unwrap_err();
+    assert_err(
+        &err,
+        "expected function, found formatter",
+        "
+  --> <anonymous>:1:19
+   |
+ 1 | lorem {{ (ipsum | dolor) | unknown }}
+   |                   ^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn render_inline_expr_err_unknown_function() {
     let engine = Engine::new();
     let err = engine
-        .compile("lorem {{ ipsum | another | unknown }}")
+        .compile("lorem {{ ipsum | dolor | unknown }}")
         .unwrap()
         .render(&engine, value! { ipsum: true })
         .to_string()
@@ -402,8 +426,8 @@ fn render_inline_expr_err_unknown_function() {
         "
   --> <anonymous>:1:18
    |
- 1 | lorem {{ ipsum | another | unknown }}
-   |                  ^^^^^^^
+ 1 | lorem {{ ipsum | dolor | unknown }}
+   |                  ^^^^^
    |
    = reason: REASON
 ",

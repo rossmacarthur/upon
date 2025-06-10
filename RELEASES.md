@@ -4,6 +4,12 @@
 
 *Unreleased*
 
+- [Support parenthesized expressions][todo]. This allows you to use parentheses
+  in inline expressions, such as:
+  ```
+  {{ content | replace: "John Smith", (user.name | title) }}
+  ```
+
 - [Rename "filters" to "functions"][todo]. "Filter" now refers to the way the
   function is used, i.e. the pipe syntax `{{ value | function: arg1, arg2 }}`.
   This change is in preparation for a new syntax for calling functions.

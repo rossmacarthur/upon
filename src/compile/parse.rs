@@ -526,6 +526,16 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 ast::BaseExpr::Map(map)
             }
 
+            (Token::OpenParen, span) => {
+                let expr = self.parse_expr()?;
+                let end = self.expect(Token::CloseParen)?;
+                let span = span.combine(end);
+                ast::BaseExpr::Paren(ast::Paren {
+                    expr: Box::new(expr),
+                    span,
+                })
+            }
+
             (tk, span) => {
                 return Err(self.err_unexpected_token("expression", tk, span));
             }
