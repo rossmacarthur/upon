@@ -4,15 +4,15 @@ fn main() -> upon::Result<()> {
     let mut engine = upon::Engine::new();
 
     // Any functions with the supported signatures can be used
-    engine.add_filter("lower", str::to_lowercase);
+    engine.add_function("lower", str::to_lowercase);
 
-    // Filters can be closures
-    engine.add_filter("contains", |s: &str, other: &str| -> bool {
+    // Functions can be closures
+    engine.add_function("contains", |s: &str, other: &str| -> bool {
         s.contains(other)
     });
 
-    // Filters can be free functions
-    engine.add_filter("is_empty", is_empty);
+    // Functions can be free functions
+    engine.add_function("is_empty", is_empty);
 
     engine.add_template(
         "example",
@@ -60,8 +60,8 @@ fn main() -> upon::Result<()> {
     Ok(())
 }
 
-/// This filter takes value by reference so that the renderer doesn't have to
-/// clone the value before passing it to the filter.
+/// This function takes value by reference so that the renderer doesn't have to
+/// clone the value before passing it to the function.
 fn is_empty(value: &Value) -> Result<bool, String> {
     match value {
         Value::String(v) => Ok(v.is_empty()),

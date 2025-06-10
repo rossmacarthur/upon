@@ -37,14 +37,14 @@ enum ErrorKind {
     /// Rendering failed.
     ///
     /// This can happen for a variety of reasons during rendering. This excludes
-    /// filter, format and IO errors which are defined below.
+    /// function, format and IO errors which are defined below.
     Render,
 
-    /// A filter error.
+    /// A function error.
     ///
-    /// This can happen if a user defined filter returns an error.
-    #[cfg(feature = "filters")]
-    Filter,
+    /// This can happen if a user defined function returns an error.
+    #[cfg(feature = "functions")]
+    Function,
 
     /// A format error.
     ///
@@ -81,7 +81,7 @@ impl Error {
     }
 
     /// Constructs a new render error without pretty information.
-    #[cfg(feature = "filters")]
+    #[cfg(feature = "functions")]
     pub(crate) fn render_plain(reason: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::Render,
@@ -108,17 +108,17 @@ impl Error {
     }
 
     /// Attaches pretty information to the error.
-    #[cfg(feature = "filters")]
+    #[cfg(feature = "functions")]
     pub(crate) fn enrich(mut self, source: &str, span: impl Into<Span>) -> Self {
         self.pretty
             .get_or_insert_with(|| Pretty::build(source, span.into()));
         self
     }
 
-    #[cfg(feature = "filters")]
-    pub(crate) fn filter(reason: impl Into<String>) -> Self {
+    #[cfg(feature = "functions")]
+    pub(crate) fn function(reason: impl Into<String>) -> Self {
         Self {
-            kind: ErrorKind::Filter,
+            kind: ErrorKind::Function,
             name: None,
             reason: Some(reason.into()),
             pretty: None,
@@ -203,8 +203,8 @@ impl std::fmt::Display for Error {
         let msg = match &self.kind {
             ErrorKind::Syntax => "invalid syntax",
             ErrorKind::Render => "render error",
-            #[cfg(feature = "filters")]
-            ErrorKind::Filter => "filter error",
+            #[cfg(feature = "functions")]
+            ErrorKind::Function => "function error",
             ErrorKind::Format => "format error",
             #[cfg(feature = "serde")]
             ErrorKind::Serialize => "serialize error",

@@ -16,7 +16,7 @@ cargo run --example <name>
   formatter_ to escape strings for HTML and add an "unescape" _value formatter_
   for outputting values unescaped.
 
-- [filters](filters.rs): Demonstrates how to configure custom filters for
+- [functions](functions.rs): Demonstrates how to configure custom functions for
   transforming data before rendering.
 
 - [static_templates](static_templates.rs): Demonstrates how to statically

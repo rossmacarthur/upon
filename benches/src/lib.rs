@@ -235,8 +235,8 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
     #[inline]
     fn new() -> Self {
         let mut engine = upon::Engine::new();
-        engine.add_filter("lower", str::to_lowercase);
-        engine.add_filter("reverse", |s: &str| String::from_iter(s.chars().rev()));
+        engine.add_function("lower", str::to_lowercase);
+        engine.add_function("reverse", |s: &str| String::from_iter(s.chars().rev()));
         engine
     }
 
@@ -253,8 +253,8 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
                 .comment(begin_comment, end_comment)
                 .build(),
         );
-        engine.add_filter("lower", str::to_lowercase);
-        engine.add_filter("reverse", |s: &str| String::from_iter(s.chars().rev()));
+        engine.add_function("lower", str::to_lowercase);
+        engine.add_function("reverse", |s: &str| String::from_iter(s.chars().rev()));
         engine
     }
 

@@ -45,23 +45,23 @@ fn basic_upon() {
 }
 
 #[test]
-fn filters_handlebars() {
-    t!(Handlebars, "../benchdata/filters/handlebars.html");
+fn functions_handlebars() {
+    t!(Handlebars, "../benchdata/functions/handlebars.html");
 }
 
 #[test]
-fn filters_minijinja() {
-    t!(Minijinja, "../benchdata/filters/jinja.html");
+fn functions_minijinja() {
+    t!(Minijinja, "../benchdata/functions/jinja.html");
 }
 
 #[test]
-fn filters_tera() {
-    t!(Tera, "../benchdata/filters/jinja.html");
+fn functions_tera() {
+    t!(Tera, "../benchdata/functions/jinja.html");
 }
 
 #[test]
-fn filters_upon() {
-    t!(Upon, "../benchdata/filters/jinja.html");
+fn functions_upon() {
+    t!(Upon, "../benchdata/functions/jinja.html");
 }
 
 #[test]

@@ -29,7 +29,7 @@ features that they share.
 
 ![Violin plot of compile results](./benches/results/compile.svg)
 ![Violin plot of render results](./benches/results/render.svg)
-![Violin plot of render with filters results](./benches/results/filters.svg)
+![Violin plot of render with functions results](./benches/results/functions.svg)
 
 Benchmarking was done using [criterion](https://crates.io/crates/criterion).
 

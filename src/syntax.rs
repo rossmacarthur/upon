@@ -72,9 +72,9 @@
 //!
 //! ## Filters
 //!
-//! Filters can be applied to existing expressions using the `|` (pipe)
-//! operator. The simplest filters take no extra arguments and are just
-//! specified by name. For example, assuming a filter called `lower` is
+//! Filters are functions that can be applied to existing expressions using the
+//! `|` (pipe) operator. The simplest filters take no extra arguments and are
+//! just specified by name. For example, assuming a function called `lower` is
 //! registered in the engine the following would produce an expression with the
 //! `user.name` value transformed to lowercase.
 //!
@@ -90,8 +90,8 @@
 //! {{ page.path | append: ".html" }}
 //! ```
 //!
-//! See the [`filters`][crate::filters] module documentation for more
-//! information on filters.
+//! See the [`functions`][crate::functions] module documentation for more
+//! information on functions.
 //!
 //! # Blocks
 //!

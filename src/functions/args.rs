@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::mem;
 
-use crate::filters::FilterArg;
+use crate::functions::FunctionArg;
 use crate::value::ValueCow;
 use crate::Value;
 
@@ -24,7 +24,7 @@ pub enum Error {
     ),
 }
 
-impl FilterArg for () {
+impl FunctionArg for () {
     type Output<'arg> = ();
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -38,7 +38,7 @@ impl FilterArg for () {
     }
 }
 
-impl FilterArg for bool {
+impl FunctionArg for bool {
     type Output<'arg> = bool;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -55,7 +55,7 @@ impl FilterArg for bool {
 macro_rules! impl_for_int {
     ($($ty:ty)+) => {
         $(
-            impl FilterArg for $ty {
+            impl FunctionArg for $ty {
                 type Output<'arg> =$ty;
 
                 fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -79,7 +79,7 @@ impl_for_int! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 isize i128 }
 macro_rules! impl_for_float {
     ($($ty:ty)+) => {
         $(
-            impl FilterArg for $ty {
+            impl FunctionArg for $ty {
                 type Output<'arg> =$ty;
 
                 fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -98,7 +98,7 @@ macro_rules! impl_for_float {
 
 impl_for_float! { f32 f64 }
 
-impl FilterArg for String {
+impl FunctionArg for String {
     type Output<'arg> = String;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -120,7 +120,7 @@ impl FilterArg for String {
 
 pub struct Str;
 
-impl FilterArg for Str {
+impl FunctionArg for Str {
     type Output<'arg> = &'arg str;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -134,7 +134,7 @@ impl FilterArg for Str {
     }
 }
 
-impl FilterArg for Vec<Value> {
+impl FunctionArg for Vec<Value> {
     type Output<'arg> = Vec<Value>;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -156,7 +156,7 @@ impl FilterArg for Vec<Value> {
 
 pub struct ListRef;
 
-impl FilterArg for ListRef {
+impl FunctionArg for ListRef {
     type Output<'arg> = &'arg [Value];
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -170,7 +170,7 @@ impl FilterArg for ListRef {
     }
 }
 
-impl FilterArg for BTreeMap<String, Value> {
+impl FunctionArg for BTreeMap<String, Value> {
     type Output<'arg> = BTreeMap<String, Value>;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -192,7 +192,7 @@ impl FilterArg for BTreeMap<String, Value> {
 
 pub struct MapRef;
 
-impl FilterArg for MapRef {
+impl FunctionArg for MapRef {
     type Output<'arg> = &'arg BTreeMap<String, Value>;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -206,7 +206,7 @@ impl FilterArg for MapRef {
     }
 }
 
-impl FilterArg for Value {
+impl FunctionArg for Value {
     type Output<'arg> = Value;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
@@ -222,7 +222,7 @@ impl FilterArg for Value {
 
 pub struct ValueRef;
 
-impl FilterArg for ValueRef {
+impl FunctionArg for ValueRef {
     type Output<'arg> = &'arg Value;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>

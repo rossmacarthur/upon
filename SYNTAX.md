@@ -88,9 +88,9 @@ Hello {{ user.name }} {{ user?.surname }}!
 
 ### Filters
 
-Filters can be applied to existing expressions using the `|` (pipe)
-operator. The simplest filters take no extra arguments and are just
-specified by name. For example, assuming a filter called `lower` is
+Filters are functions that can be applied to existing expressions using the
+`|` (pipe) operator. The simplest filters take no extra arguments and are
+just specified by name. For example, assuming a function called `lower` is
 registered in the engine the following would produce an expression with the
 `user.name` value transformed to lowercase.
 
@@ -106,8 +106,8 @@ append a suffix to it.
 {{ page.path | append: ".html" }}
 ```
 
-See the [`filters`][filters] module documentation for more
-information on filters.
+See the [`functions`][functions] module documentation for more
+information on functions.
 
 ## Blocks
 
@@ -278,5 +278,5 @@ Hello, and welcome, John!
 ```
 
 
-[filters]: https://docs.rs/upon/latest/upon/filters/index.html
+[functions]: https://docs.rs/upon/latest/upon/functions/index.html
 [set_max_include_depth]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_max_include_depth

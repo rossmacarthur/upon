@@ -36,7 +36,7 @@ configurable delimiters.
 - Loops: `{% for user in users %} ... {% endfor %}`
 - Nested templates: `{% include "nested" %}`
 - Configurable delimiters: `<? user.name ?>`, `(( if user.enabled ))`
-- Arbitrary user defined filters: `{{ user.name | replace: "\t", " " }}`
+- Arbitrary user defined functions: `{{ user.name | replace: "\t", " " }}`
 
 ### Engine
 
@@ -58,13 +58,13 @@ I created `upon` because I required a template engine that had runtime
 compiled templates, configurable syntax delimiters and minimal dependencies.
 I also didn’t need support for arbitrary expressions in the template syntax
 but occasionally I needed something more flexible than outputting simple
-values (hence filters). Performance was also a concern for me, template
+values (hence functions). Performance was also a concern for me, template
 engines like [Handlebars] and [Tera] have a lot of features but can be up to
 five to seven times slower to render than engines like [TinyTemplate].
 
 Basically I wanted something like [TinyTemplate] with support for
-configurable delimiters and user defined filter functions. The syntax is
-inspired by template engines like [Liquid] and [Jinja].
+configurable delimiters and user defined functions. The syntax is inspired
+by template engines like [Liquid] and [Jinja].
 
 ### MSRV
 
@@ -79,9 +79,9 @@ First, add the crate to your Cargo manifest.
 cargo add upon
 ```
 
-Now construct an [`Engine`][Engine]. The engine stores the syntax config, filter
-functions, formatters, and compiled templates. Generally, you only need to
-construct one engine during the lifetime of a program.
+Now construct an [`Engine`][Engine]. The engine stores the syntax config, functions,
+formatters, and compiled templates. Generally, you only need to construct
+one engine during the lifetime of a program.
 
 ```rust
 let engine = upon::Engine::new();
@@ -109,7 +109,8 @@ assert_eq!(result, "Hello John Smith!");
 ## Further reading
 
 - The [`syntax`][syntax] module documentation outlines the template syntax.
-- The [`filters`][filters] module documentation describes filters and how they work.
+- The [`functions`][functions] module documentation describes functions and how they
+  work.
 - The [`fmt`][fmt] module documentation contains information on value formatters.
 - In addition to the examples in the current document, the
   [`examples/`](https://github.com/rossmacarthur/upon/tree/trunk/examples) directory in the repository contains some more
@@ -119,8 +120,8 @@ assert_eq!(result, "Hello John Smith!");
 
 The following crate features are available.
 
-- **`filters`** *(enabled by default)* — Enables support for filters in
-  templates (see [`Engine::add_filter`][Engine::add_filter]). This does *not* affect value
+- **`functions`** *(enabled by default)* — Enables support for functions in
+  templates (see [`Engine::add_function`][Engine::add_function]). This does *not* affect value
   formatters (see [`Engine::add_formatter`][Engine::add_formatter]). Disabling this will improve
   compile times.
 
@@ -140,7 +141,7 @@ The following crate features are available.
   will be used in error formatting.
 
 To disable all features or to use a subset you need to set `default-features = false` in your Cargo manifest and then enable the features that you would
-like. For example to use **`serde`** but disable **`filters`** and
+like. For example to use **`serde`** but disable **`functions`** and
 **`unicode`** you would do the following.
 
 ```toml
@@ -247,7 +248,7 @@ features that they share.
 
 ![Violin plot of compile results](./benches/results/compile.svg)
 ![Violin plot of render results](./benches/results/render.svg)
-![Violin plot of render with filters results](./benches/results/filters.svg)
+![Violin plot of render with functions results](./benches/results/functions.svg)
 
 Benchmarking was done using [criterion](https://crates.io/crates/criterion).
 
@@ -270,16 +271,16 @@ at your option.
 
 
 [Engine]: https://docs.rs/upon/latest/upon/struct.Engine.html
-[Engine::add_filter]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_filter
 [Engine::add_formatter]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter
+[Engine::add_function]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_function
 [Engine::with_syntax]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.with_syntax
 [String]: https://doc.rust-lang.org/stable/std/string/struct.String.html
 [Value]: https://docs.rs/upon/latest/upon/enum.Value.html
 [add_template]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template
 [aho-corasick]: https://crates.io/crates/aho-corasick
 [compile]: https://docs.rs/upon/latest/upon/struct.Engine.html#method.compile
-[filters]: https://docs.rs/upon/latest/upon/filters/index.html
 [fmt]: https://docs.rs/upon/latest/upon/fmt/index.html
+[functions]: https://docs.rs/upon/latest/upon/functions/index.html
 [render]: https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render
 [render_from]: https://docs.rs/upon/latest/upon/struct.TemplateRef.html#method.render_from
 [serde]: https://crates.io/crates/serde

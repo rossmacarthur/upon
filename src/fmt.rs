@@ -80,7 +80,7 @@ use std::io;
 use crate::Value;
 
 /// A formatter function or closure.
-pub(crate) type FormatterFn = dyn Fn(&mut Formatter<'_>, &Value) -> Result + Sync + Send + 'static;
+pub(crate) type DynFormatter = dyn Fn(&mut Formatter<'_>, &Value) -> Result + Sync + Send + 'static;
 
 /// A [`std::fmt::Write`] façade.
 pub struct Formatter<'a> {

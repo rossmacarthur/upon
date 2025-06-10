@@ -8,8 +8,8 @@ mod value;
 use std::io;
 
 use crate::fmt::{Formatter, Writer};
-#[cfg(feature = "filters")]
-pub use crate::render::core::FilterState;
+#[cfg(feature = "functions")]
+pub use crate::render::core::FunctionState;
 use crate::render::core::RendererImpl;
 pub use crate::render::stack::Stack;
 use crate::types::program::Template;

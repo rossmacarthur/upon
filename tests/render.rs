@@ -106,11 +106,11 @@ fn render_inline_expr_literal_string_escaped() {
     assert_eq!(result, "lorem escaped \n \r \t \\ \"");
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
 fn render_inline_expr_literal_with_filter() {
     let mut engine = Engine::new();
-    engine.add_filter("ipsum", str::to_uppercase);
+    engine.add_function("ipsum", str::to_uppercase);
     let result = engine
         .compile(r#"lorem {{ "test" | ipsum }}"#)
         .unwrap()
@@ -341,7 +341,7 @@ fn format_list(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
 }
 
 #[test]
-fn render_inline_expr_err_unknown_filter_or_formatter() {
+fn render_inline_expr_err_unknown_formatter_or_function() {
     let engine = Engine::new();
     let err = engine
         .compile("lorem {{ ipsum | unknown }}")
@@ -351,7 +351,7 @@ fn render_inline_expr_err_unknown_filter_or_formatter() {
         .unwrap_err();
     assert_err(
         &err,
-        "unknown filter or formatter",
+        "unknown formatter or function",
         "
   --> <anonymous>:1:18
    |
@@ -364,7 +364,7 @@ fn render_inline_expr_err_unknown_filter_or_formatter() {
 }
 
 #[test]
-fn render_inline_expr_err_unknown_filter_found_formatter() {
+fn render_inline_expr_err_unknown_function_found_formatter() {
     let mut engine = Engine::new();
     engine.add_formatter("another", |_, _| Ok(()));
     let err = engine
@@ -375,7 +375,7 @@ fn render_inline_expr_err_unknown_filter_found_formatter() {
         .unwrap_err();
     assert_err(
         &err,
-        "expected filter, found formatter",
+        "expected function, found formatter",
         "
   --> <anonymous>:1:18
    |
@@ -388,7 +388,7 @@ fn render_inline_expr_err_unknown_filter_found_formatter() {
 }
 
 #[test]
-fn render_inline_expr_err_unknown_filter() {
+fn render_inline_expr_err_unknown_function() {
     let engine = Engine::new();
     let err = engine
         .compile("lorem {{ ipsum | another | unknown }}")
@@ -398,7 +398,7 @@ fn render_inline_expr_err_unknown_filter() {
         .unwrap_err();
     assert_err(
         &err,
-        "unknown filter",
+        "unknown function",
         "
   --> <anonymous>:1:18
    |
@@ -732,11 +732,11 @@ fn render_for_statement_list() {
     assert_eq!(result, "lorem test");
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
 fn render_for_statement_filtered_list() {
     let mut engine = Engine::new();
-    engine.add_filter("pop", |mut list: Vec<Value>| {
+    engine.add_function("pop", |mut list: Vec<Value>| {
         list.pop();
         list
     });
@@ -927,11 +927,11 @@ fn render_for_statement_err_cannot_index_into_loop_field() {
     );
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
 fn render_for_statement_filtered_map() {
     let mut engine = Engine::new();
-    engine.add_filter("rm", |mut map: BTreeMap<String, Value>, key: &str| {
+    engine.add_function("rm", |mut map: BTreeMap<String, Value>, key: &str| {
         map.remove(key);
         map
     });
@@ -955,11 +955,11 @@ fn render_for_statement_nested_borrowed_list() {
     assert_eq!(result, "lorem lorem t lorem e lorem s lorem t ");
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
 fn render_for_statement_nested_owned_list() {
     let mut engine = Engine::new();
-    engine.add_filter("to_owned", Value::to_owned);
+    engine.add_function("to_owned", Value::to_owned);
     engine.add_template("nested", "lorem {{ ipsum }} ").unwrap();
     let result = engine
         .compile(r#"lorem {% for ipsum in dolor | to_owned %}{% include "nested" %}{% endfor %}"#)
@@ -985,11 +985,11 @@ fn render_for_statement_nested_borrowed_map() {
     assert_eq!(result, "lorem lorem a t lorem b e lorem c s lorem d t ");
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
 fn render_for_statement_nested_owned_map() {
     let mut engine = Engine::new();
-    engine.add_filter("to_owned", Value::to_owned);
+    engine.add_function("to_owned", Value::to_owned);
     engine
         .add_template("nested", "lorem {{ ipsum }} {{ dolor }} ")
         .unwrap();
@@ -1191,11 +1191,11 @@ fn render_include_with_statement_var() {
     assert_eq!(result, "lorem test sit");
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
 fn render_include_with_statement_owned() {
     let mut engine = Engine::new();
-    engine.add_filter("to_owned", Value::to_owned);
+    engine.add_function("to_owned", Value::to_owned);
     engine.add_template("nested", "{{ dolor }}").unwrap();
     let result = engine
         .compile(r#"lorem {% include "nested" with ipsum | to_owned %} sit"#)

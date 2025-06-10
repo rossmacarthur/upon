@@ -61,10 +61,10 @@ fn engine_add_template_owned_source() -> upon::Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[test]
-fn engine_add_filter_nested() {
-    use upon::filters::*;
+fn engine_add_function_nested() {
+    use upon::functions::*;
 
     #[derive(Default)]
     struct Wrapper<'engine> {
@@ -72,16 +72,16 @@ fn engine_add_filter_nested() {
     }
 
     impl<'engine> Wrapper<'engine> {
-        fn add_filter<F, R, A>(&mut self, name: &'engine str, f: F)
+        fn add_function<F, R, A>(&mut self, name: &'engine str, f: F)
         where
-            F: Filter<R, A> + Send + Sync + 'static,
-            R: FilterReturn,
-            A: FilterArgs,
+            F: Function<R, A> + Send + Sync + 'static,
+            R: FunctionReturn,
+            A: FunctionArgs,
         {
-            self.engine.add_filter(name, f);
+            self.engine.add_function(name, f);
         }
     }
 
     let mut engine = Wrapper::default();
-    engine.add_filter("lower", str::to_lowercase);
+    engine.add_function("lower", str::to_lowercase);
 }

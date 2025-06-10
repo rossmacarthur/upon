@@ -603,7 +603,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         }
     }
 
-    /// Parses filter arguments.
+    /// Parses function arguments.
     ///
     /// This is just a comma separate list of base expressions. For example
     ///

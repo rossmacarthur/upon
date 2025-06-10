@@ -107,11 +107,11 @@ pub fn bench_render(c: &mut Criterion) {
     }
 
     {
-        let mut g = c.benchmark_group("render/filters");
-        bench!(g, Handlebars, "filters/handlebars.html");
-        bench!(g, Minijinja, "filters/jinja.html");
-        bench!(g, Tera, "filters/jinja.html");
-        bench!(g, Upon, "filters/jinja.html");
+        let mut g = c.benchmark_group("render/functions");
+        bench!(g, Handlebars, "functions/handlebars.html");
+        bench!(g, Minijinja, "functions/jinja.html");
+        bench!(g, Tera, "functions/jinja.html");
+        bench!(g, Upon, "functions/jinja.html");
     }
 }
 

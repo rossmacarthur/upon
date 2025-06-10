@@ -8,7 +8,7 @@ use crate::types::ast;
 use crate::types::program::{Instr, Template};
 use crate::types::span::Span;
 use crate::value::ValueCow;
-use crate::{EngineBoxFn, Error, Result, Value};
+use crate::{EngineBoxCallable, Error, Result, Value};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct RendererImpl<'render, 'stack> {
@@ -16,13 +16,14 @@ pub struct RendererImpl<'render, 'stack> {
     pub(crate) stack: Stack<'stack>,
 }
 
-#[cfg(feature = "filters")]
+#[cfg(feature = "functions")]
 #[cfg_attr(internal_debug, derive(Debug))]
-pub struct FilterState<'stack, 'args>
+pub struct FunctionState<'stack, 'args>
 where
     'stack: 'args,
 {
     pub source: &'stack str,
+    pub fname: &'args str,
     pub args: &'args mut [(ValueCow<'stack>, Span)],
 }
 
@@ -141,17 +142,25 @@ where
                 }
 
                 Instr::EmitWith(name, _arity, _span) => {
-                    let name_raw = &t.source[name.span];
-                    match self.inner.engine.functions.get(name_raw) {
-                        // The referenced function is a filter, so we apply
+                    let fname = &t.source[name.span];
+                    match self.inner.engine.callables.get(fname) {
+                        // The referenced function is a formatter so we simply
+                        // emit the value with it.
+                        Some(EngineBoxCallable::Formatter(formatter)) => {
+                            let (value, _) = exprs.pop().unwrap();
+                            formatter(f, &value)
+                                .map_err(|err| Error::format(err, &t.source, name.span))?;
+                        }
+                        // The referenced function is a function, so we apply
                         // it and then emit the value using the default
                         // formatter.
-                        #[cfg(feature = "filters")]
-                        Some(EngineBoxFn::Filter(filter)) => {
+                        #[cfg(feature = "functions")]
+                        Some(EngineBoxCallable::Function(function)) => {
                             let at = exprs.len() - (_arity + 1);
                             let args = &mut exprs[at..];
-                            let result = filter(FilterState {
+                            let result = function(FunctionState {
                                 source: &t.source,
+                                fname,
                                 args,
                             })
                             .map_err(|err| err.enrich(&t.source, name.span))?;
@@ -159,17 +168,10 @@ where
                             (self.inner.engine.default_formatter)(f, &result)
                                 .map_err(|err| Error::format(err, &t.source, *_span))?;
                         }
-                        // The referenced function is a formatter so we simply
-                        // emit the value with it.
-                        Some(EngineBoxFn::Formatter(formatter)) => {
-                            let (value, _) = exprs.pop().unwrap();
-                            formatter(f, &value)
-                                .map_err(|err| Error::format(err, &t.source, name.span))?;
-                        }
-                        // No filter or formatter exists.
+                        // No formatter or function exists.
                         None => {
                             return Err(Error::render(
-                                "unknown filter or formatter",
+                                "unknown formatter or function",
                                 &t.source,
                                 name.span,
                             ));
@@ -259,33 +261,34 @@ where
                 }
 
                 Instr::Apply(name, _arity, _span) => {
-                    let name_raw = &t.source[name.span];
-                    match self.inner.engine.functions.get(name_raw) {
-                        // The referenced function is a filter, so we apply it.
-                        #[cfg(feature = "filters")]
-                        Some(EngineBoxFn::Filter(filter)) => {
+                    let fname = &t.source[name.span];
+                    match self.inner.engine.callables.get(fname) {
+                        // The referenced function is a formatter which is not valid
+                        // in the middle of an expression.
+                        Some(EngineBoxCallable::Formatter(_)) => {
+                            return Err(Error::render(
+                                "expected function, found formatter",
+                                &t.source,
+                                name.span,
+                            ));
+                        }
+                        // The referenced function is a function, so we apply it.
+                        #[cfg(feature = "functions")]
+                        Some(EngineBoxCallable::Function(function)) => {
                             let at = exprs.len() - (_arity + 1);
                             let args = &mut exprs[at..];
-                            let result = filter(FilterState {
+                            let result = function(FunctionState {
                                 source: &t.source,
+                                fname,
                                 args,
                             })
                             .map_err(|e| e.enrich(&t.source, *_span))?;
                             exprs.truncate(at);
                             exprs.push((ValueCow::Owned(result), *_span));
                         }
-                        // The referenced function is a formatter which is not valid
-                        // in the middle of an expression.
-                        Some(EngineBoxFn::Formatter(_)) => {
-                            return Err(Error::render(
-                                "expected filter, found formatter",
-                                &t.source,
-                                name.span,
-                            ));
-                        }
-                        // No filter or formatter exists.
+                        // No formatter or function exists.
                         None => {
-                            return Err(Error::render("unknown filter", &t.source, name.span));
+                            return Err(Error::render("unknown function", &t.source, name.span));
                         }
                     }
                 }
