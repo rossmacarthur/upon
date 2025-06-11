@@ -47,7 +47,7 @@ fn gen() -> String {
 
 use std::collections::BTreeMap;
 
-use crate::functions::args::{ListRef, MapRef, Str, ValueRef};
+use crate::functions::args::{ListRef, MapRef, StringRef, ValueRef};
 use crate::functions::{Function, FunctionArg, FunctionArgs, FunctionReturn};
 use crate::Value;
 
@@ -77,7 +77,7 @@ use crate::Value;
             .map(|(i, t)| match t {
                 ArgType::Owned => Arg::Generic(generics[i]),
                 ArgType::Str => Arg::Borrowed {
-                    impl_type: "Str",
+                    impl_type: "StringRef",
                     fn_type: "str",
                 },
                 ArgType::ListRef => Arg::Borrowed {

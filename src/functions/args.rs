@@ -118,9 +118,9 @@ impl FunctionArg for String {
     }
 }
 
-pub struct Str;
+pub struct StringRef;
 
-impl FunctionArg for Str {
+impl FunctionArg for StringRef {
     type Output<'arg> = &'arg str;
 
     fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
