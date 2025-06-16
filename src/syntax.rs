@@ -37,12 +37,18 @@
 //! into the rendered output.
 //!
 //! ```text
-//! Hello {{ name }}!
+//! Hello {{ .name }}!
 //! ```
 //!
 //! You can access nested fields using a dotted path. The following would first
 //! lookup the field "user" and then lookup the field "name" within it.
 //!
+//! ```text
+//! Hello {{ .user.name }}!
+//! ```
+//!
+//! For convenience, you can also omit the leading dot (`.`) in the first path
+//! segment. The following is equivalent to the previous example.
 //! ```text
 //! Hello {{ user.name }}!
 //! ```
@@ -66,6 +72,12 @@
 //!
 //! ```text
 //! Hello {{ user.name }} {{ user?.surname }}!
+//! ```
+//!
+//! This is useful when checking if the first segment of a path might not be
+//! defined.
+//! ```text
+//! {% if ?.user %} ... {% endif %}
 //! ```
 //!
 //! [`Value::None`]: crate::Value::None

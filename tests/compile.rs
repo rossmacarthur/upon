@@ -26,6 +26,30 @@ fn compile_inline_expr() {
 
 #[test]
 fn compile_inline_expr_index() {
+    Engine::new().compile("lorem {{ .123 }} ipsum").unwrap();
+}
+
+#[test]
+fn compile_inline_expr_optional_index() {
+    Engine::new().compile("lorem {{ ?.123 }} ipsum").unwrap();
+}
+
+#[test]
+fn compile_inline_expr_key() {
+    Engine::new()
+        .compile("lorem {{ .ipsum }} sit amet")
+        .unwrap();
+}
+
+#[test]
+fn compile_inline_expr_optional_key() {
+    Engine::new()
+        .compile("lorem {{ ?.ipsum }} sit amet")
+        .unwrap();
+}
+
+#[test]
+fn compile_inline_expr_path_index() {
     Engine::new()
         .compile("lorem {{ ipsum.123.dolor }} sit amet")
         .unwrap();

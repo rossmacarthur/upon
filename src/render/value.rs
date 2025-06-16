@@ -81,7 +81,7 @@ pub fn lookup_path_maybe<'a>(
             for (i, p) in path.iter().enumerate() {
                 match lookup(source, value, p) {
                     Ok(Some(v)) => value = v,
-                    Ok(None) | Err(_) if i == 0 => return Ok(None),
+                    Err(_) if i == 0 => return Ok(None),
                     Ok(None) => return Ok(Some(ValueCow::Borrowed(&Value::None))),
                     Err(err) => return Err(err),
                 };
@@ -93,7 +93,7 @@ pub fn lookup_path_maybe<'a>(
             for (i, p) in path.iter().enumerate() {
                 match lookup(source, value, p) {
                     Ok(Some(v)) => value = v,
-                    Ok(None) | Err(_) if i == 0 => return Ok(None),
+                    Err(_) if i == 0 => return Ok(None),
                     Ok(None) => return Ok(Some(ValueCow::Borrowed(&Value::None))),
                     Err(err) => return Err(err),
                 };

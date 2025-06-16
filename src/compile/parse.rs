@@ -507,12 +507,39 @@ impl<'engine, 'source> Parser<'engine, 'source> {
                 ast::BaseExpr::Literal(lit)
             }
 
+            (Token::Dot, span) => {
+                let access = self.parse_access()?;
+                let first = ast::Member {
+                    op: ast::AccessOp::Direct,
+                    access,
+                    span: span.combine(access.span()),
+                };
+                let var = self.parse_var(first)?;
+                ast::BaseExpr::Var(var)
+            }
+
+            (Token::QuestionDot, span) => {
+                let access = self.parse_access()?;
+                let first = ast::Member {
+                    op: ast::AccessOp::Optional,
+                    access,
+                    span: span.combine(access.span()),
+                };
+                let var = self.parse_var(first)?;
+                ast::BaseExpr::Var(var)
+            }
+
             (Token::Ident, span) => {
                 if let Some((Token::OpenParen, _)) = self.peek()? {
                     let call = self.parse_call(span)?;
                     ast::BaseExpr::Call(call)
                 } else {
-                    let var = self.parse_var(span)?;
+                    let first = ast::Member {
+                        op: ast::AccessOp::Direct,
+                        access: ast::Access::Key(ast::Ident { span }),
+                        span,
+                    };
+                    let var = self.parse_var(first)?;
                     ast::BaseExpr::Var(var)
                 }
             }
@@ -571,12 +598,8 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///    user?.age
     ///
-    fn parse_var(&mut self, span: Span) -> Result<ast::Var> {
-        let mut path = vec![ast::Member {
-            op: ast::AccessOp::Direct,
-            access: ast::Access::Key(ast::Ident { span }),
-            span,
-        }];
+    fn parse_var(&mut self, first: ast::Member) -> Result<ast::Var> {
+        let mut path = vec![first];
         loop {
             match self.peek()? {
                 Some((Token::Dot, sp)) => {

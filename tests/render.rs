@@ -175,6 +175,18 @@ fn render_inline_expr_map_key() {
 }
 
 #[test]
+fn render_inline_expr_scope_optional_key() {
+    let engine = Engine::new();
+    let result = engine
+        .compile("lorem {{ ?.ipsum }}")
+        .unwrap()
+        .render(&engine, value! {})
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem ");
+}
+
+#[test]
 fn render_inline_expr_map_optional_key() {
     let engine = Engine::new();
     let result = engine

@@ -4,6 +4,22 @@
 
 *Unreleased*
 
+- [Support access and optional access from scope][todo]. This extends the syntax
+  for variable access in expressions to support the dot (`.`) and optional dot
+  (`?.`) prefixes for the first segment of paths.
+
+  The following are equivalent:
+  ```
+  {{ user }}
+  {{ .user }}
+  ```
+
+  But now you can also use the following, which will return `Value::None` if
+  `user` is not defined:
+  ```
+  {{ ?.user }}
+  ```
+
 - [Add support for in-place function calls][todo]. Previously, function calls
   only supported the "filter" syntax, which always required at least one
   argument to be "piped" into the call. This change adds an additional name and
