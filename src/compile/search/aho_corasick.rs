@@ -1,6 +1,6 @@
 use crate::types::delimiter::Delimiter;
 use crate::types::syntax::Syntax;
-use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
+use aho_corasick::{AhoCorasick, AhoCorasickBuilder, Anchored, Input, MatchKind, StartKind};
 
 #[cfg_attr(internal_debug, derive(Debug))]
 pub struct AhoCorasickSearcher {
@@ -11,6 +11,7 @@ pub struct AhoCorasickSearcher {
 impl AhoCorasickSearcher {
     pub fn new(syntax: Syntax) -> Self {
         let imp = AhoCorasickBuilder::new()
+            .start_kind(StartKind::Both)
             .match_kind(MatchKind::LeftmostLongest)
             .build(syntax.patterns)
             .expect("failed to build AhoCorasick");
@@ -22,20 +23,19 @@ impl AhoCorasickSearcher {
 
     #[inline]
     pub fn find_at(&self, source: &str, at: usize) -> Option<(Delimiter, usize, usize)> {
-        let sb = source.as_bytes();
-        self.imp.find(&sb[at..]).map(|m| {
+        self.imp.find(Input::new(source).range(at..)).map(|m| {
             let delimiter = self.delimiters[m.pattern()];
-            (delimiter, at + m.start(), at + m.end())
+            (delimiter, m.start(), m.end())
         })
     }
 
     #[inline]
     pub fn starts_with(&self, source: &str, at: usize) -> Option<(Delimiter, usize)> {
-        let (delimiter, i, j) = self.find_at(source, at)?;
-        if at == i {
-            Some((delimiter, j))
-        } else {
-            None
-        }
+        self.imp
+            .find(Input::new(source).range(at..).anchored(Anchored::Yes))
+            .map(|m| {
+                let delimiter = self.delimiters[m.pattern()];
+                (delimiter, m.end())
+            })
     }
 }
