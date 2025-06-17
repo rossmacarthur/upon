@@ -48,7 +48,7 @@
 //! ```
 //!
 //! For convenience, you can also omit the leading dot (`.`) in the first path
-//! segment. The following is equivalent to the previous example.
+//! member. The following is equivalent to the previous example.
 //! ```text
 //! Hello {{ user.name }}!
 //! ```
@@ -74,7 +74,7 @@
 //! Hello {{ user.name }} {{ user?.surname }}!
 //! ```
 //!
-//! This is useful when checking if the first segment of a path might not be
+//! This is useful when checking if the first member of a path might not be
 //! defined.
 //! ```text
 //! {% if ?.user %} ... {% endif %}

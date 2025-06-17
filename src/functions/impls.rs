@@ -76,6 +76,21 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, A> Function<R, (A, ValueRef)> for Func
+where
+    Func: Fn(A, &Value) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+
+    (A, ValueRef): for<'a> FunctionArgs<Output<'a> = (A, &'a Value)>,
+{
+    fn call<'a>(&self, (a, b): (A, &'a Value)) -> R {
+        self(a, b)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B> Function<R, (StringRef, B)> for Func
 where
     Func: Fn(&str, B) -> R,
@@ -99,6 +114,19 @@ where
     (StringRef, StringRef): for<'a> FunctionArgs<Output<'a> = (&'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b): (&'a str, &'a str)) -> R {
+        self(a, b)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (StringRef, ValueRef)> for Func
+where
+    Func: Fn(&str, &Value) -> R,
+    R: FunctionReturn,
+
+    (StringRef, ValueRef): for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value)>,
+{
+    fn call<'a>(&self, (a, b): (&'a str, &'a Value)) -> R {
         self(a, b)
     }
 }
@@ -132,6 +160,19 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R> Function<R, (ListRef, ValueRef)> for Func
+where
+    Func: Fn(&[Value], &Value) -> R,
+    R: FunctionReturn,
+
+    (ListRef, ValueRef): for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value)>,
+{
+    fn call<'a>(&self, (a, b): (&'a [Value], &'a Value)) -> R {
+        self(a, b)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B> Function<R, (MapRef, B)> for Func
 where
     Func: Fn(&BTreeMap<String, Value>, B) -> R,
@@ -160,6 +201,19 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R> Function<R, (MapRef, ValueRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value) -> R,
+    R: FunctionReturn,
+
+    (MapRef, ValueRef): for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value)>,
+{
+    fn call<'a>(&self, (a, b): (&'a BTreeMap<String, Value>, &'a Value)) -> R {
+        self(a, b)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B> Function<R, (ValueRef, B)> for Func
 where
     Func: Fn(&Value, B) -> R,
@@ -183,6 +237,19 @@ where
     (ValueRef, StringRef): for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a str)>,
 {
     fn call<'a>(&self, (a, b): (&'a Value, &'a str)) -> R {
+        self(a, b)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ValueRef, ValueRef)> for Func
+where
+    Func: Fn(&Value, &Value) -> R,
+    R: FunctionReturn,
+
+    (ValueRef, ValueRef): for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value)>,
+{
+    fn call<'a>(&self, (a, b): (&'a Value, &'a Value)) -> R {
         self(a, b)
     }
 }
@@ -230,6 +297,37 @@ where
     (A, StringRef, StringRef): for<'a> FunctionArgs<Output<'a> = (A, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c): (A, &'a str, &'a str)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C> Function<R, (A, ValueRef, C)> for Func
+where
+    Func: Fn(A, &Value, C) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (A, ValueRef, C): for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C)>,
+{
+    fn call<'a>(&self, (a, b, c): (A, &'a Value, C)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A> Function<R, (A, ValueRef, StringRef)> for Func
+where
+    Func: Fn(A, &Value, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+
+    (A, ValueRef, StringRef): for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c): (A, &'a Value, &'a str)) -> R {
         self(a, b, c)
     }
 }
@@ -295,6 +393,35 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, C> Function<R, (StringRef, ValueRef, C)> for Func
+where
+    Func: Fn(&str, &Value, C) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (StringRef, ValueRef, C): for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a str, &'a Value, C)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (StringRef, ValueRef, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, &str) -> R,
+    R: FunctionReturn,
+
+    (StringRef, ValueRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a str, &'a Value, &'a str)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B, C> Function<R, (ListRef, B, C)> for Func
 where
     Func: Fn(&[Value], B, C) -> R,
@@ -350,6 +477,35 @@ where
         for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c): (&'a [Value], &'a str, &'a str)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (ListRef, ValueRef, C)> for Func
+where
+    Func: Fn(&[Value], &Value, C) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (ListRef, ValueRef, C): for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a [Value], &'a Value, C)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ListRef, ValueRef, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, &str) -> R,
+    R: FunctionReturn,
+
+    (ListRef, ValueRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a [Value], &'a Value, &'a str)) -> R {
         self(a, b, c)
     }
 }
@@ -417,6 +573,36 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, C> Function<R, (MapRef, ValueRef, C)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (MapRef, ValueRef, C):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a BTreeMap<String, Value>, &'a Value, C)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (MapRef, ValueRef, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str) -> R,
+    R: FunctionReturn,
+
+    (MapRef, ValueRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a BTreeMap<String, Value>, &'a Value, &'a str)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B, C> Function<R, (ValueRef, B, C)> for Func
 where
     Func: Fn(&Value, B, C) -> R,
@@ -472,6 +658,35 @@ where
         for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c): (&'a Value, &'a str, &'a str)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (ValueRef, ValueRef, C)> for Func
+where
+    Func: Fn(&Value, &Value, C) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (ValueRef, ValueRef, C): for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a Value, &'a Value, C)) -> R {
+        self(a, b, c)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ValueRef, ValueRef, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, &str) -> R,
+    R: FunctionReturn,
+
+    (ValueRef, ValueRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c): (&'a Value, &'a Value, &'a str)) -> R {
         self(a, b, c)
     }
 }
@@ -587,6 +802,71 @@ where
         for<'a> FunctionArgs<Output<'a> = (A, &'a str, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c, d): (A, &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C, D> Function<R, (A, ValueRef, C, D)> for Func
+where
+    Func: Fn(A, &Value, C, D) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (A, ValueRef, C, D): for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (A, &'a Value, C, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C> Function<R, (A, ValueRef, C, StringRef)> for Func
+where
+    Func: Fn(A, &Value, C, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (A, ValueRef, C, StringRef): for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (A, &'a Value, C, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, D> Function<R, (A, ValueRef, StringRef, D)> for Func
+where
+    Func: Fn(A, &Value, &str, D) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (A, ValueRef, StringRef, D): for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (A, &'a Value, &'a str, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A> Function<R, (A, ValueRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(A, &Value, &str, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+
+    (A, ValueRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (A, &'a Value, &'a str, &'a str)) -> R {
         self(a, b, c, d)
     }
 }
@@ -719,6 +999,68 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, C, D> Function<R, (StringRef, ValueRef, C, D)> for Func
+where
+    Func: Fn(&str, &Value, C, D) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (StringRef, ValueRef, C, D): for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a str, &'a Value, C, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (StringRef, ValueRef, C, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, C, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (StringRef, ValueRef, C, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a str, &'a Value, C, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (StringRef, ValueRef, StringRef, D)> for Func
+where
+    Func: Fn(&str, &Value, &str, D) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (StringRef, ValueRef, StringRef, D):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a str, &'a Value, &'a str, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (StringRef, ValueRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (StringRef, ValueRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a str, &'a Value, &'a str, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B, C, D> Function<R, (ListRef, B, C, D)> for Func
 where
     Func: Fn(&[Value], B, C, D) -> R,
@@ -841,6 +1183,68 @@ where
         for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a str, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c, d): (&'a [Value], &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D> Function<R, (ListRef, ValueRef, C, D)> for Func
+where
+    Func: Fn(&[Value], &Value, C, D) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ListRef, ValueRef, C, D): for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a [Value], &'a Value, C, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (ListRef, ValueRef, C, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, C, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (ListRef, ValueRef, C, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a [Value], &'a Value, C, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (ListRef, ValueRef, StringRef, D)> for Func
+where
+    Func: Fn(&[Value], &Value, &str, D) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ListRef, ValueRef, StringRef, D):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a [Value], &'a Value, &'a str, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ListRef, ValueRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (ListRef, ValueRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a [Value], &'a Value, &'a str, &'a str)) -> R {
         self(a, b, c, d)
     }
 }
@@ -979,6 +1383,73 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, C, D> Function<R, (MapRef, ValueRef, C, D)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C, D) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (MapRef, ValueRef, C, D):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a BTreeMap<String, Value>, &'a Value, C, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (MapRef, ValueRef, C, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (MapRef, ValueRef, C, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a BTreeMap<String, Value>, &'a Value, C, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (MapRef, ValueRef, StringRef, D)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str, D) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (MapRef, ValueRef, StringRef, D):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, &'a str, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a BTreeMap<String, Value>, &'a Value, &'a str, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (MapRef, ValueRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (MapRef, ValueRef, StringRef, StringRef): for<'a> FunctionArgs<
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, &'a str, &'a str),
+    >,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d): (&'a BTreeMap<String, Value>, &'a Value, &'a str, &'a str),
+    ) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B, C, D> Function<R, (ValueRef, B, C, D)> for Func
 where
     Func: Fn(&Value, B, C, D) -> R,
@@ -1101,6 +1572,68 @@ where
         for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a str, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c, d): (&'a Value, &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D> Function<R, (ValueRef, ValueRef, C, D)> for Func
+where
+    Func: Fn(&Value, &Value, C, D) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ValueRef, ValueRef, C, D): for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a Value, &'a Value, C, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (ValueRef, ValueRef, C, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, C, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (ValueRef, ValueRef, C, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a Value, &'a Value, C, &'a str)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (ValueRef, ValueRef, StringRef, D)> for Func
+where
+    Func: Fn(&Value, &Value, &str, D) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ValueRef, ValueRef, StringRef, D):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str, D)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a Value, &'a Value, &'a str, D)) -> R {
+        self(a, b, c, d)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ValueRef, ValueRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (ValueRef, ValueRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d): (&'a Value, &'a Value, &'a str, &'a str)) -> R {
         self(a, b, c, d)
     }
 }
@@ -1359,6 +1892,145 @@ where
         for<'a> FunctionArgs<Output<'a> = (A, &'a str, &'a str, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c, d, e): (A, &'a str, &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C, D, E> Function<R, (A, ValueRef, C, D, E)> for Func
+where
+    Func: Fn(A, &Value, C, D, E) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (A, ValueRef, C, D, E): for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, C, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C, D> Function<R, (A, ValueRef, C, D, StringRef)> for Func
+where
+    Func: Fn(A, &Value, C, D, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (A, ValueRef, C, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, C, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C, E> Function<R, (A, ValueRef, C, StringRef, E)> for Func
+where
+    Func: Fn(A, &Value, C, &str, E) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (A, ValueRef, C, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, C, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, C> Function<R, (A, ValueRef, C, StringRef, StringRef)> for Func
+where
+    Func: Fn(A, &Value, C, &str, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (A, ValueRef, C, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, C, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, C, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, D, E> Function<R, (A, ValueRef, StringRef, D, E)> for Func
+where
+    Func: Fn(A, &Value, &str, D, E) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (A, ValueRef, StringRef, D, E):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, &'a str, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, D> Function<R, (A, ValueRef, StringRef, D, StringRef)> for Func
+where
+    Func: Fn(A, &Value, &str, D, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (A, ValueRef, StringRef, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, &'a str, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A, E> Function<R, (A, ValueRef, StringRef, StringRef, E)> for Func
+where
+    Func: Fn(A, &Value, &str, &str, E) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (A, ValueRef, StringRef, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, &'a str, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, A> Function<R, (A, ValueRef, StringRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(A, &Value, &str, &str, &str) -> R,
+    R: FunctionReturn,
+
+    A: for<'a> FunctionArg<Output<'a> = A>,
+
+    (A, ValueRef, StringRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (A, &'a Value, &'a str, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (A, &'a Value, &'a str, &'a str, &'a str)) -> R {
         self(a, b, c, d, e)
     }
 }
@@ -1630,6 +2302,137 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, C, D, E> Function<R, (StringRef, ValueRef, C, D, E)> for Func
+where
+    Func: Fn(&str, &Value, C, D, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (StringRef, ValueRef, C, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, C, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D> Function<R, (StringRef, ValueRef, C, D, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, C, D, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (StringRef, ValueRef, C, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, C, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, E> Function<R, (StringRef, ValueRef, C, StringRef, E)> for Func
+where
+    Func: Fn(&str, &Value, C, &str, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (StringRef, ValueRef, C, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, C, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (StringRef, ValueRef, C, StringRef, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, C, &str, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (StringRef, ValueRef, C, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, C, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, C, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D, E> Function<R, (StringRef, ValueRef, StringRef, D, E)> for Func
+where
+    Func: Fn(&str, &Value, &str, D, E) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (StringRef, ValueRef, StringRef, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, &'a str, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (StringRef, ValueRef, StringRef, D, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, &str, D, &str) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (StringRef, ValueRef, StringRef, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, &'a str, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, E> Function<R, (StringRef, ValueRef, StringRef, StringRef, E)> for Func
+where
+    Func: Fn(&str, &Value, &str, &str, E) -> R,
+    R: FunctionReturn,
+
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (StringRef, ValueRef, StringRef, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, &'a str, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (StringRef, ValueRef, StringRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&str, &Value, &str, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (StringRef, ValueRef, StringRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a str, &'a Value, &'a str, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a str, &'a Value, &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B, C, D, E> Function<R, (ListRef, B, C, D, E)> for Func
 where
     Func: Fn(&[Value], B, C, D, E) -> R,
@@ -1895,6 +2698,137 @@ where
         for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a str, &'a str, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a str, &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D, E> Function<R, (ListRef, ValueRef, C, D, E)> for Func
+where
+    Func: Fn(&[Value], &Value, C, D, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ListRef, ValueRef, C, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, C, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D> Function<R, (ListRef, ValueRef, C, D, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, C, D, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ListRef, ValueRef, C, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, C, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, E> Function<R, (ListRef, ValueRef, C, StringRef, E)> for Func
+where
+    Func: Fn(&[Value], &Value, C, &str, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ListRef, ValueRef, C, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, C, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (ListRef, ValueRef, C, StringRef, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, C, &str, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (ListRef, ValueRef, C, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, C, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, C, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D, E> Function<R, (ListRef, ValueRef, StringRef, D, E)> for Func
+where
+    Func: Fn(&[Value], &Value, &str, D, E) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ListRef, ValueRef, StringRef, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, &'a str, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (ListRef, ValueRef, StringRef, D, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, &str, D, &str) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ListRef, ValueRef, StringRef, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, &'a str, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, E> Function<R, (ListRef, ValueRef, StringRef, StringRef, E)> for Func
+where
+    Func: Fn(&[Value], &Value, &str, &str, E) -> R,
+    R: FunctionReturn,
+
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ListRef, ValueRef, StringRef, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, &'a str, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ListRef, ValueRef, StringRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&[Value], &Value, &str, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (ListRef, ValueRef, StringRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a [Value], &'a Value, &'a str, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a [Value], &'a Value, &'a str, &'a str, &'a str)) -> R {
         self(a, b, c, d, e)
     }
 }
@@ -2221,6 +3155,174 @@ where
 }
 
 #[doc(hidden)]
+impl<Func, R, C, D, E> Function<R, (MapRef, ValueRef, C, D, E)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C, D, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (MapRef, ValueRef, C, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, C, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D> Function<R, (MapRef, ValueRef, C, D, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C, D, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (MapRef, ValueRef, C, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C, D, &'a str)>,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, C, D, &'a str),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, E> Function<R, (MapRef, ValueRef, C, StringRef, E)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C, &str, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (MapRef, ValueRef, C, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C, &'a str, E)>,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, C, &'a str, E),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (MapRef, ValueRef, C, StringRef, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, C, &str, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (MapRef, ValueRef, C, StringRef, StringRef): for<'a> FunctionArgs<
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, C, &'a str, &'a str),
+    >,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, C, &'a str, &'a str),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D, E> Function<R, (MapRef, ValueRef, StringRef, D, E)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str, D, E) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (MapRef, ValueRef, StringRef, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, &'a str, D, E)>,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, &'a str, D, E),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (MapRef, ValueRef, StringRef, D, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str, D, &str) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (MapRef, ValueRef, StringRef, D, StringRef): for<'a> FunctionArgs<
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, &'a str, D, &'a str),
+    >,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, &'a str, D, &'a str),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, E> Function<R, (MapRef, ValueRef, StringRef, StringRef, E)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str, &str, E) -> R,
+    R: FunctionReturn,
+
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (MapRef, ValueRef, StringRef, StringRef, E): for<'a> FunctionArgs<
+        Output<'a> = (&'a BTreeMap<String, Value>, &'a Value, &'a str, &'a str, E),
+    >,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (&'a BTreeMap<String, Value>, &'a Value, &'a str, &'a str, E),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (MapRef, ValueRef, StringRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&BTreeMap<String, Value>, &Value, &str, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (MapRef, ValueRef, StringRef, StringRef, StringRef): for<'a> FunctionArgs<
+        Output<'a> = (
+            &'a BTreeMap<String, Value>,
+            &'a Value,
+            &'a str,
+            &'a str,
+            &'a str,
+        ),
+    >,
+{
+    fn call<'a>(
+        &self,
+        (a, b, c, d, e): (
+            &'a BTreeMap<String, Value>,
+            &'a Value,
+            &'a str,
+            &'a str,
+            &'a str,
+        ),
+    ) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
 impl<Func, R, B, C, D, E> Function<R, (ValueRef, B, C, D, E)> for Func
 where
     Func: Fn(&Value, B, C, D, E) -> R,
@@ -2486,6 +3588,137 @@ where
         for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a str, &'a str, &'a str, &'a str)>,
 {
     fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a str, &'a str, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D, E> Function<R, (ValueRef, ValueRef, C, D, E)> for Func
+where
+    Func: Fn(&Value, &Value, C, D, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ValueRef, ValueRef, C, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, C, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, D> Function<R, (ValueRef, ValueRef, C, D, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, C, D, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ValueRef, ValueRef, C, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, C, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C, E> Function<R, (ValueRef, ValueRef, C, StringRef, E)> for Func
+where
+    Func: Fn(&Value, &Value, C, &str, E) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ValueRef, ValueRef, C, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, C, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, C> Function<R, (ValueRef, ValueRef, C, StringRef, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, C, &str, &str) -> R,
+    R: FunctionReturn,
+
+    C: for<'a> FunctionArg<Output<'a> = C>,
+
+    (ValueRef, ValueRef, C, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, C, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, C, &'a str, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D, E> Function<R, (ValueRef, ValueRef, StringRef, D, E)> for Func
+where
+    Func: Fn(&Value, &Value, &str, D, E) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ValueRef, ValueRef, StringRef, D, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str, D, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, &'a str, D, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, D> Function<R, (ValueRef, ValueRef, StringRef, D, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, &str, D, &str) -> R,
+    R: FunctionReturn,
+
+    D: for<'a> FunctionArg<Output<'a> = D>,
+
+    (ValueRef, ValueRef, StringRef, D, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str, D, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, &'a str, D, &'a str)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R, E> Function<R, (ValueRef, ValueRef, StringRef, StringRef, E)> for Func
+where
+    Func: Fn(&Value, &Value, &str, &str, E) -> R,
+    R: FunctionReturn,
+
+    E: for<'a> FunctionArg<Output<'a> = E>,
+
+    (ValueRef, ValueRef, StringRef, StringRef, E):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str, &'a str, E)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, &'a str, &'a str, E)) -> R {
+        self(a, b, c, d, e)
+    }
+}
+
+#[doc(hidden)]
+impl<Func, R> Function<R, (ValueRef, ValueRef, StringRef, StringRef, StringRef)> for Func
+where
+    Func: Fn(&Value, &Value, &str, &str, &str) -> R,
+    R: FunctionReturn,
+
+    (ValueRef, ValueRef, StringRef, StringRef, StringRef):
+        for<'a> FunctionArgs<Output<'a> = (&'a Value, &'a Value, &'a str, &'a str, &'a str)>,
+{
+    fn call<'a>(&self, (a, b, c, d, e): (&'a Value, &'a Value, &'a str, &'a str, &'a str)) -> R {
         self(a, b, c, d, e)
     }
 }

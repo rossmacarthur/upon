@@ -17,34 +17,43 @@
 //! argument implementing [`FunctionArg`] and any return type implementing
 //! [`FunctionReturn`].
 //!
-//! Additionally, the _first_ argument to the function (i.e. the piped
-//! expression when used as a *filter*) can also be specified using the
-//! following reference types. This is preferred in most cases because the
-//! renderer won't have to clone the value before passing it to the function.
+//! The _first_ argument to the function (i.e. the piped expression when used as
+//! a *filter*) can also be specified using the following reference types. This
+//! is preferred in most cases because the renderer won't have to clone the
+//! value before passing it to the function.
 //! - [`&str`][str]
 //! - [`&[Value]`][slice]
 //! - [`&BTreeMap<String, Value>`][std::collections::BTreeMap]
 //! - [`&Value`][Value]
 //!
-//! Other arguments can also use [`&str`][str] but only if the passed parameter
-//! is always a literal string.
+//! The _second_ argument can be specified using the following reference types.
+//! - [`&str`][str]
+//! - [`&Value`][Value]
+//!
+//! Other arguments can always use [`&str`][str].
+//!
+//! The technical reason for this contraint is that each permutation of
+//! _reference_ arguments needs its own trait implementation.
 //!
 //! # Examples
 //!
 //! ## Using existing functions
 //!
-//! A lot of standard library functions can be used as functions, as long as
-//! they have the supported argument and return types.
+//! A lot of standard library functions and existing functions satisfy the
+//! [`Function`] trait, as long as they have the supported argument and return
+//! types.
 //!
 //! ```
 //! let mut engine = upon::Engine::new();
 //! engine.add_function("lower", str::to_lowercase);
 //! engine.add_function("abs", i64::abs);
+//! engine.add_function("eq", upon::Value::eq);
 //! ```
 //!
 //! ## Closures
 //!
-//! Closures are perfectly valid functions.
+//! Closures are perfectly valid functions, although often they will need type
+//! hints for the arguments.
 //!
 //! ```
 //! let mut engine = upon::Engine::new();
@@ -82,7 +91,7 @@
 //! ```
 //! # use upon::Value;
 //! fn last(list: &[Value]) -> Option<Value> {
-//!     list.last().map(Clone::clone)
+//!     list.last().cloned()
 //! }
 //! ```
 
@@ -111,6 +120,8 @@ where
 }
 
 /// Any function.
+///
+/// Some implementations of this trait are hidden.
 ///
 /// *See the [module][crate::functions] documentation for more information.*
 #[cfg_attr(docsrs, doc(cfg(feature = "functions")))]

@@ -67,7 +67,7 @@ Hello {{ .user.name }}!
 ```
 
 For convenience, you can also omit the leading dot (`.`) in the first path
-segment. The following is equivalent to the previous example.
+member. The following is equivalent to the previous example.
 
 ```text
 Hello {{ user.name }}!
@@ -94,7 +94,7 @@ following would try lookup the field “surname” from “user” and return
 Hello {{ user.name }} {{ user?.surname }}!
 ```
 
-This is useful when checking if the first segment of a path might not be
+This is useful when checking if the first member of a path might not be
 defined.
 
 ```text

@@ -629,7 +629,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
     /// Parses a type of member access.
     ///
-    /// This is a path segment which is either an index or an identifier.
+    /// This is a path member which is either an index or an identifier.
     ///
     ///   users
     ///

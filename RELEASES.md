@@ -4,6 +4,9 @@
 
 *Unreleased*
 
+- [Support `&Value` as second argument to functions][todo]. This allows you to
+  register functions like `upon::Value::eq`.
+
 - [Support access and optional access from scope][todo]. This extends the syntax
   for variable access in expressions to support the dot (`.`) and optional dot
   (`?.`) prefixes for the first segment of paths.

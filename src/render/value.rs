@@ -70,7 +70,7 @@ pub fn lookup_path<'a>(
     }
 }
 
-/// Lookup the given path, return None if the first segment is not found.
+/// Lookup the given path, return None if the first member is not found.
 pub fn lookup_path_maybe<'a>(
     source: &str,
     value: &ValueCow<'a>,

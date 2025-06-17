@@ -302,6 +302,9 @@ pub struct ValueMember<'a> {
 }
 
 /// A key in a value path.
+///
+/// Passed to custom value function when using
+/// [`render_from_fn`][Template::render_from_fn].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ValueAccess<'a> {
     /// An index into an array like `2` in `user.names.2`.
@@ -312,6 +315,9 @@ pub enum ValueAccess<'a> {
 }
 
 /// The type of member access.
+///
+/// Passed to custom value function when using
+/// [`render_from_fn`][Template::render_from_fn].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ValueAccessOp {
     /// A member access like `.` in `user.name`.
@@ -422,7 +428,7 @@ impl<'engine> Engine<'engine> {
     ///
     /// Formatters and functions share the same namespace. If a formatter or
     /// function with the same name already exists in the engine, it is replaced
-    /// and `Some(_)` with the type of function that was replaced is returned,
+    /// and `Some(_)` with the type of callable that was replaced is returned,
     /// else `None` is returned.
     #[inline]
     pub fn add_formatter<N, F>(&mut self, name: N, f: F) -> Option<EngineCallable>
@@ -444,7 +450,7 @@ impl<'engine> Engine<'engine> {
     ///
     /// Formatters and functions share the same namespace. If a formatter or
     /// function with the same name already exists in the engine, it is replaced
-    /// and `Some(_)` with the type of function that was replaced is returned,
+    /// and `Some(_)` with the type of callable that was replaced is returned,
     /// else `None` is returned.
     #[cfg(feature = "functions")]
     #[cfg_attr(docsrs, doc(cfg(feature = "functions")))]

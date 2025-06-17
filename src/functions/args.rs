@@ -56,7 +56,7 @@ macro_rules! impl_for_int {
     ($($ty:ty)+) => {
         $(
             impl FunctionArg for $ty {
-                type Output<'arg> =$ty;
+                type Output<'arg> = $ty;
 
                 fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
                 where
@@ -80,7 +80,7 @@ macro_rules! impl_for_float {
     ($($ty:ty)+) => {
         $(
             impl FunctionArg for $ty {
-                type Output<'arg> =$ty;
+                type Output<'arg> = $ty;
 
                 fn from_value<'stack, 'arg>(v: &'arg mut ValueCow<'stack>) -> Result<Self::Output<'arg>>
                 where

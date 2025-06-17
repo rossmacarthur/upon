@@ -54,7 +54,7 @@ use crate::Value;
     "#,
     );
 
-    let value_types = [
+    let arg0_types = [
         ArgType::Owned,
         ArgType::Str,
         ArgType::ListRef,
@@ -62,8 +62,9 @@ use crate::Value;
         ArgType::ValueRef,
     ]
     .as_slice();
-    let arg_types = [ArgType::Owned, ArgType::Str].as_slice();
-    let all = [value_types, arg_types, arg_types, arg_types, arg_types];
+    let arg1_types = [ArgType::Owned, ArgType::Str, ArgType::ValueRef].as_slice();
+    let argx_types = [ArgType::Owned, ArgType::Str].as_slice();
+    let all = [arg0_types, arg1_types, argx_types, argx_types, argx_types];
     let generics: Vec<_> = ('A'..='Q').take(all.len()).collect();
 
     for types in (1..=all.len()).flat_map(|i| all[..i].iter().copied().multi_cartesian_product()) {
