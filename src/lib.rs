@@ -466,6 +466,22 @@ impl<'engine> Engine<'engine> {
             .insert(name.into(), EngineBoxCallable::Function(functions::new(f)))
             .map(|f| f.discriminant())
     }
+    #[deprecated(
+        since = "0.10.0",
+        note = "use `add_function` instead, all functions can be used as filters"
+    )]
+    #[cfg(feature = "functions")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "functions")))]
+    #[inline]
+    pub fn add_filter<N, F, R, A>(&mut self, name: N, f: F) -> Option<EngineCallable>
+    where
+        N: Into<Cow<'engine, str>>,
+        F: Function<R, A> + Send + Sync + 'static,
+        R: FunctionReturn,
+        A: FunctionArgs,
+    {
+        self.add_function(name, f)
+    }
 
     /// Remove a formatter or function by name.
     ///
