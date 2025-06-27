@@ -2,14 +2,14 @@
 
 ## 0.10.0
 
-*Unreleased*
+*June 27th, 2025*
 
-- [Support `&Value` as second argument to functions][todo]. This allows you to
-  register functions like `upon::Value::eq`.
+- [Support `&Value` as second argument to functions][0368dd7b]. This allows you
+  to register functions like `upon::Value::eq`.
 
-- [Support access and optional access from scope][todo]. This extends the syntax
-  for variable access in expressions to support the dot (`.`) and optional dot
-  (`?.`) prefixes for the first segment of paths.
+- [Support access and optional access from scope][8b15d749]. This extends the
+  syntax for variable access in expressions to support the dot (`.`) and
+  optional dot (`?.`) prefixes for the first segment of paths.
 
   The following are equivalent:
   ```
@@ -23,7 +23,7 @@
   {{ ?.user }}
   ```
 
-- [Add support for in-place function calls][todo]. Previously, function calls
+- [Add support for in-place function calls][86133bc7]. Previously, function calls
   only supported the "filter" syntax, which always required at least one
   argument to be "piped" into the call. This change adds an additional name and
   parenthesized argument syntax including those without arguments. For example
@@ -37,15 +37,21 @@
   {{ item.price | format: get_currency(user.id) }}
   ```
 
-- [Support parenthesized expressions][todo]. This allows you to use parentheses
-  in inline expressions, such as:
+- [Support parenthesized expressions][0e54cfe6]. This allows you to use
+  parentheses in inline expressions, such as:
   ```
   {{ content | replace: "John Smith", (user.name | title) }}
   ```
 
-- [Rename "filters" to "functions"][todo]. "Filter" now refers to the way the
+- [Rename "filters" to "functions"][b49719a2]. "Filter" now refers to the way the
   function is used, i.e. the pipe syntax `{{ value | function: arg1, arg2 }}`.
   This change is in preparation for a new syntax for calling functions.
+
+[0368dd7b]: https://github.com/rossmacarthur/upon/commit/0368dd7b85c1ca730c3a2c8b586ca1595fd90c1a
+[8b15d749]: https://github.com/rossmacarthur/upon/commit/8b15d7492fc5e8f7b97d3c8824d434d7cf187e6b
+[86133bc7]: https://github.com/rossmacarthur/upon/commit/86133bc7943b7e27faac6eceb4d198e99dea5c3c
+[0e54cfe6]: https://github.com/rossmacarthur/upon/commit/0e54cfe62e42faf733e27286e859ef6ffd6ee376
+[b49719a2]: https://github.com/rossmacarthur/upon/commit/b49719a2421dfb41629ea55a228e0c3ef97ebf25
 
 ## 0.9.0
 

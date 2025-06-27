@@ -79,7 +79,7 @@ dependencies = [
  "serde_json",
  "tera",
  "tinytemplate",
- "upon 0.9.0",
+ "upon 0.10.0",
 ]
 
 [[package]]
@@ -488,7 +488,7 @@ dependencies = [
  "arbitrary",
  "libfuzzer-sys",
  "serde",
- "upon 0.9.0",
+ "upon 0.10.0",
 ]
 
 [[package]]
@@ -1461,7 +1461,7 @@ dependencies = [
 
 [[package]]
 name = "upon"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "aho-corasick",
  "serde",
