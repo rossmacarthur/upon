@@ -16,6 +16,7 @@ pub trait Engine<'a>: Sized {
         unimplemented!()
     }
     fn add_template(&mut self, name: &'static str, source: &'a str);
+    fn add_partial(&mut self, _name: &'static str, _source: &'a str) {}
     fn render<S>(&self, name: &'static str, ctx: &S) -> String
     where
         S: serde::Serialize;
@@ -66,12 +67,13 @@ impl<'engine> Engine<'engine> for Handlebars<'engine> {
 //  liquid
 // /////////////////////////////////////////////////////////////////////////////
 
-pub struct Liquid {
+pub struct Liquid<'engine> {
     parser: liquid::Parser,
     store: HashMap<&'static str, liquid::Template>,
+    partials: HashMap<&'static str, &'engine str>,
 }
 
-impl<'engine> Engine<'engine> for Liquid {
+impl<'engine> Engine<'engine> for Liquid<'engine> {
     #[inline]
     fn name() -> &'static str {
         "liquid"
@@ -82,6 +84,7 @@ impl<'engine> Engine<'engine> for Liquid {
         Self {
             parser: liquid::ParserBuilder::with_stdlib().build().unwrap(),
             store: HashMap::new(),
+            partials: HashMap::new(),
         }
     }
 
@@ -89,6 +92,25 @@ impl<'engine> Engine<'engine> for Liquid {
     fn add_template(&mut self, name: &'static str, source: &'engine str) {
         let template = self.parser.parse(source).unwrap();
         self.store.insert(name, template);
+    }
+
+    #[inline]
+    fn add_partial(&mut self, name: &'static str, source: &'engine str) {
+        use liquid::partials::{EagerCompiler, InMemorySource};
+        type Partials = EagerCompiler<InMemorySource>;
+
+        self.partials.insert(name, source);
+
+        let mut partials = Partials::empty();
+        for (name, source) in &self.partials {
+            partials.add(*name, *source);
+        }
+
+        // need to rebuild the parser with the new partials
+        self.parser = liquid::ParserBuilder::with_stdlib()
+            .partials(partials)
+            .build()
+            .unwrap()
     }
 
     #[inline]

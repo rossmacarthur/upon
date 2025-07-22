@@ -1,0 +1,6 @@
+{%- if recurse -%}
+Recursing:
+{% render "bench", recurse: recurse.recurse -%}
+{%- else -%}
+End
+{% endif -%}

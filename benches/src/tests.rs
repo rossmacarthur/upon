@@ -1,116 +1,151 @@
-use crate::context::{Context, User};
+use crate::context;
 use crate::{Engine, Handlebars, Liquid, Minijinja, Tera, TinyTemplate, Upon};
 
 macro_rules! t {
     ($E:ty, $source:literal) => {{
-        let result = render::<$E>(include_str!($source), false);
+        let result = render::<$E>(include_str!(concat!("../benchdata/", $source)));
         goldie::assert!(result);
     }};
 }
 
 macro_rules! t_syntax {
     ($E:ty, $source:literal) => {{
-        let result = render::<$E>(include_str!($source), true);
+        let result = render_syntax::<$E>(include_str!(concat!("../benchdata/", $source)));
         goldie::assert!(result);
     }};
 }
 
+macro_rules! t_recurse {
+    ($E:ty, $source:literal) => {
+        let result = render_recurse::<$E>(include_str!(concat!("../benchdata/", $source)));
+        goldie::assert!(result);
+    };
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+//  Basic
+// /////////////////////////////////////////////////////////////////////////////
+
 #[test]
 fn basic_handlebars() {
-    t!(Handlebars, "../benchdata/basic/handlebars.html");
+    t!(Handlebars, "basic/handlebars.html");
 }
+
 #[test]
 fn basic_liquid() {
-    t!(Liquid, "../benchdata/basic/liquid.html");
+    t!(Liquid, "basic/liquid.html");
 }
 
 #[test]
 fn basic_minijinja() {
-    t!(Minijinja, "../benchdata/basic/jinja.html");
+    t!(Minijinja, "basic/jinja.html");
 }
 
 #[test]
 fn basic_tera() {
-    t!(Tera, "../benchdata/basic/jinja.html");
+    t!(Tera, "basic/jinja.html");
 }
 
 #[test]
 fn basic_tinytemplate() {
-    t!(TinyTemplate, "../benchdata/basic/tinytemplate.html");
+    t!(TinyTemplate, "basic/tinytemplate.html");
 }
 
 #[test]
 fn basic_upon() {
-    t!(Upon, "../benchdata/basic/jinja.html");
+    t!(Upon, "basic/jinja.html");
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+//  Functions
+// /////////////////////////////////////////////////////////////////////////////
 
 #[test]
 fn functions_handlebars() {
-    t!(Handlebars, "../benchdata/functions/handlebars.html");
+    t!(Handlebars, "functions/handlebars.html");
 }
 
 #[test]
 fn functions_minijinja() {
-    t!(Minijinja, "../benchdata/functions/jinja.html");
+    t!(Minijinja, "functions/jinja.html");
 }
 
 #[test]
 fn functions_tera() {
-    t!(Tera, "../benchdata/functions/jinja.html");
+    t!(Tera, "functions/jinja.html");
 }
 
 #[test]
 fn functions_upon() {
-    t!(Upon, "../benchdata/functions/jinja.html");
+    t!(Upon, "functions/jinja.html");
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+//  Literals
+// /////////////////////////////////////////////////////////////////////////////
 
 #[test]
 fn literals_minijinja() {
-    t!(Minijinja, "../benchdata/literals/jinja.html");
+    t!(Minijinja, "literals/jinja.html");
 }
 
 #[test]
 fn literals_upon() {
-    t!(Upon, "../benchdata/literals/jinja.html");
+    t!(Upon, "literals/jinja.html");
 }
 
 #[test]
 fn syntax_minijinja() {
-    t_syntax!(Minijinja, "../benchdata/syntax/jinja.html");
+    t_syntax!(Minijinja, "syntax/jinja.html");
 }
 
 #[test]
 fn syntax_upon() {
-    t_syntax!(Upon, "../benchdata/syntax/jinja.html");
+    t_syntax!(Upon, "syntax/jinja.html");
 }
 
-fn render<'a, E: Engine<'a>>(source: &'a str, syntax: bool) -> String {
-    let ctx = Context {
-        title: "My awesome webpage!".to_owned(),
-        users: vec![
-            User {
-                name: "Nancy Wheeler".to_owned(),
-                age: 17,
-                is_disabled: false,
-            },
-            User {
-                name: "Steve Harrington".to_owned(),
-                age: 18,
-                is_disabled: false,
-            },
-            User {
-                name: "Billy Hargrove".to_owned(),
-                age: 19,
-                is_disabled: true,
-            },
-        ],
-    };
+// /////////////////////////////////////////////////////////////////////////////
+//  Recurse
+// /////////////////////////////////////////////////////////////////////////////
 
-    let mut engine = if syntax {
-        E::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"))
-    } else {
-        E::new()
-    };
+#[test]
+fn recurse_handlebars() {
+    t_recurse!(Handlebars, "recurse/handlebars.html");
+}
+
+#[test]
+fn recurse_liquid() {
+    t_recurse!(Liquid, "recurse/liquid.html");
+}
+
+#[test]
+fn recurse_minijinja() {
+    t_recurse!(Minijinja, "recurse/minijinja.html");
+}
+
+#[test]
+fn recurse_upon() {
+    t_recurse!(Upon, "recurse/upon.html");
+}
+
+fn render<'a, E: Engine<'a>>(source: &'a str) -> String {
+    let ctx = context::plain();
+    let mut engine = E::new();
     engine.add_template("bench", source);
     engine.render("bench", &ctx)
+}
+
+fn render_syntax<'a, E: Engine<'a>>(source: &'a str) -> String {
+    let ctx = context::plain();
+    let mut engine = E::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"));
+    engine.add_template("bench", source);
+    engine.render("bench", &ctx)
+}
+
+fn render_recurse<'a, E: Engine<'a>>(source: &'a str) -> String {
+    let rec = context::recurse(20);
+    let mut engine = E::new();
+    engine.add_partial("bench", source);
+    engine.add_template("bench", source);
+    engine.render("bench", &rec)
 }

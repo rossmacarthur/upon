@@ -1,0 +1,6 @@
+{%- if recurse -%}
+Recursing:
+{% include "bench" with recurse -%}
+{%- else -%}
+End
+{% endif -%}

@@ -39,19 +39,8 @@ pub fn bench_compile(c: &mut Criterion) {
     macro_rules! bench {
         ($g:ident, $E:ty, $source:literal) => {{
             $g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!(concat!("../benchdata/", $source)), 50);
+                let source = include_str!(concat!("../benchdata/", $source)).repeat(50);
                 let mut engine = <$E as Engine>::new();
-                b.iter(|| engine.add_template("bench", &source));
-            });
-        }};
-    }
-
-    macro_rules! bench_with_syntax {
-        ($g:ident, $E:ty, $source:literal) => {{
-            $g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!(concat!("../benchdata/", $source)), 50);
-                let mut engine =
-                    <$E as Engine>::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"));
                 b.iter(|| engine.add_template("bench", &source));
             });
         }};
@@ -69,15 +58,25 @@ pub fn bench_compile(c: &mut Criterion) {
     }
 
     {
-        let mut g = c.benchmark_group("compile/syntax");
-        bench_with_syntax!(g, Minijinja, "syntax/jinja.html");
-        bench_with_syntax!(g, Upon, "syntax/jinja.html");
-    }
-
-    {
         let mut g = c.benchmark_group("compile/literals");
         bench!(g, Minijinja, "literals/jinja.html");
         bench!(g, Upon, "literals/jinja.html");
+    }
+
+    macro_rules! bench_with_syntax {
+        ($g:ident, $E:ty, $source:literal) => {{
+            $g.bench_function(<$E as Engine>::name(), |b| {
+                let source = include_str!(concat!("../benchdata/", $source)).repeat(50);
+                let mut engine =
+                    <$E as Engine>::with_syntax(("{", "}"), ("<%", "%>"), ("<#", "#>"));
+                b.iter(|| engine.add_template("bench", &source));
+            });
+        }};
+    }
+    {
+        let mut g = c.benchmark_group("compile/syntax");
+        bench_with_syntax!(g, Minijinja, "syntax/jinja.html");
+        bench_with_syntax!(g, Upon, "syntax/jinja.html");
     }
 }
 
@@ -88,7 +87,7 @@ pub fn bench_render(c: &mut Criterion) {
     macro_rules! bench {
         ($g:ident, $E:ty, $source:literal) => {{
             $g.bench_function(<$E as Engine>::name(), |b| {
-                let source = repeat(include_str!(concat!("../benchdata/", $source)), 50);
+                let source = include_str!(concat!("../benchdata/", $source)).repeat(50);
                 let mut engine = <$E as Engine>::new();
                 <$E as Engine>::add_template(&mut engine, "bench", &source);
                 b.iter(|| <$E as Engine>::render(&engine, "bench", &ctx));
@@ -113,12 +112,26 @@ pub fn bench_render(c: &mut Criterion) {
         bench!(g, Tera, "functions/jinja.html");
         bench!(g, Upon, "functions/jinja.html");
     }
-}
 
-fn repeat(source: &str, n: usize) -> String {
-    let mut s = String::new();
-    for _ in 0..n {
-        s.push_str(source);
+    let ctx = context::recurse(7);
+
+    macro_rules! bench_recurse {
+        ($g:ident, $E:ty, $source:literal) => {{
+            $g.bench_function(<$E as Engine>::name(), |b| {
+                let source = include_str!(concat!("../benchdata/", $source)).repeat(3);
+                let mut engine = <$E as Engine>::new();
+                <$E as Engine>::add_partial(&mut engine, "bench", &source);
+                <$E as Engine>::add_template(&mut engine, "bench", &source);
+                b.iter(|| <$E as Engine>::render(&engine, "bench", &ctx));
+            });
+        }};
     }
-    s
+
+    {
+        let mut g = c.benchmark_group("render/recurse");
+        bench_recurse!(g, Handlebars, "recurse/handlebars.html");
+        bench_recurse!(g, Liquid, "recurse/liquid.html");
+        bench_recurse!(g, Minijinja, "recurse/minijinja.html");
+        bench_recurse!(g, Upon, "recurse/upon.html");
+    }
 }
