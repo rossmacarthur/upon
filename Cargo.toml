@@ -25,7 +25,10 @@ unicode-width = { version = "0.2.0", optional = true }
 serde = { version = "1.0.137", features = ["derive"] }
 
 [features]
-default = ["functions", "serde", "unicode"]
+default = ["builtins", "functions", "serde", "unicode"]
+
+# Enables the set of builtin functions provided by this library.
+builtins = ["functions"]
 
 # Enables support for functions in templates. This does not affect value
 # formatters. Disabling this will improve compile times.

@@ -96,12 +96,17 @@
 //! ```
 
 mod args;
+#[cfg(feature = "builtins")]
+mod builtins;
 mod impls;
 
 use crate::render::FunctionState;
 use crate::types::span::Span;
 use crate::value::ValueCow;
 use crate::{Error, Result, Value};
+
+#[cfg(feature = "builtins")]
+pub use crate::functions::builtins::*;
 
 pub(crate) type DynFunction =
     dyn Fn(FunctionState<'_, '_>) -> Result<Value> + Send + Sync + 'static;

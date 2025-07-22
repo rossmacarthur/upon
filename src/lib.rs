@@ -112,6 +112,9 @@
 //!   formatters (see [`Engine::add_formatter`]). Disabling this will improve
 //!   compile times.
 //!
+//! - **`builtins`** _(enabled by default)_ — Enables support for builtin
+//!   filters provided by this library..
+//!
 //! - **`serde`** _(enabled by default)_ — Enables all serde support and pulls
 //!   in the [`serde`] crate as a dependency. If disabled then you can use
 //!   [`render_from(..)`][TemplateRef::render_from] to render templates and
@@ -386,13 +389,16 @@ impl<'engine> Engine<'engine> {
 
     #[inline]
     fn with_searcher(searcher: Searcher) -> Self {
-        Self {
+        let mut engine = Self {
             searcher,
             default_formatter: &fmt::default,
             callables: BTreeMap::new(),
             templates: BTreeMap::new(),
             max_include_depth: 64,
-        }
+        };
+        #[cfg(feature = "builtins")]
+        functions::add_functions(&mut engine);
+        engine
     }
 
     /// Set the maximum length of the template render stack.
@@ -495,6 +501,12 @@ impl<'engine> Engine<'engine> {
         self.callables.remove(name).map(|f| f.discriminant())
     }
 
+    /// Remove all added formatters and functions.
+    #[inline]
+    pub fn clear_callables(&mut self) {
+        self.callables.clear()
+    }
+
     /// Add a template to the engine.
     ///
     /// The template will be compiled and stored under the given name.
@@ -552,6 +564,12 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn remove_template(&mut self, name: &str) -> bool {
         self.templates.remove(name).is_some()
+    }
+
+    /// Remove all added templates.
+    #[inline]
+    pub fn clear_templates(&mut self) {
+        self.templates.clear()
     }
 
     /// Compile a template.

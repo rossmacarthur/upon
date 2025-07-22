@@ -13,8 +13,9 @@ pub(crate) use crate::value::cow::ValueCow;
 pub use crate::value::ser::to_value;
 
 /// Data to be rendered represented as a recursive enum.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd)]
 pub enum Value {
+    #[default]
     None,
     Bool(bool),
     Integer(i64),
@@ -22,12 +23,6 @@ pub enum Value {
     String(String),
     List(Vec<Value>),
     Map(BTreeMap<String, Value>),
-}
-
-impl Default for Value {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl AsRef<Value> for Value {

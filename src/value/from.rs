@@ -41,6 +41,12 @@ impl From<f64> for Value {
     }
 }
 
+impl From<char> for Value {
+    fn from(c: char) -> Self {
+        Self::String(String::from(c))
+    }
+}
+
 impl From<String> for Value {
     fn from(s: String) -> Self {
         Self::String(s)

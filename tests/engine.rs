@@ -12,7 +12,7 @@ fn engine_debug() {
 #[test]
 fn engine_send_and_sync() {
     let engine = Engine::new();
-    thread::spawn(move || {
+    let handle = thread::spawn(move || {
         let result = engine
             .compile("{{ lorem }}")
             .unwrap()
@@ -21,6 +21,7 @@ fn engine_send_and_sync() {
             .unwrap();
         assert_eq!(result, "ipsum");
     });
+    handle.join().unwrap();
 }
 
 #[test]

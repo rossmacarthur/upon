@@ -7,6 +7,11 @@ use upon::Value;
 
 pub fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
     match v {
+        Value::None => write!(f, "None")?,
+        Value::Bool(b) => write!(f, "{b:?}")?,
+        Value::Integer(n) => write!(f, "{n:?}")?,
+        Value::Float(n) => write!(f, "{n:?}")?,
+        Value::String(s) => write!(f, "{s:?}")?,
         Value::List(list) => {
             f.write_char('[')?;
             for (i, item) in list.iter().enumerate() {
@@ -16,7 +21,6 @@ pub fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
                 debug(f, item)?;
             }
             f.write_char(']')?;
-            Ok(())
         }
         Value::Map(map) => {
             f.write_char('{')?;
@@ -28,8 +32,7 @@ pub fn debug(f: &mut fmt::Formatter<'_>, v: &Value) -> fmt::Result {
                 debug(f, value)?;
             }
             f.write_char('}')?;
-            Ok(())
         }
-        _ => fmt::default(f, v),
     }
+    Ok(())
 }

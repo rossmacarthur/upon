@@ -5,7 +5,7 @@ use crate::value::ValueCow;
 use crate::{Error, Result, Value};
 
 impl ValueCow<'_> {
-    pub fn as_bool(&self) -> bool {
+    pub(crate) fn as_bool(&self) -> bool {
         match &**self {
             Value::None => false,
             Value::Bool(false) => false,
