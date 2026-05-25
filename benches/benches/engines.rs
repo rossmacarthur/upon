@@ -2,8 +2,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use benches::{context, Liquid};
-use benches::{Engine, Handlebars, Minijinja, Tera, TinyTemplate, Upon};
+use benches::{context, Engine, Handlebars, Liquid, Minijinja, Tera, TinyTemplate, Upon};
 
 criterion_main! { benches }
 
@@ -15,7 +14,7 @@ criterion_group! {
 }
 
 /// Benchmarks the time taken to create a new instance of the engine.
-pub fn bench_init(c: &mut Criterion) {
+fn bench_init(c: &mut Criterion) {
     let mut g = c.benchmark_group("init");
 
     macro_rules! bench {
@@ -35,7 +34,7 @@ pub fn bench_init(c: &mut Criterion) {
 }
 
 /// Benchmarks the time taken to compile a template.
-pub fn bench_compile(c: &mut Criterion) {
+fn bench_compile(c: &mut Criterion) {
     macro_rules! bench {
         ($g:ident, $E:ty, $source:literal) => {{
             $g.bench_function(<$E as Engine>::name(), |b| {
@@ -81,7 +80,7 @@ pub fn bench_compile(c: &mut Criterion) {
 }
 
 /// Benchmarks the time taken to render a template as a string.
-pub fn bench_render(c: &mut Criterion) {
+fn bench_render(c: &mut Criterion) {
     let ctx = context::random(150);
 
     macro_rules! bench {

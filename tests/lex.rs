@@ -24,7 +24,9 @@ fn lex_syntax_overlapping() {
         .expr("{", "}")
         .block("{{", "}}")
         .build();
-    Engine::with_syntax(syntax)
+    let mut engine = Engine::new();
+    engine.set_syntax(syntax);
+    engine
         .compile("lorem { ipsum } {{ if dolor }} {{ endif }} sit amet")
         .unwrap();
 }
@@ -36,7 +38,9 @@ fn lex_syntax_overlapping_flipped() {
         .expr("{{", "}}")
         .block("{", "}")
         .build();
-    Engine::with_syntax(syntax)
+    let mut engine = Engine::new();
+    engine.set_syntax(syntax);
+    engine
         .compile("lorem {{ ipsum }} { if dolor } { endif } sit amet")
         .unwrap();
 }
@@ -55,9 +59,9 @@ fn lex_syntax_precedence() {
         .expr("{|", "|}")
         .block("{", "}")
         .build();
-    Engine::with_syntax(syntax)
-        .compile("lorem {| ipsum | dolor |} sit")
-        .unwrap();
+    let mut engine = Engine::new();
+    engine.set_syntax(syntax);
+    engine.compile("lorem {| ipsum | dolor |} sit").unwrap();
 }
 
 #[test]

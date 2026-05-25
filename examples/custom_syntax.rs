@@ -1,11 +1,13 @@
 fn main() -> upon::Result<()> {
+    let mut engine = upon::Engine::new();
+
     let syntax = upon::Syntax::builder()
         .expr("<?", "?>") // used to emit expressions (e.g. variables)
         .block("<%", "%>") // used for for loops, conditionals and with blocks
         // .comment("<#", "#>") // excluding a delimiter essentially disables it
         .build();
 
-    let engine = upon::Engine::with_syntax(syntax);
+    engine.set_syntax(syntax);
 
     let out = engine
         .compile(

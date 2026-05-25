@@ -118,7 +118,7 @@
 //!   construct the context using [`Value`]'s `From` impls.
 //!
 //! - **`syntax`** _(disabled by default)_ — Enables support for configuring
-//!   custom delimiters in templates (see [`Engine::with_syntax`]) and pulls in
+//!   custom delimiters in templates (see [`Engine::set_syntax`]) and pulls in
 //!   the [`aho-corasick`][aho_corasick] crate.
 //!
 //! - **`unicode`** _(enabled by default)_ — Enables unicode support and pulls
@@ -357,37 +357,8 @@ impl<'engine> Engine<'engine> {
     /// Construct a new engine.
     #[inline]
     pub fn new() -> Self {
-        Self::with_searcher(Searcher::new())
-    }
-
-    /// Construct a new engine with custom syntax.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use upon::{Engine, Syntax};
-    ///
-    /// let syntax = Syntax::builder().expr("<{", "}>").block("<[", "]>").build();
-    /// let engine = Engine::with_syntax(syntax);
-    /// ```
-    ///
-    /// # Note
-    ///
-    /// Passing a custom syntax to this function always uses the `aho-corasick`
-    /// implementation for searching. This means that even if you pass the
-    /// default syntax to this function it is *not* equivalent to
-    /// [`Engine::new()`][Engine::new].
-    #[cfg_attr(docsrs, doc(cfg(feature = "syntax")))]
-    #[cfg(feature = "syntax")]
-    #[inline]
-    pub fn with_syntax(syntax: Syntax<'engine>) -> Self {
-        Self::with_searcher(Searcher::with_syntax(syntax))
-    }
-
-    #[inline]
-    fn with_searcher(searcher: Searcher) -> Self {
         Self {
-            searcher,
+            searcher: Searcher::new(),
             default_formatter: &fmt::default,
             callables: BTreeMap::new(),
             templates: BTreeMap::new(),
@@ -404,6 +375,26 @@ impl<'engine> Engine<'engine> {
     #[inline]
     pub fn set_max_include_depth(&mut self, depth: usize) {
         self.max_include_depth = depth;
+    }
+
+    /// Set the custom syntax for this engine.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use upon::{Engine, Syntax};
+    ///
+    /// let mut engine = Engine::new();
+    /// engine.set_syntax(
+    ///     Syntax::builder().expr("<{", "}>").block("<[", "]>").build()
+    /// );
+    /// ```
+    ///
+    #[cfg(feature = "syntax")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "syntax")))]
+    #[inline]
+    pub fn set_syntax(&mut self, syntax: Syntax<'engine>) {
+        self.searcher = Searcher::with_syntax(syntax);
     }
 
     /// Set the default formatter.
@@ -573,7 +564,7 @@ impl std::fmt::Debug for Engine<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Engine")
             .field("searcher", &self.searcher)
-            .field("default_formatter", &format_args!("FormatterFn"))
+            .field("default_formatter", &format_args!("DynFormatter"))
             .field("callables", &self.callables)
             .field("templates", &self.templates)
             .field("max_include_depth", &self.max_include_depth)
@@ -598,6 +589,7 @@ impl std::fmt::Debug for EngineBoxCallable {
             Self::Function(_) => "Function",
             Self::Formatter(_) => "Formatter",
         })
+        // .finish_non_exhaustive() // TODO: needs Rust 1.83.0
         .finish()
     }
 }

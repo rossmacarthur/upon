@@ -14,7 +14,7 @@ template = "docs/SYNTAX_TEMPLATE.md"
 "Value" = "https://docs.rs/upon/latest/upon/enum.Value.html"
 
 # Engine methods
-"Engine::with_syntax" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.with_syntax"
+"Engine::set_syntax" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.set_syntax"
 "Engine::add_formatter" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_formatter"
 "Engine::add_function" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_function"
 "add_template(..)" = "https://docs.rs/upon/latest/upon/struct.Engine.html#method.add_template"

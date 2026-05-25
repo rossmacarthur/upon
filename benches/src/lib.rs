@@ -268,7 +268,8 @@ impl<'engine> Engine<'engine> for upon::Engine<'engine> {
         (begin_block, end_block): (&'static str, &'static str),
         (begin_comment, end_comment): (&'static str, &'static str),
     ) -> Self {
-        let mut engine = upon::Engine::with_syntax(
+        let mut engine = upon::Engine::new();
+        engine.set_syntax(
             upon::Syntax::builder()
                 .expr(begin_expr, end_expr)
                 .block(begin_block, end_block)
