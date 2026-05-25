@@ -1,5 +1,7 @@
 mod helpers;
 
+use std::fmt::Write;
+
 use upon::{Engine, Value, ValueAccess, ValueAccessOp, ValueMember};
 
 use crate::helpers::Writer;
@@ -96,6 +98,39 @@ fn render_with_value_fn_optional_access() {
         .to_string()
         .unwrap();
     assert_eq!(result, "lorem ");
+}
+
+#[test]
+fn render_with_value_fn_mut() {
+    let engine = Engine::new();
+
+    let mut variables = Vec::new();
+    let value_fn_mut = |path: &[ValueMember<'_>]| -> Result<Value, String> {
+        let mut s = String::new();
+        for member in path {
+            match member.op {
+                ValueAccessOp::Direct if !s.is_empty() => s.push('.'),
+                ValueAccessOp::Optional => s.push_str("?."),
+                _ => {}
+            }
+            match member.access {
+                ValueAccess::Key(k) => write!(&mut s, "{k}"),
+                ValueAccess::Index(i) => write!(&mut s, "{i}"),
+            }
+            .map_err(|e| e.to_string())?;
+        }
+        variables.push(s);
+        Ok("test".into())
+    };
+
+    let result = engine
+        .compile(r#"lorem {{ ?.ipsum.dolor }} {{ ipsum.sit }} {{ ipsum?.amet }}"#)
+        .unwrap()
+        .render_from_fn(&engine, value_fn_mut)
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem test test test");
+    assert_eq!(variables, ["?.ipsum.dolor", "ipsum.sit", "ipsum?.amet"]);
 }
 
 #[test]

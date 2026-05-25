@@ -287,7 +287,7 @@ enum EngineBoxCallable {
     Function(Box<DynFunction>),
 }
 
-type ValueFn<'a> = dyn Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'a;
+type ValueFn<'a> = dyn FnMut(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'a;
 
 /// A member in a value path.
 ///
@@ -640,7 +640,7 @@ impl<'render> Template<'render> {
     #[inline]
     pub fn render_from_fn<F>(&self, engine: &'render Engine<'render>, value_fn: F) -> Renderer<'_>
     where
-        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
+        F: FnMut(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
     {
         Renderer::with_value_fn(engine, &self.template, None, Box::new(value_fn))
     }
@@ -693,7 +693,7 @@ impl<'render> TemplateRef<'render> {
     #[inline]
     pub fn render_from_fn<F>(&self, value_fn: F) -> Renderer<'render>
     where
-        F: Fn(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
+        F: FnMut(&[ValueMember<'_>]) -> std::result::Result<Value, String> + 'render,
     {
         Renderer::with_value_fn(
             self.engine,

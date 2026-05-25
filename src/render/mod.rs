@@ -169,7 +169,7 @@ impl<'render> Renderer<'render> {
                 to_string(inner, stack)
             }
             Globals::Fn(value_fn) => {
-                let stack = Stack::with_value_fn(&value_fn);
+                let stack = Stack::with_value_fn(value_fn);
                 to_string(inner, stack)
             }
         }
@@ -193,7 +193,7 @@ impl<'render> Renderer<'render> {
                 to_writer(inner, stack, w)
             }
             Globals::Fn(value_fn) => {
-                let stack = Stack::with_value_fn(&value_fn);
+                let stack = Stack::with_value_fn(value_fn);
                 to_writer(inner, stack, w)
             }
         }

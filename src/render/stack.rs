@@ -11,7 +11,7 @@ pub struct Stack<'a> {
 
 pub enum State<'a> {
     /// A function for fetching values.
-    ValueFn(&'a ValueFn<'a>),
+    ValueFn(Box<ValueFn<'a>>),
 
     /// An entire scope of variables, always a map
     Scope(ValueCow<'a>),
@@ -46,15 +46,15 @@ impl<'a> Stack<'a> {
         }
     }
 
-    pub fn with_value_fn(f: &'a ValueFn<'a>) -> Self {
+    pub fn with_value_fn(f: Box<ValueFn<'a>>) -> Self {
         Self {
             stack: vec![State::ValueFn(f)],
         }
     }
 
     /// Resolves a path to a variable on the stack.
-    pub fn lookup_var(&self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
-        for state in self.stack.iter().rev() {
+    pub fn lookup_var(&mut self, source: &str, v: &ast::Var) -> Result<ValueCow<'a>> {
+        for state in self.stack.iter_mut().rev() {
             match state {
                 State::ValueFn(value_fn) => {
                     let path: Vec<_> = v
