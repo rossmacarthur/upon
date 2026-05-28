@@ -103,6 +103,7 @@ pub enum BaseExpr {
     Literal(Literal),
     List(List),
     Map(Map),
+    Cmp(Cmp),
     Paren(Paren),
     Call(Call),
 }
@@ -183,6 +184,21 @@ pub struct String {
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]
+pub struct Cmp {
+    pub op: Op,
+    pub left: Box<BaseExpr>,
+    pub right: Box<BaseExpr>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy)]
+#[cfg_attr(internal_debug, derive(Debug))]
+pub enum Op {
+    Eq,
+    Ne,
+}
+
+#[cfg_attr(internal_debug, derive(Debug))]
 pub struct Paren {
     pub expr: Box<Expr>,
     pub span: Span,
@@ -204,6 +220,7 @@ impl BaseExpr {
             BaseExpr::Literal(lit) => lit.span,
             BaseExpr::List(list) => list.span,
             BaseExpr::Map(map) => map.span,
+            BaseExpr::Cmp(cmp) => cmp.span,
             BaseExpr::Paren(paren) => paren.span,
             BaseExpr::Call(call) => call.span,
         }

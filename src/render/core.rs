@@ -260,6 +260,16 @@ where
                     }
                 }
 
+                Instr::ExprCmp(op, span) => {
+                    let (right, _) = exprs.pop().unwrap();
+                    let (left, _) = exprs.pop().unwrap();
+                    let result = match op {
+                        ast::Op::Eq => left.eq(&right),
+                        ast::Op::Ne => left.ne(&right),
+                    };
+                    exprs.push((ValueCow::Owned(Value::Bool(result)), *span));
+                }
+
                 Instr::Apply(name, _arity, _span) => {
                     let fname = &t.source[name.span];
                     match self.inner.engine.callables.get(fname) {

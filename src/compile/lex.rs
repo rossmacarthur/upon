@@ -118,6 +118,10 @@ pub enum Token {
     Plus,
     /// `-`
     Minus,
+    /// ==
+    Eq,
+    /// !=
+    Ne,
     /// Sequence of tab (0x09) and/or spaces (0x20)
     Whitespace,
     /// A keyword like `if` or `for`
@@ -299,7 +303,9 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     ')' => self.lex_close(Token::CloseParen, i, c)?,
 
                     // Multi-character tokens with a distinct start character.
-                    '?' => self.lex_question_dot(iter, i)?,
+                    '?' => self.lex2(iter, Token::QuestionDot, i, '.')?,
+                    '=' => self.lex2(iter, Token::Eq, i, '=')?,
+                    '!' => self.lex2(iter, Token::Ne, i, '=')?,
                     '"' => self.lex_string(iter, i)?,
                     c if c.is_ascii_digit() => match block_state {
                         BlockState::Path => self.lex_index(iter),
@@ -320,7 +326,15 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             (BlockState::Unknown, Token::Ident | Token::Dot | Token::QuestionDot) => {
                 self.state = State::BlockPath { begin, end };
             }
-            (BlockState::Path, Token::OpenParen | Token::Pipe | Token::Comma | Token::Colon) => {
+            (
+                BlockState::Path,
+                Token::OpenParen
+                | Token::Pipe
+                | Token::Comma
+                | Token::Colon
+                | Token::Eq
+                | Token::Ne,
+            ) => {
                 self.state = State::Block { begin, end };
             }
             _ => {}
@@ -398,12 +412,12 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         Ok((tk, j))
     }
 
-    fn lex_question_dot<I>(&mut self, mut iter: I, i: usize) -> Result<(Token, usize)>
+    fn lex2<I>(&mut self, mut iter: I, tk: Token, i: usize, exp: char) -> Result<(Token, usize)>
     where
         I: Iterator<Item = (usize, char)> + Clone,
     {
         match iter.next() {
-            Some((_, '.')) => Ok((Token::QuestionDot, i + 2)),
+            Some((_, c)) if c == exp => Ok((tk, i + 1 + c.len_utf8())),
             Some((j, c)) => Err(self.err_unexpected_character(i..j + c.len_utf8())),
             None => Err(self.err_unexpected_character(i..self.source.len())),
         }
@@ -523,6 +537,8 @@ impl Token {
             Self::Colon => "colon",
             Self::Minus => "minus",
             Self::Plus => "plus",
+            Self::Eq => "equality operator",
+            Self::Ne => "inequality operator",
             Self::Whitespace => "whitespace",
             Self::Keyword => "keyword",
             Self::Ident => "identifier",

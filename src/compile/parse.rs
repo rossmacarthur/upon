@@ -435,35 +435,108 @@ impl<'engine, 'source> Parser<'engine, 'source> {
 
     /// Parses an expression.
     ///
-    /// This is a base expression with zero or more function calls. For example:
+    /// This is a base expression with zero or more filters. For example:
     ///
     ///   user.name | lower | prefix: "Mr. "
     ///
     fn parse_expr(&mut self) -> Result<ast::Expr> {
         let mut expr = ast::Expr::Base(self.parse_base_expr()?);
-        while self.is_next(Token::Pipe)? {
-            self.expect(Token::Pipe)?;
-            let name = self.parse_ident()?;
-            let (args, span) = if self.is_next(Token::Colon)? {
-                let span = self.expect(Token::Colon)?;
-                let args = self.parse_args(span)?;
-                let span = expr.span().combine(args.span);
-                (Some(args), span)
-            } else {
-                (None, expr.span().combine(name.span))
-            };
-            let receiver = Box::new(expr);
-            expr = ast::Expr::Filter(ast::Filter {
-                name,
-                args,
-                receiver,
-                span,
-            });
+
+        let expr = loop {
+            match self.peek()? {
+                Some((Token::Pipe, _)) => {
+                    if matches!(expr, ast::Expr::Base(ast::BaseExpr::Cmp(_))) {
+                        return Err(Error::syntax(
+                            "parentheses are required to apply filter",
+                            self.source(),
+                            expr.span(),
+                        ));
+                    }
+
+                    self.expect(Token::Pipe)?;
+                    let name = self.parse_ident()?;
+                    let (args, span) = if self.is_next(Token::Colon)? {
+                        let span = self.expect(Token::Colon)?;
+                        let args = self.parse_args(span)?;
+                        let span = expr.span().combine(args.span);
+                        (Some(args), span)
+                    } else {
+                        (None, expr.span().combine(name.span))
+                    };
+                    let receiver = Box::new(expr);
+                    expr = ast::Expr::Filter(ast::Filter {
+                        name,
+                        args,
+                        receiver,
+                        span,
+                    });
+                }
+                _ => break expr,
+            }
+        };
+
+        // Check for invalid filter applications, this has a better error
+        // message than "expected end expression, found ..."
+        if let ast::Expr::Filter(_) = expr {
+            if self
+                .peek()?
+                .map(|(tk, _)| matches!(tk, Token::Eq | Token::Ne))
+                .unwrap_or(false)
+            {
+                return Err(Error::syntax(
+                    "parentheses are required to compare filter result",
+                    self.source(),
+                    expr.span(),
+                ));
+            }
         }
+
         Ok(expr)
     }
 
-    /// Parses a variable or literal.
+    /// Parses a base expression.
+    ///
+    /// This is either a base atom like a variable or literal, or a comparison
+    /// of two base atoms.
+    fn parse_base_expr(&mut self) -> Result<ast::BaseExpr> {
+        let left = self.parse_base_atom()?;
+
+        let Some((tk @ (Token::Eq | Token::Ne), _)) = self.peek()? else {
+            return Ok(left);
+        };
+
+        self.expect(tk)?;
+        let op = match tk {
+            Token::Eq => ast::Op::Eq,
+            Token::Ne => ast::Op::Ne,
+            _ => unreachable!(),
+        };
+        let left = Box::new(left);
+        let right = Box::new(self.parse_base_atom()?);
+        let span = left.span().combine(right.span());
+        let expr = ast::BaseExpr::Cmp(ast::Cmp {
+            op,
+            left,
+            right,
+            span,
+        });
+
+        if self
+            .peek()?
+            .map(|(tk, _)| matches!(tk, Token::Eq | Token::Ne))
+            .unwrap_or(false)
+        {
+            return Err(Error::syntax(
+                "parentheses are required to chain comparisons",
+                self.source(),
+                expr.span(),
+            ));
+        }
+
+        Ok(expr)
+    }
+
+    /// Parses a base atom.
     ///
     /// This is either a variable like
     ///
@@ -475,7 +548,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     ///
     ///    0x150
     ///
-    fn parse_base_expr(&mut self) -> Result<ast::BaseExpr> {
+    fn parse_base_atom(&mut self) -> Result<ast::BaseExpr> {
         let expr = match self.parse()? {
             (Token::Keyword, span) => {
                 let lit = self.parse_literal_bool(span)?;

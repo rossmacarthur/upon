@@ -181,6 +181,13 @@ impl Compiler {
                     self.push(Instr::ExprMapInsert(key));
                 }
             }
+
+            ast::BaseExpr::Cmp(eq) => {
+                self.compile_base_expr(*eq.left);
+                self.compile_base_expr(*eq.right);
+                self.push(Instr::ExprCmp(eq.op, eq.span));
+            }
+
             ast::BaseExpr::Paren(paren) => {
                 self.compile_expr(*paren.expr);
             }
