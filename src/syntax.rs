@@ -128,6 +128,39 @@
 //! See the [`functions`][crate::functions] module documentation for more
 //! information on functions.
 //!
+//! ## Comparisons
+//!
+//! Comparisons use `==`, `!=`, `<`, `<=`, `>`, and `>=` and evaluate to
+//! booleans. Equality comparisons can be applied to all values. Ordering
+//! comparisons are supported for numbers and strings; unsupported values
+//! evaluate to `false`.
+//!
+//! ```text
+//! {% if user.role == "admin" %} ... {% endif %}
+//! {{ enabled != false }}
+//! {{ score >= passing_score }}
+//! ```
+//!
+//! Comparisons can be used anywhere a value, literal, or function call can be
+//! used, including as function or filter arguments.
+//!
+//! ```html
+//! {{ badge(score >= 90) }}
+//! {{ title | default_if: subtitle != "" }}
+//! ```
+//!
+//! A comparison is limited to one comparison operator at a time. Use parentheses
+//! when comparing the result of another comparison.
+//!
+//! ```text
+//! {{ (a == b) == c }}
+//! {{ a >= (b != c) }}
+//! ```
+//!
+//! Filters must also be parenthesized when they are part of a comparison. For
+//! example, write `(user.score | round) >= 90` instead of
+//! `user.score | round >= 90`.
+//!
 //! # Blocks
 //!
 //! Blocks are marked with an opening `{% ... %}` and a closing `{% ... %}`.

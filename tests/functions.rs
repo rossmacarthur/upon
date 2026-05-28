@@ -153,6 +153,45 @@ fn render_filter_arity_5() {
 }
 
 #[test]
+fn render_function_with_cmp_arg() {
+    let mut engine = Engine::new();
+    engine.add_function("status", |ok| if ok { "match" } else { "miss" });
+
+    let template = engine.compile("{{ status(a == b) }}").unwrap();
+
+    let result = template
+        .render(&engine, value! { a: "x", b: "x" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "match");
+
+    let result = template
+        .render(&engine, value! { a: "x", b: "y" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "miss");
+}
+
+#[test]
+fn render_filter_with_cmp_arg() {
+    let mut engine = Engine::new();
+    engine.add_function("maybe_if", |v, ok| if ok { v } else { Value::None });
+    let template = engine.compile(r#"{{ value | maybe_if: a == b }}"#).unwrap();
+
+    let result = template
+        .render(&engine, value! { value: "x", a: "x", b: "x" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "x");
+    let result = template
+        .render(&engine, value! { value: "x", a: "x", b: "y" })
+        .to_string()
+        .unwrap();
+
+    assert_eq!(result, "");
+}
+
+#[test]
 fn render_filter_with_nested_function_arg() {
     let mut engine = Engine::new();
     engine.add_function("surname", || "Smith");

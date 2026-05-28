@@ -118,6 +118,18 @@ pub enum Token {
     Plus,
     /// `-`
     Minus,
+    /// ==
+    Eq,
+    /// !=
+    Ne,
+    /// <
+    Lt,
+    /// <=
+    Le,
+    /// >
+    Gt,
+    /// >=
+    Ge,
     /// Sequence of tab (0x09) and/or spaces (0x20)
     Whitespace,
     /// A keyword like `if` or `for`
@@ -299,7 +311,11 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
                     ')' => self.lex_close(Token::CloseParen, i, c)?,
 
                     // Multi-character tokens with a distinct start character.
-                    '?' => self.lex_question_dot(iter, i)?,
+                    '?' => self.lex2(iter, Token::QuestionDot, i, '.')?,
+                    '=' => self.lex2(iter, Token::Eq, i, '=')?,
+                    '!' => self.lex2(iter, Token::Ne, i, '=')?,
+                    '<' => self.lex2_else(iter, Token::Le, Token::Lt, i, '=')?,
+                    '>' => self.lex2_else(iter, Token::Ge, Token::Gt, i, '=')?,
                     '"' => self.lex_string(iter, i)?,
                     c if c.is_ascii_digit() => match block_state {
                         BlockState::Path => self.lex_index(iter),
@@ -320,7 +336,19 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
             (BlockState::Unknown, Token::Ident | Token::Dot | Token::QuestionDot) => {
                 self.state = State::BlockPath { begin, end };
             }
-            (BlockState::Path, Token::OpenParen | Token::Pipe | Token::Comma | Token::Colon) => {
+            (
+                BlockState::Path,
+                Token::OpenParen
+                | Token::Pipe
+                | Token::Comma
+                | Token::Colon
+                | Token::Eq
+                | Token::Ne
+                | Token::Lt
+                | Token::Le
+                | Token::Gt
+                | Token::Ge,
+            ) => {
                 self.state = State::Block { begin, end };
             }
             _ => {}
@@ -398,14 +426,31 @@ impl<'engine, 'source> Lexer<'engine, 'source> {
         Ok((tk, j))
     }
 
-    fn lex_question_dot<I>(&mut self, mut iter: I, i: usize) -> Result<(Token, usize)>
+    fn lex2<I>(&mut self, mut iter: I, tk: Token, i: usize, exp: char) -> Result<(Token, usize)>
     where
         I: Iterator<Item = (usize, char)> + Clone,
     {
         match iter.next() {
-            Some((_, '.')) => Ok((Token::QuestionDot, i + 2)),
+            Some((_, c)) if c == exp => Ok((tk, i + 1 + c.len_utf8())),
             Some((j, c)) => Err(self.err_unexpected_character(i..j + c.len_utf8())),
             None => Err(self.err_unexpected_character(i..self.source.len())),
+        }
+    }
+
+    fn lex2_else<I>(
+        &mut self,
+        mut iter: I,
+        tk2: Token,
+        tk: Token,
+        i: usize,
+        exp: char,
+    ) -> Result<(Token, usize)>
+    where
+        I: Iterator<Item = (usize, char)> + Clone,
+    {
+        match iter.next() {
+            Some((_, c)) if c == exp => Ok((tk2, i + 1 + c.len_utf8())),
+            _ => Ok((tk, i + 1)),
         }
     }
 
@@ -523,6 +568,12 @@ impl Token {
             Self::Colon => "colon",
             Self::Minus => "minus",
             Self::Plus => "plus",
+            Self::Eq => "equality operator",
+            Self::Ne => "inequality operator",
+            Self::Lt => "less-than operator",
+            Self::Le => "less-than-or-equal operator",
+            Self::Gt => "greater-than operator",
+            Self::Ge => "greater-than-or-equal operator",
             Self::Whitespace => "whitespace",
             Self::Keyword => "keyword",
             Self::Ident => "identifier",
@@ -767,7 +818,7 @@ mod tests {
     #[test]
     fn lex_expr() {
         let tokens = lex(
-            "lorem ipsum {{ . ?. |\t (_aZ_0 привіт) :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet",
+            "lorem ipsum {{ . ?. | == != < <= > >=\t (_aZ_0 привіт) :\"hello\\n\" 0.5 0xffee00 }} dolor sit amet",
         )
         .unwrap();
         assert_eq!(
@@ -781,6 +832,18 @@ mod tests {
                 (Token::QuestionDot, "?."),
                 (Token::Whitespace, " "),
                 (Token::Pipe, "|"),
+                (Token::Whitespace, " "),
+                (Token::Eq, "=="),
+                (Token::Whitespace, " "),
+                (Token::Ne, "!="),
+                (Token::Whitespace, " "),
+                (Token::Lt, "<"),
+                (Token::Whitespace, " "),
+                (Token::Le, "<="),
+                (Token::Whitespace, " "),
+                (Token::Gt, ">"),
+                (Token::Whitespace, " "),
+                (Token::Ge, ">="),
                 (Token::Whitespace, "\t "),
                 (Token::OpenParen, "("),
                 (Token::Ident, "_aZ_0"),

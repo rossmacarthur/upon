@@ -248,6 +248,73 @@ fn render_inline_expr_list_index() {
 }
 
 #[test]
+fn render_inline_expr_cmp_eq() {
+    let engine = Engine::new();
+    let template = engine.compile("lorem {{ ipsum == dolor }}").unwrap();
+
+    let result = template
+        .render(&engine, value! { ipsum: "test", dolor: "test" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem true");
+
+    let result = template
+        .render(&engine, value! { ipsum: "test", dolor: "testing" })
+        .to_string()
+        .unwrap();
+
+    assert_eq!(result, "lorem false");
+}
+
+#[test]
+fn render_inline_expr_cmp_ne() {
+    let engine = Engine::new();
+    let template = engine.compile("lorem {{ ipsum != dolor }}").unwrap();
+
+    let result = template
+        .render(&engine, value! { ipsum: "test", dolor: "test" })
+        .to_string()
+        .unwrap();
+    assert_eq!(result, "lorem false");
+
+    let result = template
+        .render(&engine, value! { ipsum: "test", dolor: "testing" })
+        .to_string()
+        .unwrap();
+
+    assert_eq!(result, "lorem true");
+}
+
+#[test]
+fn render_inline_expr_cmp_ord() {
+    let engine = Engine::new();
+
+    let cases = [
+        ("{{ 2 > 1 }}", "true"),
+        ("{{ 2 > 2 }}", "false"),
+        ("{{ 2 >= 2 }}", "true"),
+        ("{{ 2 < 3 }}", "true"),
+        ("{{ 2 < 2 }}", "false"),
+        ("{{ 2 <= 2 }}", "true"),
+        ("{{ 2 < 2.5 }}", "true"),
+        ("{{ 2.5 > 2 }}", "true"),
+        (r#"{{ "beta" > "alpha" }}"#, "true"),
+        (r#"{{ "beta" <= "alpha" }}"#, "false"),
+        ("{{ true > false }}", "false"),
+    ];
+
+    for (source, expected) in cases {
+        let result = engine
+            .compile(source)
+            .unwrap()
+            .render(&engine, Value::None)
+            .to_string()
+            .unwrap();
+        assert_eq!(result, expected);
+    }
+}
+
+#[test]
 fn render_inline_expr_custom_formatter() {
     let mut engine = Engine::new();
     engine.add_formatter("format_list", format_list);

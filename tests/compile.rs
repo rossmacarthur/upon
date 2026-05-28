@@ -117,6 +117,48 @@ fn compile_inline_expr_filter_args() {
 }
 
 #[test]
+fn compile_inline_expr_function_no_args() {
+    Engine::new().compile("lorem {{ ipsum() }}").unwrap();
+}
+
+#[test]
+fn compile_inline_expr_function_arg_cmp() {
+    Engine::new()
+        .compile("lorem {{ ipsum(dolor == amet) }}")
+        .unwrap();
+    Engine::new()
+        .compile("lorem {{ ipsum(dolor >= amet) }}")
+        .unwrap();
+}
+
+#[test]
+fn compile_inline_expr_filter_arg_cmp() {
+    Engine::new()
+        .compile("lorem {{ ipsum | dolor: sit != amet }}")
+        .unwrap();
+    Engine::new()
+        .compile("lorem {{ ipsum | dolor: sit < amet }}")
+        .unwrap();
+}
+
+#[test]
+fn compile_inline_expr_parenthesized_chained_cmp() {
+    let engine = Engine::new();
+    engine
+        .compile("lorem {{ (ipsum == dolor) != amet }}")
+        .unwrap();
+    engine
+        .compile("lorem {{ ipsum == (dolor != amet) }}")
+        .unwrap();
+    engine
+        .compile("lorem {{ (ipsum >= dolor) < amet }}")
+        .unwrap();
+    engine
+        .compile("lorem {{ ipsum <= (dolor > amet) }}")
+        .unwrap();
+}
+
+#[test]
 fn compile_inline_expr_err_eof() {
     let err = Engine::new().compile("lorem {{ ipsum.dolor |").unwrap_err();
     assert_err(
@@ -298,6 +340,120 @@ fn compile_inline_expr_err_empty() {
    |
  1 | lorem {{ }} ipsum dolor
    |          ^^-
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_cmp_to_filter_requires_parentheses() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum == dolor | amet }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to apply filter",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum == dolor | amet }}
+   |          ^^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_chained_cmp_requires_parentheses() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum == dolor != amet }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to chain comparisons",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum == dolor != amet }}
+   |          ^^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_chained_ord_cmp_requires_parentheses() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum >= dolor < amet }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to chain comparisons",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum >= dolor < amet }}
+   |          ^^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_chained_cmp_arg_requires_parentheses() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum(dolor == sit != amet) }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to chain comparisons",
+        "
+  --> <anonymous>:1:16
+   |
+ 1 | lorem {{ ipsum(dolor == sit != amet) }}
+   |                ^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_filter_to_cmp_requires_parentheses() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor == amet }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to compare filter result",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum | dolor == amet }}
+   |          ^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
+fn compile_inline_expr_err_filter_to_cmp_requires_parentheses2() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum | dolor >=")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to compare filter result",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum | dolor >=
+   |          ^^^^^^^^^^^^^
    |
    = reason: REASON
 ",
@@ -845,6 +1001,6 @@ fn compile_include_with_statement_filters() {
 fn assert_err(err: &Error, reason: &str, pretty: &str) {
     let display = format!("invalid syntax: {reason}");
     let display_alt = format!("invalid syntax\n{}", pretty.replace("REASON", reason));
-    assert_eq!(err.to_string(), display);
-    assert_eq!(format!("{err:#}"), display_alt);
+    pretty_assertions::assert_eq!(err.to_string(), display);
+    pretty_assertions::assert_eq!(format!("{err:#}"), display_alt);
 }

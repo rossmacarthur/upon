@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use crate::types::ast;
@@ -15,6 +16,23 @@ impl ValueCow<'_> {
             Value::List(l) if l.is_empty() => false,
             Value::Map(m) if m.is_empty() => false,
             _ => true,
+        }
+    }
+
+    pub fn cmp_op(&self, op: ast::Op, other: &Self) -> bool {
+        match op {
+            ast::Op::Eq => **self == **other,
+            ast::Op::Ne => **self != **other,
+            ast::Op::Lt => matches!(partial_cmp_value(self, other), Some(Ordering::Less)),
+            ast::Op::Le => matches!(
+                partial_cmp_value(self, other),
+                Some(Ordering::Less | Ordering::Equal)
+            ),
+            ast::Op::Gt => matches!(partial_cmp_value(self, other), Some(Ordering::Greater)),
+            ast::Op::Ge => matches!(
+                partial_cmp_value(self, other),
+                Some(Ordering::Greater | Ordering::Equal)
+            ),
         }
     }
 }
@@ -38,6 +56,60 @@ impl Value {
 
     pub(crate) fn new_list() -> Self {
         Self::List(Vec::new())
+    }
+}
+
+fn partial_cmp_value(left: &Value, right: &Value) -> Option<Ordering> {
+    match (left, right) {
+        (Value::Integer(left), Value::Integer(right)) => Some(left.cmp(right)),
+        (Value::Integer(left), Value::Float(right)) => cmp_i64_f64(*left, *right),
+        (Value::Float(left), Value::Integer(right)) => {
+            cmp_i64_f64(*right, *left).map(reverse_ordering)
+        }
+        (Value::Float(left), Value::Float(right)) => left.partial_cmp(right),
+        (Value::String(left), Value::String(right)) => Some(left.cmp(right)),
+        _ => None,
+    }
+}
+
+fn cmp_i64_f64(left: i64, right: f64) -> Option<Ordering> {
+    if right.is_nan() {
+        return None;
+    }
+    if right == f64::INFINITY {
+        return Some(Ordering::Less);
+    }
+    if right == f64::NEG_INFINITY {
+        return Some(Ordering::Greater);
+    }
+    if right < i64::MIN as f64 {
+        return Some(Ordering::Greater);
+    }
+    if right >= i64::MAX as f64 {
+        return Some(Ordering::Less);
+    }
+
+    let truncated = right.trunc() as i64;
+    match left.cmp(&truncated) {
+        Ordering::Equal => {
+            let truncated = truncated as f64;
+            if right > truncated {
+                Some(Ordering::Less)
+            } else if right < truncated {
+                Some(Ordering::Greater)
+            } else {
+                Some(Ordering::Equal)
+            }
+        }
+        ordering => Some(ordering),
+    }
+}
+
+fn reverse_ordering(ordering: Ordering) -> Ordering {
+    match ordering {
+        Ordering::Less => Ordering::Greater,
+        Ordering::Equal => Ordering::Equal,
+        Ordering::Greater => Ordering::Less,
     }
 }
 

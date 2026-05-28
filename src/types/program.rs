@@ -71,6 +71,9 @@ pub enum Instr {
     /// Insert an item to the current map expression
     ExprMapInsert(ast::String),
 
+    /// Compare two expressions
+    ExprCmp(ast::Op, Span),
+
     /// Apply the function using the value and args on the top of the stack.
     ///
     /// The second value is the number of arguments to pop from the stack
