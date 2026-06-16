@@ -196,6 +196,10 @@ pub struct Cmp {
 pub enum Op {
     Eq,
     Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }
 
 #[cfg_attr(internal_debug, derive(Debug))]

@@ -478,11 +478,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
         // Check for invalid filter applications, this has a better error
         // message than "expected end expression, found ..."
         if let ast::Expr::Filter(_) = expr {
-            if self
-                .peek()?
-                .map(|(tk, _)| matches!(tk, Token::Eq | Token::Ne))
-                .unwrap_or(false)
-            {
+            if self.peek()?.map(|(tk, _)| tk.is_cmp_op()).unwrap_or(false) {
                 return Err(Error::syntax(
                     "parentheses are required to compare filter result",
                     self.source(),
@@ -501,16 +497,12 @@ impl<'engine, 'source> Parser<'engine, 'source> {
     fn parse_base_expr(&mut self) -> Result<ast::BaseExpr> {
         let left = self.parse_base_atom()?;
 
-        let Some((tk @ (Token::Eq | Token::Ne), _)) = self.peek()? else {
+        let Some((tk, _)) = self.peek()?.filter(|(tk, _)| tk.is_cmp_op()) else {
             return Ok(left);
         };
 
         self.expect(tk)?;
-        let op = match tk {
-            Token::Eq => ast::Op::Eq,
-            Token::Ne => ast::Op::Ne,
-            _ => unreachable!(),
-        };
+        let op = tk.to_cmp_op();
         let left = Box::new(left);
         let right = Box::new(self.parse_base_atom()?);
         let span = left.span().combine(right.span());
@@ -521,11 +513,7 @@ impl<'engine, 'source> Parser<'engine, 'source> {
             span,
         });
 
-        if self
-            .peek()?
-            .map(|(tk, _)| matches!(tk, Token::Eq | Token::Ne))
-            .unwrap_or(false)
-        {
+        if self.peek()?.map(|(tk, _)| tk.is_cmp_op()).unwrap_or(false) {
             return Err(Error::syntax(
                 "parentheses are required to chain comparisons",
                 self.source(),
@@ -1078,6 +1066,27 @@ impl Keyword {
             "include" => Self::Include,
             "true" => Self::True,
             "false" => Self::False,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Token {
+    fn is_cmp_op(self) -> bool {
+        matches!(
+            self,
+            Self::Eq | Self::Ne | Self::Lt | Self::Le | Self::Gt | Self::Ge
+        )
+    }
+
+    fn to_cmp_op(self) -> ast::Op {
+        match self {
+            Token::Eq => ast::Op::Eq,
+            Token::Ne => ast::Op::Ne,
+            Token::Lt => ast::Op::Lt,
+            Token::Le => ast::Op::Le,
+            Token::Gt => ast::Op::Gt,
+            Token::Ge => ast::Op::Ge,
             _ => unreachable!(),
         }
     }

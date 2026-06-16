@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use crate::types::ast;
@@ -17,6 +18,36 @@ impl ValueCow<'_> {
             _ => true,
         }
     }
+
+    pub fn try_partial_cmp(&self, op: ast::Op, other: &Self) -> std::result::Result<bool, String> {
+        Ok(match op {
+            ast::Op::Eq => self.eq(other),
+            ast::Op::Ne => self.ne(other),
+            op => match try_partial_cmp(self, other)? {
+                Some(Ordering::Less) => matches!(op, ast::Op::Lt | ast::Op::Le),
+                Some(Ordering::Equal) => matches!(op, ast::Op::Le | ast::Op::Ge),
+                Some(Ordering::Greater) => matches!(op, ast::Op::Gt | ast::Op::Ge),
+                None => false,
+            },
+        })
+    }
+}
+
+fn try_partial_cmp(left: &Value, right: &Value) -> std::result::Result<Option<Ordering>, String> {
+    Ok(match (left, right) {
+        (Value::None, Value::None) => Some(Ordering::Equal),
+        (Value::Bool(l), Value::Bool(r)) => l.partial_cmp(r),
+        (Value::Integer(l), Value::Integer(r)) => l.partial_cmp(r),
+        (Value::Float(l), Value::Float(r)) => l.partial_cmp(r),
+        (Value::String(l), Value::String(r)) => l.partial_cmp(r),
+        (left, right) => {
+            return Err(format!(
+                "cannot compare {} with {}",
+                left.human(),
+                right.human()
+            ))
+        }
+    })
 }
 
 impl Value {

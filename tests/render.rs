@@ -286,6 +286,63 @@ fn render_inline_expr_cmp_ne() {
 }
 
 #[test]
+fn render_inline_expr_cmp_ord() {
+    let engine = Engine::new();
+
+    let tests = [
+        ("{{ true > false }}", "true"),
+        ("{{ 2 > 1 }}", "true"),
+        ("{{ 2 > 2 }}", "false"),
+        ("{{ 2 >= 2 }}", "true"),
+        ("{{ 2 < 3 }}", "true"),
+        ("{{ 2 < 2 }}", "false"),
+        ("{{ 2 <= 2 }}", "true"),
+        ("{{ 2.0 > 1.0 }}", "true"),
+        ("{{ 2.0 > 2.0 }}", "false"),
+        ("{{ 2.0 >= 2.0 }}", "true"),
+        ("{{ 2.0 < 3.0 }}", "true"),
+        ("{{ 2.0 < 2.0 }}", "false"),
+        ("{{ 2.0 <= 2.0 }}", "true"),
+        ("{{ 2.0 < 2.5 }}", "true"),
+        ("{{ 2.5 > 2.0 }}", "true"),
+        (r#"{{ "beta" > "alpha" }}"#, "true"),
+        (r#"{{ "beta" <= "alpha" }}"#, "false"),
+    ];
+    for (source, expected) in tests {
+        let result = engine
+            .compile(source)
+            .unwrap()
+            .render(&engine, Value::None)
+            .to_string()
+            .unwrap();
+        assert_eq!(result, expected, "failed for source: {}", source);
+    }
+}
+
+#[test]
+fn render_inline_expr_cmp_err() {
+    let engine = Engine::new();
+    let err = engine
+        .compile("lorem {{ ipsum > dolor }}")
+        .unwrap()
+        .render(&engine, value! { ipsum: "test", dolor: 123 })
+        .to_string()
+        .unwrap_err();
+    assert_err(
+        &err,
+        "cannot compare string with integer",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum > dolor }}
+   |          ^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn render_inline_expr_custom_formatter() {
     let mut engine = Engine::new();
     engine.add_formatter("format_list", format_list);

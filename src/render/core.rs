@@ -263,10 +263,9 @@ where
                 Instr::ExprCmp(op, span) => {
                     let (right, _) = exprs.pop().unwrap();
                     let (left, _) = exprs.pop().unwrap();
-                    let result = match op {
-                        ast::Op::Eq => left.eq(&right),
-                        ast::Op::Ne => left.ne(&right),
-                    };
+                    let result = left
+                        .try_partial_cmp(*op, &right)
+                        .map_err(|e| Error::render(e, &t.source, *span))?;
                     exprs.push((ValueCow::Owned(Value::Bool(result)), *span));
                 }
 

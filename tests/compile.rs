@@ -126,12 +126,18 @@ fn compile_inline_expr_function_arg_cmp() {
     Engine::new()
         .compile("lorem {{ ipsum(dolor == amet) }}")
         .unwrap();
+    Engine::new()
+        .compile("lorem {{ ipsum(dolor >= amet) }}")
+        .unwrap();
 }
 
 #[test]
 fn compile_inline_expr_filter_arg_cmp() {
     Engine::new()
         .compile("lorem {{ ipsum | dolor: sit != amet }}")
+        .unwrap();
+    Engine::new()
+        .compile("lorem {{ ipsum | dolor: sit < amet }}")
         .unwrap();
 }
 
@@ -143,6 +149,12 @@ fn compile_inline_expr_parenthesized_chained_cmp() {
         .unwrap();
     engine
         .compile("lorem {{ ipsum == (dolor != amet) }}")
+        .unwrap();
+    engine
+        .compile("lorem {{ (ipsum >= dolor) < amet }}")
+        .unwrap();
+    engine
+        .compile("lorem {{ ipsum <= (dolor > amet) }}")
         .unwrap();
 }
 
@@ -373,6 +385,25 @@ fn compile_inline_expr_err_chained_cmp_requires_parentheses() {
 }
 
 #[test]
+fn compile_inline_expr_err_chained_ord_cmp_requires_parentheses() {
+    let err = Engine::new()
+        .compile("lorem {{ ipsum >= dolor < amet }}")
+        .unwrap_err();
+    assert_err(
+        &err,
+        "parentheses are required to chain comparisons",
+        "
+  --> <anonymous>:1:10
+   |
+ 1 | lorem {{ ipsum >= dolor < amet }}
+   |          ^^^^^^^^^^^^^^
+   |
+   = reason: REASON
+",
+    );
+}
+
+#[test]
 fn compile_inline_expr_err_chained_cmp_arg_requires_parentheses() {
     let err = Engine::new()
         .compile("lorem {{ ipsum(dolor == sit != amet) }}")
@@ -413,7 +444,7 @@ fn compile_inline_expr_err_filter_to_cmp_requires_parentheses() {
 #[test]
 fn compile_inline_expr_err_filter_to_cmp_requires_parentheses2() {
     let err = Engine::new()
-        .compile("lorem {{ ipsum | dolor ==")
+        .compile("lorem {{ ipsum | dolor >=")
         .unwrap_err();
     assert_err(
         &err,
@@ -421,7 +452,7 @@ fn compile_inline_expr_err_filter_to_cmp_requires_parentheses2() {
         "
   --> <anonymous>:1:10
    |
- 1 | lorem {{ ipsum | dolor ==
+ 1 | lorem {{ ipsum | dolor >=
    |          ^^^^^^^^^^^^^
    |
    = reason: REASON
