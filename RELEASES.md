@@ -2,7 +2,7 @@
 
 ## 0.11.0
 
-*Unreleased*
+*July 25th, 2026*
 
 - [Replace `Engine::with_syntax` with `Engine::set_syntax`][39e3a756]. Custom
   syntax is now configured on an existing engine via a setter method instead of

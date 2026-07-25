@@ -73,7 +73,7 @@ dependencies = [
  "serde_json",
  "tera",
  "tinytemplate",
- "upon 0.10.0",
+ "upon 0.11.0",
 ]
 
 [[package]]
@@ -482,7 +482,7 @@ dependencies = [
  "arbitrary",
  "libfuzzer-sys",
  "serde",
- "upon 0.10.0",
+ "upon 0.11.0",
 ]
 
 [[package]]
@@ -547,7 +547,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "serde_json",
- "upon 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "upon 0.10.0",
  "yansi",
 ]
 
@@ -1437,6 +1437,8 @@ checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 [[package]]
 name = "upon"
 version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3ead40aa15464f4d808014183fa0b030761ff6f57e162f7fc76d6a900df7a28"
 dependencies = [
  "aho-corasick",
  "serde",
@@ -1446,9 +1448,7 @@ dependencies = [
 
 [[package]]
 name = "upon"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3ead40aa15464f4d808014183fa0b030761ff6f57e162f7fc76d6a900df7a28"
+version = "0.11.0"
 dependencies = [
  "aho-corasick",
  "serde",
