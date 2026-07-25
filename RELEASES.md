@@ -1,5 +1,24 @@
 # 📝 Release notes
 
+## 0.11.0
+
+*Unreleased*
+
+- [Replace `Engine::with_syntax` with `Engine::set_syntax`][39e3a756]. Custom
+  syntax is now configured on an existing engine via a setter method instead of
+  a separate constructor, for example:
+  ```rust
+  let mut engine = Engine::new();
+  engine.set_syntax(Syntax::builder().expr("<{", "}>").block("<[", "]>").build());
+  ```
+
+- [Allow the value function passed to `render_from_fn` to be `FnMut`][f625cc8f].
+  Previously the closure had to implement `Fn`, this relaxes the bound so
+  stateful value functions can be used.
+
+[39e3a756]: https://github.com/rossmacarthur/upon/commit/39e3a756d9b30987dfe5ad7e30f82e35a3158e91
+[f625cc8f]: https://github.com/rossmacarthur/upon/commit/f625cc8f95da19e2781c700bb4e237343f58d2f0
+
 ## 0.10.0
 
 *June 27th, 2025*
